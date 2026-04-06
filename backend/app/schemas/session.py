@@ -7,6 +7,7 @@ class SessionBase(BaseModel):
     date: date
     status: str = "scheduled"
     notes: Optional[str] = None
+    external_id: Optional[str] = None
 
 class SessionCreate(SessionBase):
     pass

@@ -1,0 +1,33 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "backend: run",
+      "type": "shell",
+      "command": "python -B -m uvicorn main:app --reload --host 127.0.0.1 --port 8000",
+      "options": {
+        "cwd": "${workspaceFolder}/backend"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "frontend: run web",
+      "type": "shell",
+      "command": "flutter run -d chrome --web-hostname 127.0.0.1 --web-port 55912 --dart-define=API_BASE_URL=http://127.0.0.1:8000",
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "dev: fullstack",
+      "dependsOrder": "parallel",
+      "dependsOn": [
+        "backend: run",
+        "frontend: run web"
+      ],
+      "problemMatcher": []
+    }
+  ]
+}
+

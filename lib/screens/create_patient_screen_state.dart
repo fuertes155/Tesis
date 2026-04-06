@@ -91,56 +91,59 @@ class CreatePatientScreenState extends State<CreatePatientScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final primaryColor = const Color(0xFF1A237E);
 
     return Scaffold(
-      backgroundColor: theme.colorScheme.surface,
+      backgroundColor: const Color(0xFFF8FAFC),
       appBar: AppBar(
-        title: const Text('Crear Paciente'),
-        centerTitle: true,
+        backgroundColor: Colors.white,
+        surfaceTintColor: Colors.white,
+        elevation: 0,
+        title: const Text(
+          'Nuevo Paciente',
+          style: TextStyle(fontWeight: FontWeight.w800, color: Color(0xFF1E293B)),
+        ),
+        centerTitle: false,
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(24.0),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            const SizedBox(height: 16),
+            Text(
+              'REGISTRO CLÍNICO',
+              style: theme.textTheme.labelSmall?.copyWith(
+                color: const Color(0xFF64748B),
+                fontWeight: FontWeight.w800,
+                letterSpacing: 1.5,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Complete la información del paciente para crear su expediente digital.',
+              style: theme.textTheme.bodyLarge?.copyWith(
+                color: const Color(0xFF64748B),
+              ),
+            ),
+            const SizedBox(height: 40),
             Container(
               padding: const EdgeInsets.all(32),
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(24),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.grey.withValues(alpha: 0.05),
-                    blurRadius: 20,
-                    offset: const Offset(0, 10),
-                  ),
-                ],
+                border: Border.all(color: const Color(0xFFE2E8F0)),
               ),
               child: Form(
                 key: _formKey,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      'Datos Personales',
-                      style: theme.textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        color: theme.colorScheme.primary,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Ingrese la información del nuevo paciente',
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                        color: Colors.grey[600],
-                      ),
-                    ),
-                    const SizedBox(height: 32),
-                    TextFormField(
+                    _buildProfessionalLabel('Nombre Completo'),
+                    _buildProfessionalField(
                       controller: _nameController,
-                      decoration: const InputDecoration(
-                        labelText: 'Nombre Completo',
-                        prefixIcon: Icon(Icons.person_outline_rounded),
-                      ),
+                      hint: 'Ej. Juan Alberto Pérez',
+                      icon: Icons.person_outline_rounded,
                       validator: (value) {
                         if (value == null || value.isEmpty) {
                           return 'Por favor ingrese el nombre';
@@ -149,14 +152,11 @@ class CreatePatientScreenState extends State<CreatePatientScreen> {
                       },
                     ),
                     const SizedBox(height: 24),
-                    TextFormField(
+                    _buildProfessionalLabel('Fecha de Nacimiento'),
+                    _buildProfessionalField(
                       controller: _birthDateController,
-                      decoration: const InputDecoration(
-                        labelText: 'Fecha de Nacimiento',
-                        prefixIcon: Icon(Icons.cake_outlined),
-                        suffixIcon: Icon(Icons.calendar_today_rounded),
-                        hintText: 'DD/MM/AAAA',
-                      ),
+                      hint: 'DD/MM/AAAA',
+                      icon: Icons.calendar_today_outlined,
                       readOnly: true,
                       onTap: () async {
                         final now = DateTime.now();
@@ -176,37 +176,40 @@ class CreatePatientScreenState extends State<CreatePatientScreen> {
                       },
                     ),
                     const SizedBox(height: 24),
-                    TextFormField(
+                    _buildProfessionalLabel('Documento de Identidad'),
+                    _buildProfessionalField(
                       controller: _docIdController,
-                      decoration: const InputDecoration(
-                        labelText: 'Documento de Identidad',
-                        prefixIcon: Icon(Icons.badge_outlined),
-                      ),
+                      hint: 'Número de documento',
+                      icon: Icons.badge_outlined,
                     ),
                     const SizedBox(height: 24),
-                    TextFormField(
+                    _buildProfessionalLabel('Teléfono de Contacto'),
+                    _buildProfessionalField(
                       controller: _phoneController,
-                      decoration: const InputDecoration(
-                        labelText: 'Teléfono de Contacto',
-                        prefixIcon: Icon(Icons.phone_outlined),
-                      ),
+                      hint: '+1 234 567 890',
+                      icon: Icons.phone_outlined,
                       keyboardType: TextInputType.phone,
                     ),
-                    const SizedBox(height: 40),
+                    const SizedBox(height: 48),
                     SizedBox(
                       width: double.infinity,
+                      height: 54,
                       child: ElevatedButton(
                         onPressed: _isLoading ? null : _createPatient,
                         style: ElevatedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          backgroundColor: primaryColor,
+                          foregroundColor: Colors.white,
+                          elevation: 0,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          textStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16),
                         ),
                         child: _isLoading
                             ? const SizedBox(
-                                height: 20,
-                                width: 20,
-                                child: CircularProgressIndicator(strokeWidth: 2),
+                                height: 24,
+                                width: 24,
+                                child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
                               )
-                            : const Text('GUARDAR PACIENTE'),
+                            : const Text('CREAR EXPEDIENTE'),
                       ),
                     ),
                   ],
@@ -215,6 +218,63 @@ class CreatePatientScreenState extends State<CreatePatientScreen> {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildProfessionalLabel(String label) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Text(
+        label,
+        style: const TextStyle(
+          fontSize: 14,
+          fontWeight: FontWeight.w700,
+          color: Color(0xFF334155),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildProfessionalField({
+    required TextEditingController controller,
+    required String hint,
+    required IconData icon,
+    bool readOnly = false,
+    VoidCallback? onTap,
+    String? Function(String?)? validator,
+    TextInputType? keyboardType,
+  }) {
+    return TextFormField(
+      controller: controller,
+      readOnly: readOnly,
+      onTap: onTap,
+      validator: validator,
+      keyboardType: keyboardType,
+      style: const TextStyle(fontSize: 15),
+      decoration: InputDecoration(
+        hintText: hint,
+        hintStyle: const TextStyle(color: Color(0xFF94A3B8)),
+        prefixIcon: Icon(icon, size: 20, color: const Color(0xFF64748B)),
+        filled: true,
+        fillColor: const Color(0xFFF8FAFC),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: Color(0xFF1A237E), width: 2),
+        ),
+        errorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: Color(0xFFEF4444)),
+        ),
+        focusedErrorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: Color(0xFFEF4444), width: 2),
+        ),
+        contentPadding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
       ),
     );
   }

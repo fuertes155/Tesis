@@ -38,11 +38,11 @@ class HomeKpiSection extends StatelessWidget {
         // signed() no longer needed (se removieron trends)
 
         if (loading) {
-          final extent = width >= 800
-              ? 165.0
-              : width >= 600
-              ? 185.0
-              : 205.0;
+          final extent = width > 800
+              ? 180.0
+              : width > 500
+              ? 200.0
+              : 220.0;
           return GridView.builder(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
@@ -81,11 +81,11 @@ class HomeKpiSection extends StatelessWidget {
           ),
         ];
 
-        final extent = width > 600
-            ? 145.0
-            : width > 400
-            ? 155.0
-            : 165.0;
+        final extent = width > 800
+            ? 220.0
+            : width > 500
+            ? 240.0
+            : 260.0;
         return GridView.builder(
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),

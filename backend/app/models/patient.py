@@ -1,5 +1,6 @@
-from sqlalchemy import Column, Integer, String, ForeignKey
+from sqlalchemy import Column, Integer, String, ForeignKey, DateTime
 from sqlalchemy.orm import relationship
+from datetime import datetime
 from app.database import Base
 
 class Patient(Base):
@@ -12,6 +13,8 @@ class Patient(Base):
     document_id = Column(String, nullable=True)
     phone = Column(String, nullable=True)
     diagnosis = Column(String, nullable=True)
+    doctor_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    registration_date = Column(DateTime, default=datetime.utcnow)
 
     sessions = relationship(
         "Session",

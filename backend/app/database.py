@@ -1,8 +1,11 @@
 from sqlalchemy import create_engine, event
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
+from pathlib import Path
 
-SQLALCHEMY_DATABASE_URL = "sqlite:///./sql_app_v2.db"
+_BACKEND_DIR = Path(__file__).resolve().parents[1]
+_DB_PATH = (_BACKEND_DIR / "sql_app_v2.db").resolve()
+SQLALCHEMY_DATABASE_URL = f"sqlite:///{_DB_PATH.as_posix()}"
 # For PostgreSQL:
 # SQLALCHEMY_DATABASE_URL = "postgresql://user:password@postgresserver/db"
 

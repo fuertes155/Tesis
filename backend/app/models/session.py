@@ -10,5 +10,6 @@ class Session(Base):
     date = Column(Date)
     status = Column(String, default="scheduled")
     notes = Column(String, nullable=True)
+    external_id = Column(String, unique=True, index=True, nullable=True)
 
     patient = relationship("Patient", back_populates="sessions")

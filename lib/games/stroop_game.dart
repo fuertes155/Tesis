@@ -4,9 +4,22 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'common/game_results.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'common/game_intro.dart';
+import 'common/game_scoring.dart';
 
 class StroopGame extends StatefulWidget {
-  const StroopGame({super.key});
+  final bool flowMode;
+  final int? flowIndex;
+  final int? flowTotal;
+  final int? patientAge;
+
+  const StroopGame({
+    super.key,
+    this.flowMode = false,
+    this.flowIndex,
+    this.flowTotal,
+    this.patientAge,
+  });
 
   @override
   State<StroopGame> createState() => _StroopGameState();
@@ -17,6 +30,9 @@ class _StroopGameState extends State<StroopGame> {
   int _currentRound = 0;
   int _score = 0;
   int _correctStreak = 0;
+  int _correct = 0;
+  int _wrong = 0;
+  bool _showIntro = true;
 
   // Colors for the game
   final Map<String, Color> _colors = {
@@ -46,6 +62,8 @@ class _StroopGameState extends State<StroopGame> {
       _score = 0;
       _correctStreak = 0;
       _reactionTimes = [];
+      _correct = 0;
+      _wrong = 0;
       _nextRound();
     });
   }
@@ -87,8 +105,10 @@ class _StroopGameState extends State<StroopGame> {
       if (isCorrect) {
         _score += 10 + (_correctStreak * 2); // Bonus for streak
         _correctStreak++;
+        _correct += 1;
       } else {
         _correctStreak = 0;
+        _wrong += 1;
       }
     });
 
@@ -137,10 +157,35 @@ class _StroopGameState extends State<StroopGame> {
     final avgReaction = _reactionTimes.isEmpty
         ? 0
         : _reactionTimes.reduce((a, b) => a + b) ~/ _reactionTimes.length;
-    GameResults.sendSession(
-      patientId: 1,
-      status: 'completed',
-      notes: 'stroop score=$_score avg=$avgReaction ms',
+    final execScore = GameScoring.stroopExecutiveScore(
+      correct: _correct,
+      total: totalRounds,
+      avgMs: avgReaction,
+      age: widget.patientAge,
+    );
+    final attScore = GameScoring.reactionScoreFromAvgMs(
+      avgReaction,
+      age: widget.patientAge,
+    );
+    final global = ((execScore * 0.6) + (attScore * 0.4)).round();
+    final details = <String, dynamic>{
+      'Funciones Ejecutivas': execScore,
+      'Atención': attScore,
+    };
+    final metrics = <String, dynamic>{
+      'rounds': totalRounds,
+      'correct': _correct,
+      'wrong': _wrong,
+      'avg_ms': avgReaction,
+      'raw_score': _score,
+    };
+    final future = GameResults.sendGameResult(
+      title: 'Resultados - Funciones Ejecutivas',
+      score: global,
+      details: details,
+      gameKey: 'stroop',
+      metrics: metrics,
+      age: widget.patientAge,
     );
 
     showDialog(
@@ -158,13 +203,42 @@ class _StroopGameState extends State<StroopGame> {
           ],
         ),
         actions: [
-          TextButton(
-            onPressed: () {
-              context.pop();
-              GameResults.navigateToResultsFromApi(context, patientId: 1);
-            },
-            child: const Text('Ver Resultados'),
-          ),
+          if (!widget.flowMode)
+            TextButton(
+              onPressed: () {
+                context.pop();
+                GameResults.navigateToResults(
+                  context,
+                  title: 'Resultados - Funciones Ejecutivas',
+                  score: global,
+                  details: details,
+                );
+              },
+              child: const Text('Ver Resultados'),
+            ),
+          if (widget.flowMode)
+            TextButton(
+              onPressed: () async {
+                await future;
+                if (!context.mounted) return;
+                context.pop();
+                context.pop({
+                  'completed': true,
+                  'result': {
+                    'title': 'Resultados - Funciones Ejecutivas',
+                    'score': global,
+                    'details': details,
+                  },
+                });
+              },
+              child: Text(
+                widget.flowIndex != null &&
+                        widget.flowTotal != null &&
+                        widget.flowIndex! < (widget.flowTotal! - 1)
+                    ? 'Siguiente'
+                    : 'Finalizar',
+              ),
+            ),
           TextButton(
             onPressed: () {
               context.pop();
@@ -179,9 +253,55 @@ class _StroopGameState extends State<StroopGame> {
 
   @override
   Widget build(BuildContext context) {
+    if (_showIntro && !_isPlaying && _currentRound == 0) {
+      return Scaffold(
+        backgroundColor: const Color(0xFFF8FAFC),
+        appBar: AppBar(
+          backgroundColor: Colors.white,
+          surfaceTintColor: Colors.white,
+          elevation: 0,
+          title: Text(
+            widget.flowMode &&
+                    widget.flowIndex != null &&
+                    widget.flowTotal != null
+                ? 'Funciones Ejecutivas (${widget.flowIndex! + 1}/${widget.flowTotal})'
+                : 'Funciones Ejecutivas',
+            style: const TextStyle(
+              fontWeight: FontWeight.w800,
+              color: Color(0xFF1E293B),
+            ),
+          ),
+          centerTitle: false,
+        ),
+        body: GameIntro(
+          title: 'Test Stroop',
+          subtitle:
+              'Evalúa el control inhibitorio y la velocidad de respuesta.',
+          icon: Icons.psychology_alt,
+          steps: const [
+            'Verás una palabra (ROJO, AZUL, VERDE, AMARILLO) escrita con un color.',
+            'Tu tarea es seleccionar el COLOR de la tinta, no la palabra.',
+            'Responde lo más rápido posible sin equivocarte.',
+            'Completa 20 rondas para finalizar.',
+          ],
+          actionLabel: 'Comenzar',
+          onStart: () {
+            setState(() => _showIntro = false);
+            _startGame();
+          },
+        ),
+      );
+    }
+
     return Scaffold(
       appBar: AppBar(
-        title: Text('Funciones Ejecutivas ($_currentRound/$totalRounds)'),
+        title: Text(
+          widget.flowMode &&
+                  widget.flowIndex != null &&
+                  widget.flowTotal != null
+              ? 'Funciones Ejecutivas (${widget.flowIndex! + 1}/${widget.flowTotal})'
+              : 'Funciones Ejecutivas ($_currentRound/$totalRounds)',
+        ),
       ),
       body: Center(
         child: Padding(
@@ -208,7 +328,10 @@ class _StroopGameState extends State<StroopGame> {
                 ),
                 const SizedBox(height: 48),
                 FilledButton.icon(
-                  onPressed: _startGame,
+                  onPressed: () {
+                    setState(() => _showIntro = false);
+                    _startGame();
+                  },
                   icon: const Icon(Icons.play_arrow),
                   label: const Text('COMENZAR'),
                   style: FilledButton.styleFrom(

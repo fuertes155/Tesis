@@ -1,5 +1,6 @@
 from pydantic import BaseModel
 from typing import Optional
+from datetime import datetime
 
 class PatientBase(BaseModel):
     name: str
@@ -8,12 +9,14 @@ class PatientBase(BaseModel):
     document_id: Optional[str] = None
     phone: Optional[str] = None
     diagnosis: Optional[str] = None
+    doctor_id: Optional[int] = None
 
 class PatientCreate(PatientBase):
     pass
 
 class Patient(PatientBase):
     id: int
+    registration_date: datetime
 
     class Config:
         from_attributes = True

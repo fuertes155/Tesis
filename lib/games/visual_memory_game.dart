@@ -4,10 +4,23 @@ import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:go_router/go_router.dart';
 import 'common/game_results.dart';
+import 'common/game_intro.dart';
+import 'common/game_scoring.dart';
 import '../widgets/animated_dialog.dart';
 
 class VisualMemoryGame extends StatefulWidget {
-  const VisualMemoryGame({super.key});
+  final bool flowMode;
+  final int? flowIndex;
+  final int? flowTotal;
+  final int? patientAge;
+
+  const VisualMemoryGame({
+    super.key,
+    this.flowMode = false,
+    this.flowIndex,
+    this.flowTotal,
+    this.patientAge,
+  });
 
   @override
   State<VisualMemoryGame> createState() => _VisualMemoryGameState();
@@ -28,20 +41,31 @@ class _VisualMemoryGameState extends State<VisualMemoryGame> {
   int _countdown = 0;
   Timer? _countdownTimer;
   int? _wrongIndex;
+  bool _started = false;
+  DateTime? _selectionStart;
+  final List<int> _selectionTimesMs = [];
 
   @override
   void initState() {
     super.initState();
-    _startGame();
+  }
+
+  @override
+  void dispose() {
+    _countdownTimer?.cancel();
+    super.dispose();
   }
 
   void _startGame() {
     setState(() {
+      _started = true;
       _isGameOver = false;
       _score = 0;
       _level = 1;
       _itemsToRemember = 3;
       _memorizeSeconds = 2;
+      _selectionStart = null;
+      _selectionTimesMs.clear();
       _startLevel();
     });
   }
@@ -69,6 +93,7 @@ class _VisualMemoryGameState extends State<VisualMemoryGame> {
       if (mounted) {
         setState(() {
           _showingPattern = false;
+          _selectionStart = DateTime.now();
         });
       }
     });
@@ -98,6 +123,12 @@ class _VisualMemoryGameState extends State<VisualMemoryGame> {
       // Correct selection
       if (_selectedIndices.where((i) => _targetIndices.contains(i)).length ==
           _targetIndices.length) {
+        final start = _selectionStart;
+        if (start != null) {
+          _selectionTimesMs.add(
+            DateTime.now().difference(start).inMilliseconds,
+          );
+        }
         // Level complete
         _score += 100 * _level + (10 * _itemsToRemember);
         _level++;
@@ -119,6 +150,12 @@ class _VisualMemoryGameState extends State<VisualMemoryGame> {
       });
       Future.delayed(const Duration(milliseconds: 220), () {
         if (!mounted) return;
+        final start = _selectionStart;
+        if (start != null) {
+          _selectionTimesMs.add(
+            DateTime.now().difference(start).inMilliseconds,
+          );
+        }
         setState(() {
           _wrongIndex = null;
           _isGameOver = true;
@@ -129,11 +166,33 @@ class _VisualMemoryGameState extends State<VisualMemoryGame> {
   }
 
   void _showGameOverDialog() {
-    GameResults.sendSession(
-      patientId: 1,
-      status: 'completed',
-      notes:
-          'visual_memory score=$_score level=$_level items=$_itemsToRemember',
+    final score = GameScoring.memoryScore(
+      level: _level,
+      rawScore: _score,
+      age: widget.patientAge,
+    );
+    final details = <String, dynamic>{
+      'Memoria': score,
+      'Atención': (score - 6).clamp(20, 100),
+    };
+    final avgSelection = _selectionTimesMs.isEmpty
+        ? 0
+        : _selectionTimesMs.reduce((a, b) => a + b) ~/ _selectionTimesMs.length;
+    final metrics = <String, dynamic>{
+      'raw_score': _score,
+      'level': _level,
+      'items_to_remember': _itemsToRemember,
+      'memorize_seconds': _memorizeSeconds,
+      'avg_selection_ms': avgSelection,
+      'selections': _selectionTimesMs.length,
+    };
+    final future = GameResults.sendGameResult(
+      title: 'Resultados - Memoria Visual',
+      score: score,
+      details: details,
+      gameKey: 'visual_memory',
+      metrics: metrics,
+      age: widget.patientAge,
     );
     showDialog(
       context: context,
@@ -143,16 +202,46 @@ class _VisualMemoryGameState extends State<VisualMemoryGame> {
           title: const Text('Prueba Finalizada'),
           content: Text('Puntuación final: $_score\nNivel alcanzado: $_level'),
           actions: [
+            if (!widget.flowMode)
+              TextButton(
+                onPressed: () {
+                  context.pop();
+                  GameResults.navigateToResults(
+                    context,
+                    title: 'Resultados - Memoria Visual',
+                    score: score,
+                    details: details,
+                  );
+                },
+                child: const Text('Ver Resultados'),
+              ),
+            if (widget.flowMode)
+              TextButton(
+                onPressed: () async {
+                  await future;
+                  if (!context.mounted) return;
+                  context.pop();
+                  context.pop({
+                    'completed': true,
+                    'result': {
+                      'title': 'Resultados - Memoria Visual',
+                      'score': score,
+                      'details': details,
+                    },
+                  });
+                },
+                child: Text(
+                  widget.flowIndex != null &&
+                          widget.flowTotal != null &&
+                          widget.flowIndex! < (widget.flowTotal! - 1)
+                      ? 'Siguiente'
+                      : 'Finalizar',
+                ),
+              ),
             TextButton(
               onPressed: () {
                 context.pop();
-                GameResults.navigateToResultsFromApi(context, patientId: 1);
-              },
-              child: const Text('Ver Resultados'),
-            ),
-            TextButton(
-              onPressed: () {
-                context.pop();
+                setState(() => _started = false);
                 _startGame();
               },
               child: const Text('Intentar de Nuevo'),
@@ -165,9 +254,53 @@ class _VisualMemoryGameState extends State<VisualMemoryGame> {
 
   @override
   Widget build(BuildContext context) {
+    final flowLabel =
+        widget.flowMode && widget.flowIndex != null && widget.flowTotal != null
+        ? 'Memoria Visual (${widget.flowIndex! + 1}/${widget.flowTotal})'
+        : 'Memoria Visual';
+
+    if (!_started) {
+      return Scaffold(
+        backgroundColor: const Color(0xFFF8FAFC),
+        appBar: AppBar(
+          backgroundColor: Colors.white,
+          surfaceTintColor: Colors.white,
+          elevation: 0,
+          title: Text(
+            flowLabel,
+            style: const TextStyle(
+              fontWeight: FontWeight.w800,
+              color: Color(0xFF1E293B),
+            ),
+          ),
+          centerTitle: false,
+        ),
+        body: GameIntro(
+          title: 'Memoria Visual',
+          subtitle:
+              'Evalúa tu capacidad de recordar y reconocer patrones visuales.',
+          icon: Icons.grid_4x4_rounded,
+          steps: const [
+            'Observa el patrón de casillas AZULES durante unos segundos.',
+            'Cuando el patrón desaparezca, selecciona las casillas correctas.',
+            'Si te equivocas, la prueba termina.',
+            'Cada nivel aumenta la dificultad.',
+          ],
+          actionLabel: 'Comenzar',
+          onStart: _startGame,
+        ),
+      );
+    }
+
     return Scaffold(
       appBar: AppBar(
-        title: Text('Memoria Visual - Nivel $_level'),
+        title: Text(
+          widget.flowMode &&
+                  widget.flowIndex != null &&
+                  widget.flowTotal != null
+              ? 'Memoria Visual (${widget.flowIndex! + 1}/${widget.flowTotal})'
+              : 'Memoria Visual - Nivel $_level',
+        ),
         actions: [
           TextButton(onPressed: _startGame, child: const Text('Reiniciar')),
         ],

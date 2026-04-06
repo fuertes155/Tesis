@@ -3,10 +3,23 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'common/game_results.dart';
+import 'common/game_intro.dart';
+import 'common/game_scoring.dart';
 import '../widgets/animated_dialog.dart';
 
 class FluencyGame extends StatefulWidget {
-  const FluencyGame({super.key});
+  final bool flowMode;
+  final int? flowIndex;
+  final int? flowTotal;
+  final int? patientAge;
+
+  const FluencyGame({
+    super.key,
+    this.flowMode = false,
+    this.flowIndex,
+    this.flowTotal,
+    this.patientAge,
+  });
 
   @override
   State<FluencyGame> createState() => _FluencyGameState();
@@ -21,6 +34,7 @@ class _FluencyGameState extends State<FluencyGame> {
   String _currentPrompt = '';
   Timer? _timer;
   bool _isPaused = false;
+  bool _showIntro = true;
 
   final List<String> _letters = ['F', 'A', 'S', 'M', 'R', 'P'];
   final List<String> _categories = [
@@ -84,10 +98,24 @@ class _FluencyGameState extends State<FluencyGame> {
   }
 
   void _showResultDialog() {
-    GameResults.sendSession(
-      patientId: 1,
-      status: 'completed',
-      notes: 'fluency count=$_wordCount prompt=$_currentPrompt',
+    final score = GameScoring.fluencyScore(_wordCount, age: widget.patientAge);
+    final details = <String, dynamic>{
+      'Lenguaje': score,
+      'Funciones Ejecutivas': (score - 8).clamp(20, 100),
+    };
+    final metrics = <String, dynamic>{
+      'count': _wordCount,
+      'prompt': _currentPrompt,
+      'duration_s': gameDuration - _timeLeft,
+      'paused': _isPaused,
+    };
+    final future = GameResults.sendGameResult(
+      title: 'Resultados - Lenguaje',
+      score: score,
+      details: details,
+      gameKey: 'fluency',
+      metrics: metrics,
+      age: widget.patientAge,
     );
     showDialog(
       context: context,
@@ -97,13 +125,42 @@ class _FluencyGameState extends State<FluencyGame> {
           title: const Text('Prueba Finalizada'),
           content: Text('Palabras generadas: $_wordCount'),
           actions: [
-            TextButton(
-              onPressed: () {
-                context.pop();
-                GameResults.navigateToResultsFromApi(context, patientId: 1);
-              },
-              child: const Text('Ver Resultados'),
-            ),
+            if (!widget.flowMode)
+              TextButton(
+                onPressed: () {
+                  context.pop();
+                  GameResults.navigateToResults(
+                    context,
+                    title: 'Resultados - Lenguaje',
+                    score: score,
+                    details: details,
+                  );
+                },
+                child: const Text('Ver Resultados'),
+              ),
+            if (widget.flowMode)
+              TextButton(
+                onPressed: () async {
+                  await future;
+                  if (!context.mounted) return;
+                  context.pop();
+                  context.pop({
+                    'completed': true,
+                    'result': {
+                      'title': 'Resultados - Lenguaje',
+                      'score': score,
+                      'details': details,
+                    },
+                  });
+                },
+                child: Text(
+                  widget.flowIndex != null &&
+                          widget.flowTotal != null &&
+                          widget.flowIndex! < (widget.flowTotal! - 1)
+                      ? 'Siguiente'
+                      : 'Finalizar',
+                ),
+              ),
             TextButton(
               onPressed: () {
                 context.pop();
@@ -124,9 +181,52 @@ class _FluencyGameState extends State<FluencyGame> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
+    if (_showIntro && !_isPlaying && !_isFinished) {
+      return Scaffold(
+        backgroundColor: const Color(0xFFF8FAFC),
+        appBar: AppBar(
+          backgroundColor: Colors.white,
+          surfaceTintColor: Colors.white,
+          elevation: 0,
+          title: Text(
+            widget.flowMode &&
+                    widget.flowIndex != null &&
+                    widget.flowTotal != null
+                ? 'Fluidez Verbal (${widget.flowIndex! + 1}/${widget.flowTotal})'
+                : 'Fluidez Verbal',
+            style: const TextStyle(
+              fontWeight: FontWeight.w800,
+              color: Color(0xFF1E293B),
+            ),
+          ),
+          centerTitle: false,
+        ),
+        body: GameIntro(
+          title: 'Fluidez Verbal',
+          subtitle:
+              'Mide cuántas palabras puedes generar en un tiempo limitado.',
+          icon: Icons.record_voice_over_outlined,
+          steps: const [
+            'Elige el tipo de prueba: Fonológica (por letra) o Semántica (por categoría).',
+            'Tienes 60 segundos para decir la mayor cantidad de palabras posibles.',
+            'No repitas palabras y evita nombres propios si no corresponden.',
+            'Usa los botones + y − para registrar el número de palabras.',
+          ],
+          actionLabel: 'Elegir tipo de prueba',
+          onStart: () => setState(() => _showIntro = false),
+        ),
+      );
+    }
+
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Fluidez Verbal'),
+        title: Text(
+          widget.flowMode &&
+                  widget.flowIndex != null &&
+                  widget.flowTotal != null
+              ? 'Fluidez Verbal (${widget.flowIndex! + 1}/${widget.flowTotal})'
+              : 'Fluidez Verbal',
+        ),
         actions: [
           if (_isPlaying)
             IconButton(

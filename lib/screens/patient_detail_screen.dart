@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import '../services/api_service.dart';
 import '../widgets/info_row.dart';
-import '../widgets/action_button.dart';
-import 'package:go_router/go_router.dart';
 
 class PatientDetailScreen extends StatelessWidget {
   final String patientName;
@@ -17,17 +16,30 @@ class PatientDetailScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final primaryColor = const Color(0xFF1A237E);
 
     return Scaffold(
-      backgroundColor: theme.colorScheme.surface,
+      backgroundColor: const Color(0xFFF8FAFC),
       appBar: AppBar(
-        title: Text(patientName),
-        centerTitle: true,
+        backgroundColor: Colors.white,
+        surfaceTintColor: Colors.white,
+        elevation: 0,
+        title: Text(
+          patientName,
+          style: const TextStyle(
+            fontWeight: FontWeight.w800,
+            color: Color(0xFF1E293B),
+          ),
+        ),
+        centerTitle: false,
         actions: [
-          if (patientId != null)
+          if (patientId != null && ApiService().currentRole == 'gestor')
             IconButton(
               tooltip: 'Eliminar Paciente',
-              icon: const Icon(Icons.delete_outline_rounded),
+              icon: const Icon(
+                Icons.delete_outline_rounded,
+                color: Color(0xFFEF4444),
+              ),
               onPressed: () async {
                 int? count;
                 try {
@@ -51,15 +63,15 @@ class PatientDetailScreen extends StatelessWidget {
                     actions: [
                       TextButton(
                         onPressed: () => Navigator.of(ctx).pop(false),
-                        child: const Text('Cancelar'),
+                        child: const Text('CANCELAR'),
                       ),
                       FilledButton(
                         onPressed: () => Navigator.of(ctx).pop(true),
                         style: FilledButton.styleFrom(
-                          backgroundColor: theme.colorScheme.error,
+                          backgroundColor: const Color(0xFFEF4444),
                           foregroundColor: Colors.white,
                         ),
-                        child: const Text('Eliminar'),
+                        child: const Text('ELIMINAR'),
                       ),
                     ],
                   ),
@@ -85,13 +97,14 @@ class PatientDetailScreen extends StatelessWidget {
                       SnackBar(
                         content: Text('No se pudo eliminar: $e'),
                         behavior: SnackBarBehavior.floating,
-                        backgroundColor: theme.colorScheme.error,
+                        backgroundColor: const Color(0xFFEF4444),
                       ),
                     );
                   }
                 }
               },
             ),
+          const SizedBox(width: 8),
         ],
       ),
       body: SingleChildScrollView(
@@ -99,135 +112,163 @@ class PatientDetailScreen extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Center(
+            Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(24),
+                border: Border.all(color: const Color(0xFFE2E8F0)),
+              ),
               child: Column(
                 children: [
-                  CircleAvatar(
-                    radius: 50,
-                    backgroundColor: theme.colorScheme.primaryContainer,
-                    child: Text(
-                      patientName.isNotEmpty ? patientName[0] : '?',
-                      style: TextStyle(
-                        fontSize: 40,
-                        fontWeight: FontWeight.bold,
-                        color: theme.colorScheme.primary,
+                  Row(
+                    children: [
+                      CircleAvatar(
+                        radius: 32,
+                        backgroundColor: primaryColor.withValues(alpha: 0.1),
+                        child: Text(
+                          patientName.isNotEmpty
+                              ? patientName[0].toUpperCase()
+                              : '?',
+                          style: TextStyle(
+                            fontSize: 28,
+                            fontWeight: FontWeight.w900,
+                            color: primaryColor,
+                          ),
+                        ),
                       ),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    patientName,
-                    style: theme.textTheme.headlineSmall?.copyWith(
-                      fontWeight: FontWeight.bold,
-                      color: theme.colorScheme.onSurface,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 6,
-                    ),
-                    decoration: BoxDecoration(
-                      color: theme.colorScheme.secondaryContainer,
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Text(
-                      'Activo',
-                      style: TextStyle(
-                        color: theme.colorScheme.onSecondaryContainer,
-                        fontWeight: FontWeight.bold,
+                      const SizedBox(width: 20),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              patientName,
+                              style: theme.textTheme.headlineSmall?.copyWith(
+                                fontWeight: FontWeight.w800,
+                                color: const Color(0xFF1E293B),
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              'Expediente del Paciente',
+                              style: TextStyle(color: const Color(0xFF64748B)),
+                            ),
+                          ],
+                        ),
                       ),
-                    ),
+                    ],
+                  ),
+                  const SizedBox(height: 32),
+                  const Divider(color: Color(0xFFF1F5F9)),
+                  const SizedBox(height: 24),
+                  InfoRow(
+                    icon: Icons.badge_outlined,
+                    label: 'ID Único',
+                    value: patientId?.toString() ?? 'No asignado',
+                  ),
+                  InfoRow(
+                    icon: Icons.calendar_today_outlined,
+                    label: 'Edad',
+                    value: '45 años', // En un caso real vendría del API
+                  ),
+                  InfoRow(
+                    icon: Icons.history_outlined,
+                    label: 'Última Sesión',
+                    value: '12 de Octubre, 2023',
                   ),
                 ],
               ),
             ),
-            const SizedBox(height: 32),
-            Card(
-              elevation: 0,
-              color: Colors.white,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(24),
-                side: BorderSide(color: Colors.grey.withValues(alpha: 0.1)),
-              ),
-              child: Padding(
-                padding: const EdgeInsets.all(24.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Información Personal',
-                      style: theme.textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const Divider(height: 32),
-                    InfoRow(
-                      icon: Icons.cake_outlined,
-                      label: 'Edad',
-                      value: '30 años',
-                    ),
-                    const SizedBox(height: 16),
-                    InfoRow(
-                      icon: Icons.badge_outlined,
-                      label: 'ID',
-                      value: '12345',
-                    ),
-                    const SizedBox(height: 16),
-                    InfoRow(
-                      icon: Icons.phone_outlined,
-                      label: 'Teléfono',
-                      value: '+51 987 654 321',
-                    ),
-                    const SizedBox(height: 16),
-                    InfoRow(
-                      icon: Icons.email_outlined,
-                      label: 'Email',
-                      value: 'correo@ejemplo.com',
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(height: 32),
+            const SizedBox(height: 40),
             Text(
-              'Acciones Rápidas',
-              style: theme.textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.bold,
-                color: Colors.grey[700],
+              'ACCIONES DISPONIBLES',
+              style: theme.textTheme.labelSmall?.copyWith(
+                color: const Color(0xFF64748B),
+                fontWeight: FontWeight.w800,
+                letterSpacing: 1.5,
               ),
             ),
-            const SizedBox(height: 16),
-            Row(
+            const SizedBox(height: 20),
+            GridView.count(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              crossAxisCount: 2,
+              mainAxisSpacing: 16,
+              crossAxisSpacing: 16,
+              childAspectRatio: 2.5,
               children: [
-                Expanded(
-                  child: ActionButton(
-                    icon: Icons.play_circle_fill_rounded,
-                    label: 'Nueva\nSesión',
-                    color: theme.colorScheme.primary,
-                    onTap: () => context.push('/new_session'),
+                _buildActionCard(
+                  icon: Icons.play_circle_outline_rounded,
+                  label: 'Iniciar Sesión',
+                  color: primaryColor,
+                  onTap: () => context.push(
+                    '/new_session',
+                    extra: {'patientId': patientId},
                   ),
                 ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: ActionButton(
-                    icon: Icons.history_rounded,
-                    label: 'Ver\nHistorial',
-                    color: theme.colorScheme.secondary,
-                    onTap: () => context.push('/history'),
-                  ),
+                _buildActionCard(
+                  icon: Icons.analytics_outlined,
+                  label: 'Ver Historial',
+                  color: const Color(0xFF0F172A),
+                  onTap: () => context.push('/history'),
                 ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: ActionButton(
-                    icon: Icons.assignment_rounded,
-                    label: 'Ver\nConsentimiento',
-                    color: Colors.orange,
-                    onTap: () => context.push('/consent'),
-                  ),
+                _buildActionCard(
+                  icon: Icons.edit_outlined,
+                  label: 'Editar Perfil',
+                  color: const Color(0xFF64748B),
+                  onTap: () {},
+                ),
+                _buildActionCard(
+                  icon: Icons.ios_share_rounded,
+                  label: 'Exportar Datos',
+                  color: const Color(0xFF64748B),
+                  onTap: () {},
                 ),
               ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildActionCard({
+    required IconData icon,
+    required String label,
+    required Color color,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: const Color(0xFFE2E8F0)),
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(icon, color: color, size: 20),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                label,
+                style: const TextStyle(
+                  fontWeight: FontWeight.w700,
+                  fontSize: 14,
+                  color: Color(0xFF1E293B),
+                ),
+              ),
             ),
           ],
         ),

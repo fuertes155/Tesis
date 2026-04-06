@@ -3,10 +3,23 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'common/game_results.dart';
+import 'common/game_intro.dart';
+import 'common/game_scoring.dart';
 import '../widgets/animated_dialog.dart';
 
 class ReactionGame extends StatefulWidget {
-  const ReactionGame({super.key});
+  final bool flowMode;
+  final int? flowIndex;
+  final int? flowTotal;
+  final int? patientAge;
+
+  const ReactionGame({
+    super.key,
+    this.flowMode = false,
+    this.flowIndex,
+    this.flowTotal,
+    this.patientAge,
+  });
 
   @override
   State<ReactionGame> createState() => _ReactionGameState();
@@ -24,11 +37,12 @@ class _ReactionGameState extends State<ReactionGame> {
   static const int totalAttempts = 5;
   int _best = 0;
   double _iconScale = 1.0;
+  bool _started = false;
+  int _tooEarly = 0;
 
   @override
   void initState() {
     super.initState();
-    _startRound();
   }
 
   @override
@@ -39,6 +53,7 @@ class _ReactionGameState extends State<ReactionGame> {
 
   void _startRound() {
     setState(() {
+      _started = true;
       _state = GameState.waiting;
       _backgroundColor = Colors.redAccent;
       _message = 'Esperar...';
@@ -64,6 +79,7 @@ class _ReactionGameState extends State<ReactionGame> {
         _state = GameState.tooEarly;
         _backgroundColor = Colors.orange;
         _message = '¡Muy rápido! Toca para intentar de nuevo.';
+        _tooEarly += 1;
       });
     } else if (_state == GameState.ready) {
       final endTime = DateTime.now();
@@ -103,11 +119,28 @@ class _ReactionGameState extends State<ReactionGame> {
     int average = _times.isEmpty
         ? 0
         : _times.reduce((a, b) => a + b) ~/ _times.length;
-    GameResults.sendSession(
-      patientId: 1,
-      status: 'completed',
-      notes:
-          'reaction average=$average ms best=$_best ms attempts=${_times.length}',
+    final score = GameScoring.reactionScoreFromAvgMs(
+      average,
+      age: widget.patientAge,
+      penalty: _tooEarly * 5,
+    );
+    final details = <String, dynamic>{
+      'Atención': score,
+      'Funciones Ejecutivas': (score - 8).clamp(20, 100),
+    };
+    final metrics = <String, dynamic>{
+      'avg_ms': average,
+      'best_ms': _best,
+      'attempts': _times.length,
+      'too_early': _tooEarly,
+    };
+    final future = GameResults.sendGameResult(
+      title: 'Resultados - Atención',
+      score: score,
+      details: details,
+      gameKey: 'reaction',
+      metrics: metrics,
+      age: widget.patientAge,
     );
     showDialog(
       context: context,
@@ -119,20 +152,50 @@ class _ReactionGameState extends State<ReactionGame> {
             'Promedio de reacción: $average ms\nIntentos: ${_times.length}',
           ),
           actions: [
-            TextButton(
-              onPressed: () {
-                context.pop();
-                GameResults.navigateToResultsFromApi(context, patientId: 1);
-              },
-              child: const Text('Ver Resultados'),
-            ),
+            if (!widget.flowMode)
+              TextButton(
+                onPressed: () {
+                  context.pop();
+                  GameResults.navigateToResults(
+                    context,
+                    title: 'Resultados - Atención',
+                    score: score,
+                    details: details,
+                  );
+                },
+                child: const Text('Ver Resultados'),
+              ),
+            if (widget.flowMode)
+              TextButton(
+                onPressed: () async {
+                  await future;
+                  if (!context.mounted) return;
+                  context.pop();
+                  context.pop({
+                    'completed': true,
+                    'result': {
+                      'title': 'Resultados - Atención',
+                      'score': score,
+                      'details': details,
+                    },
+                  });
+                },
+                child: Text(
+                  widget.flowIndex != null &&
+                          widget.flowTotal != null &&
+                          widget.flowIndex! < (widget.flowTotal! - 1)
+                      ? 'Siguiente'
+                      : 'Finalizar',
+                ),
+              ),
             TextButton(
               onPressed: () {
                 context.pop();
                 setState(() {
                   _times.clear();
+                  _started = false;
+                  _tooEarly = 0;
                 });
-                _startRound();
               },
               child: const Text('Reiniciar'),
             ),
@@ -144,9 +207,51 @@ class _ReactionGameState extends State<ReactionGame> {
 
   @override
   Widget build(BuildContext context) {
+    if (!_started) {
+      return Scaffold(
+        backgroundColor: const Color(0xFFF8FAFC),
+        appBar: AppBar(
+          backgroundColor: Colors.white,
+          surfaceTintColor: Colors.white,
+          elevation: 0,
+          title: Text(
+            widget.flowMode &&
+                    widget.flowIndex != null &&
+                    widget.flowTotal != null
+                ? 'Atención (${widget.flowIndex! + 1}/${widget.flowTotal})'
+                : 'Atención',
+            style: const TextStyle(
+              fontWeight: FontWeight.w800,
+              color: Color(0xFF1E293B),
+            ),
+          ),
+          centerTitle: false,
+        ),
+        body: GameIntro(
+          title: 'Atención Sostenida',
+          subtitle: 'Mide tu tiempo de reacción y control de impulsos.',
+          icon: Icons.timer_outlined,
+          steps: const [
+            'Mantén la vista en la pantalla y espera.',
+            'Cuando el fondo cambie a VERDE, toca lo más rápido que puedas.',
+            'Si tocas antes de tiempo, el intento cuenta como error.',
+            'Completa 5 intentos para finalizar la prueba.',
+          ],
+          actionLabel: 'Comenzar',
+          onStart: _startRound,
+        ),
+      );
+    }
+
     return Scaffold(
       appBar: AppBar(
-        title: Text('Atención (${_times.length}/$totalAttempts)'),
+        title: Text(
+          widget.flowMode &&
+                  widget.flowIndex != null &&
+                  widget.flowTotal != null
+              ? 'Atención (${widget.flowIndex! + 1}/${widget.flowTotal})'
+              : 'Atención (${_times.length}/$totalAttempts)',
+        ),
         foregroundColor: Colors.white,
         backgroundColor: Colors.transparent,
       ),

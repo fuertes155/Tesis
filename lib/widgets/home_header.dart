@@ -7,46 +7,53 @@ class HomeHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final primaryColor = const Color(0xFF1A237E);
+
     return Row(
       crossAxisAlignment: CrossAxisAlignment.center,
+      mainAxisSize: MainAxisSize.min,
       children: [
-        SvgPicture.asset(
-          'assets/svg/hospital_logo.svg',
-          width: 28,
-          height: 28,
-          colorFilter: ColorFilter.mode(
-            theme.colorScheme.primary,
-            BlendMode.srcIn,
+        Container(
+          padding: const EdgeInsets.all(6),
+          decoration: BoxDecoration(
+            color: primaryColor.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: SvgPicture.asset(
+            'assets/svg/hospital_logo.svg',
+            width: 20,
+            height: 20,
+            colorFilter: ColorFilter.mode(
+              primaryColor,
+              BlendMode.srcIn,
+            ),
           ),
         ),
-        const SizedBox(width: 10),
+        const SizedBox(width: 12),
         Flexible(
-          child: FittedBox(
-            fit: BoxFit.scaleDown,
-            alignment: Alignment.centerLeft,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  'Hospital Central',
-                  style: theme.textTheme.labelMedium?.copyWith(
-                    color: theme.colorScheme.onSurfaceVariant,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 0.2,
-                  ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'NEUROAPP SYSTEMS',
+                style: theme.textTheme.labelSmall?.copyWith(
+                  color: primaryColor.withValues(alpha: 0.6),
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: 1.0,
+                  fontSize: 9,
                 ),
-                const SizedBox(height: 2),
-                Text(
-                  'Panel Principal',
-                  style: theme.textTheme.titleMedium?.copyWith(
-                    color: theme.colorScheme.onSurface,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 0.0,
-                  ),
+              ),
+              Text(
+                'Panel de Control',
+                style: theme.textTheme.titleSmall?.copyWith(
+                  color: const Color(0xFF1E293B),
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: -0.5,
+                  fontSize: 14,
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ],

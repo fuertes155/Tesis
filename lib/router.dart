@@ -13,13 +13,56 @@ import 'screens/results_screen.dart';
 import 'screens/history_screen.dart';
 import 'screens/report_preview_screen.dart';
 import 'screens/reset_password_screen.dart';
+import 'screens/doctor_panel_screen.dart';
 import 'games/visual_memory_game.dart';
 import 'games/reaction_game.dart';
 import 'games/fluency_game.dart';
 import 'games/stroop_game.dart';
+import 'games/common/game_flow.dart';
+import 'services/api_service.dart';
+import 'screens/patient_welcome_screen.dart';
+import 'screens/users_admin_screen.dart';
 
 final router = GoRouter(
   initialLocation: '/',
+  redirect: (context, state) {
+    final role = ApiService().currentRole;
+    final loc = state.uri.path;
+    if (role == null && loc != '/' && loc != '/reset_password') {
+      return '/';
+    }
+    if (role == 'user') {
+      // Rutas restringidas para Paciente
+      const blocked = {
+        '/home',
+        '/patients',
+        '/create_patient',
+        '/patient_detail',
+        '/new_session',
+        '/history',
+        '/report_preview',
+      };
+      if (blocked.contains(loc)) {
+        return '/patient_welcome';
+      }
+    } else if (role == 'doctor') {
+      // Rutas restringidas para Doctor: gestión de pacientes/usuarios
+      const blocked = {
+        '/create_patient',
+        '/users_admin',
+      };
+      if (blocked.contains(loc)) {
+        return '/home';
+      }
+    } else if (role == 'gestor') {
+      // Rutas restringidas para Gestor
+      const blocked = <String>{};
+      if (blocked.contains(loc)) {
+        return '/users_admin';
+      }
+    }
+    return null;
+  },
   routes: [
     GoRoute(path: '/', builder: (context, state) => const LoginScreen()),
     GoRoute(
@@ -30,6 +73,23 @@ final router = GoRouter(
         transitionsBuilder: _fadeSlide,
         transitionDuration: const Duration(milliseconds: 260),
       ),
+    ),
+    GoRoute(
+      path: '/users_admin',
+      builder: (context, state) => const UsersAdminScreen(),
+    ),
+    GoRoute(
+      path: '/doctor_panel',
+      pageBuilder: (context, state) => CustomTransitionPage(
+        key: state.pageKey,
+        child: const DoctorPanelScreen(),
+        transitionsBuilder: _fadeSlide,
+        transitionDuration: const Duration(milliseconds: 260),
+      ),
+    ),
+    GoRoute(
+      path: '/patient_welcome',
+      builder: (context, state) => const PatientWelcomeScreen(),
     ),
     GoRoute(
       path: '/patients',
@@ -53,7 +113,10 @@ final router = GoRouter(
           if (idVal is int) patientId = idVal;
           if (idVal is String) patientId = int.tryParse(idVal);
         }
-        return PatientDetailScreen(patientName: patientName, patientId: patientId);
+        return PatientDetailScreen(
+          patientName: patientName,
+          patientId: patientId,
+        );
       },
     ),
     GoRoute(
@@ -62,7 +125,18 @@ final router = GoRouter(
     ),
     GoRoute(
       path: '/new_session',
-      builder: (context, state) => const NewSessionScreen(),
+      builder: (context, state) {
+        final extra = state.extra;
+        int? patientId;
+        if (extra is int) {
+          patientId = extra;
+        } else if (extra is Map<String, dynamic>) {
+          final v = extra['patientId'];
+          if (v is int) patientId = v;
+          if (v is String) patientId = int.tryParse(v);
+        }
+        return NewSessionScreen(patientId: patientId);
+      },
     ),
     GoRoute(
       path: '/test_selector',
@@ -122,19 +196,76 @@ final router = GoRouter(
     ),
     GoRoute(
       path: '/game_memory',
-      builder: (context, state) => const VisualMemoryGame(),
+      builder: (context, state) {
+        final extra = state.extra;
+        final flow = extra is Map ? extra['flow'] == true : false;
+        final index = extra is Map ? extra['index'] as int? : null;
+        final total = extra is Map ? extra['total'] as int? : null;
+        final age = extra is Map ? extra['age'] as int? : null;
+        return VisualMemoryGame(
+          flowMode: flow,
+          flowIndex: index,
+          flowTotal: total,
+          patientAge: age,
+        );
+      },
     ),
     GoRoute(
       path: '/game_reaction',
-      builder: (context, state) => const ReactionGame(),
+      builder: (context, state) {
+        final extra = state.extra;
+        final flow = extra is Map ? extra['flow'] == true : false;
+        final index = extra is Map ? extra['index'] as int? : null;
+        final total = extra is Map ? extra['total'] as int? : null;
+        final age = extra is Map ? extra['age'] as int? : null;
+        return ReactionGame(
+          flowMode: flow,
+          flowIndex: index,
+          flowTotal: total,
+          patientAge: age,
+        );
+      },
     ),
     GoRoute(
       path: '/game_fluency',
-      builder: (context, state) => const FluencyGame(),
+      builder: (context, state) {
+        final extra = state.extra;
+        final flow = extra is Map ? extra['flow'] == true : false;
+        final index = extra is Map ? extra['index'] as int? : null;
+        final total = extra is Map ? extra['total'] as int? : null;
+        final age = extra is Map ? extra['age'] as int? : null;
+        return FluencyGame(
+          flowMode: flow,
+          flowIndex: index,
+          flowTotal: total,
+          patientAge: age,
+        );
+      },
     ),
     GoRoute(
       path: '/game_stroop',
-      builder: (context, state) => const StroopGame(),
+      builder: (context, state) {
+        final extra = state.extra;
+        final flow = extra is Map ? extra['flow'] == true : false;
+        final index = extra is Map ? extra['index'] as int? : null;
+        final total = extra is Map ? extra['total'] as int? : null;
+        final age = extra is Map ? extra['age'] as int? : null;
+        return StroopGame(
+          flowMode: flow,
+          flowIndex: index,
+          flowTotal: total,
+          patientAge: age,
+        );
+      },
+    ),
+    GoRoute(
+      path: '/game_flow',
+      builder: (context, state) {
+        final extra = state.extra;
+        final routes = extra is Map ? extra['routes'] : null;
+        final list = routes is List ? routes.cast<String>() : const <String>[];
+        return GameFlowScreen(gameRoutes: list);
+      },
     ),
   ],
 );

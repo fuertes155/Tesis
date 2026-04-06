@@ -1,14 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_animate/flutter_animate.dart';
-import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../services/api_service.dart';
 import '../widgets/weekly_chart.dart';
 import '../widgets/status_chart.dart';
 import '../widgets/home_header.dart';
 import '../widgets/activity_filters.dart';
-import '../widgets/home_appbar_actions.dart';
 import '../widgets/home_kpi_section.dart';
 import '../widgets/home_dashboard_grid.dart';
 import '../widgets/home_recent_activity_section.dart';
@@ -195,78 +193,67 @@ class HomeScreenState extends State<HomeScreen> {
     assert(_touchState() >= 0);
 
     return Scaffold(
-      backgroundColor: theme.colorScheme.surface,
+      backgroundColor: const Color(0xFFF8FAFC),
       body: CustomScrollView(
         slivers: [
-          SliverAppBar.large(
+          SliverAppBar(
             pinned: true,
-            stretch: true,
-            backgroundColor: theme.colorScheme.surface,
-            surfaceTintColor: theme.colorScheme.surface,
-            expandedHeight: 200,
+            expandedHeight: 120,
+            backgroundColor: Colors.white,
+            surfaceTintColor: Colors.white,
+            elevation: 0,
             flexibleSpace: FlexibleSpaceBar(
-              background: Container(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [
-                      theme.colorScheme.primary.withValues(alpha: 0.1),
-                      Colors.white,
-                    ],
-                  ),
-                ),
-                child: Stack(
-                  children: [
-                    Positioned(
-                      right: -40,
-                      top: -40,
-                      child: Icon(
-                        Icons.psychology_outlined,
-                        size: 220,
-                        color: theme.colorScheme.primary.withValues(
-                          alpha: 0.05,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              titlePadding: const EdgeInsets.only(left: 24, bottom: 12),
+              centerTitle: false,
+              titlePadding: const EdgeInsets.only(left: 24, bottom: 20),
               title: const HomeHeader(),
             ),
             actions: [
-              HomeAppBarActions(
-                onCreatePatient: () => context.push('/create_patient'),
-                onRefresh: _fetch,
-                onExportCsv: _exportCsv,
-                onHistory: () => context.push('/history'),
-                onLogout: () => context.go('/'),
+              if (_api.currentRole != 'user')
+                IconButton(
+                  icon: const Icon(
+                    Icons.refresh_rounded,
+                    color: Color(0xFF64748B),
+                  ),
+                  onPressed: _fetch,
+                  tooltip: 'Actualizar',
+                ),
+              IconButton(
+                icon: const Icon(
+                  Icons.logout_rounded,
+                  color: Color(0xFF64748B),
+                ),
+                onPressed: () => context.go('/'),
+                tooltip: 'Cerrar Sesión',
               ),
+              const SizedBox(width: 16),
             ],
           ),
-
           SliverPadding(
-            padding: const EdgeInsets.all(24),
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
             sliver: SliverToBoxAdapter(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
+              child: Align(
+                alignment: Alignment.topCenter,
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 1400),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
                   Text(
                     'Hola, ${_api.currentUsername ?? 'Doctor'}',
-                    style: theme.textTheme.headlineSmall?.copyWith(
-                      fontWeight: FontWeight.w700,
-                      color: theme.colorScheme.onSurface,
+                    style: theme.textTheme.headlineMedium?.copyWith(
+                      fontWeight: FontWeight.w900,
+                      color: const Color(0xFF1E293B),
+                      letterSpacing: -1,
                     ),
-                  ),
+                  ).animate().fadeIn().slideX(begin: -0.1),
                   const SizedBox(height: 8),
                   Text(
-                    '¿Qué desea hacer hoy?',
+                    'Bienvenido de nuevo al panel de gestión.',
                     style: theme.textTheme.bodyLarge?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant,
+                      color: const Color(0xFF64748B),
                     ),
-                  ),
-                  const SizedBox(height: 32),
+                  ).animate().fadeIn(delay: 100.ms).slideX(begin: -0.1),
+                  const SizedBox(height: 48),
                   HomeKpiSection(
                     loading: _loading,
                     patientsCount: _patientsCount,
@@ -276,76 +263,183 @@ class HomeScreenState extends State<HomeScreen> {
                     pendingWeekDeltaPct: _pendingWeekDeltaPct,
                     counts30: _counts30,
                   ),
-                  const SizedBox(height: 28),
-                  if (_loading)
-                    const WeeklyChartSkeleton()
-                        .animate()
-                        .fadeIn(duration: 220.ms)
-                        .moveY(begin: 6, end: 0, duration: 220.ms)
-                  else
-                    WeeklyChart(counts: _weeklyCounts),
-                  const SizedBox(height: 16),
-                  if (_loading)
-                    const StatusChartSkeleton()
-                        .animate()
-                        .fadeIn(duration: 220.ms)
-                        .moveY(begin: 6, end: 0, duration: 220.ms)
-                  else
-                    StatusChart(
-                      completed: _statusCounts(_daysFilter)['completed'] ?? 0,
-                      pending: _statusCounts(_daysFilter)['pending'] ?? 0,
-                    ),
-                  const SizedBox(height: 28),
-
-                  HomeDashboardGrid(),
-
                   const SizedBox(height: 48),
-                  Text(
-                    'Actividad Reciente',
-                    style: theme.textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  ActivityFilters(
-                    daysFilter: _daysFilter,
-                    statusFilter: _statusFilter,
-                    searchQuery: _searchQuery,
-                    sortMode: _sortMode,
-                    onDaysChanged: (v) {
-                      setState(() => _daysFilter = v);
-                      _api.setHomeFilters(
-                        days: _daysFilter,
-                        status: _statusFilter,
-                      );
-                      _persistFilters();
-                    },
-                    onStatusChanged: (v) {
-                      setState(() => _statusFilter = v);
-                      _api.setHomeFilters(
-                        days: _daysFilter,
-                        status: _statusFilter,
-                      );
-                      _persistFilters();
-                    },
-                    onSearchChanged: (v) {
-                      setState(() => _searchQuery = v);
-                      _api.setHomeSearchAndSort(
-                        query: _searchQuery,
-                        sortMode: _sortMode,
-                      );
-                      _persistFilters();
-                    },
-                    onSortSelected: (v) {
-                      setState(() => _sortMode = v);
-                      _api.setHomeSearchAndSort(
-                        query: _searchQuery,
-                        sortMode: _sortMode,
-                      );
-                      _persistFilters();
-                    },
-                  ),
-                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      const Icon(
+                        Icons.grid_view_rounded,
+                        size: 20,
+                        color: Color(0xFF1A237E),
+                      ),
+                      const SizedBox(width: 12),
+                      Text(
+                        'ACCESO RÁPIDO',
+                        style: theme.textTheme.labelSmall?.copyWith(
+                          color: const Color(0xFF64748B),
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: 1.5,
+                        ),
+                      ),
+                    ],
+                  ).animate().fadeIn(delay: 200.ms),
+                  const SizedBox(height: 24),
+                  const HomeDashboardGrid(),
+                  const SizedBox(height: 64),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Row(
+                        children: [
+                          const Icon(
+                            Icons.analytics_outlined,
+                            size: 20,
+                            color: Color(0xFF1A237E),
+                          ),
+                          const SizedBox(width: 12),
+                          Text(
+                            'ANÁLISIS DE ACTIVIDAD',
+                            style: theme.textTheme.labelSmall?.copyWith(
+                              color: const Color(0xFF64748B),
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: 1.5,
+                            ),
+                          ),
+                        ],
+                      ),
+                      if (!_loading)
+                        ActivityFilters(
+                          daysFilter: _daysFilter,
+                          statusFilter: _statusFilter,
+                          searchQuery: _searchQuery,
+                          sortMode: _sortMode,
+                          onDaysChanged: (v) {
+                            setState(() => _daysFilter = v);
+                            _api.setHomeFilters(
+                              days: _daysFilter,
+                              status: _statusFilter,
+                            );
+                            _persistFilters();
+                          },
+                          onStatusChanged: (v) {
+                            setState(() => _statusFilter = v);
+                            _api.setHomeFilters(
+                              days: _daysFilter,
+                              status: _statusFilter,
+                            );
+                            _persistFilters();
+                          },
+                          onSearchChanged: (v) {
+                            setState(() => _searchQuery = v);
+                            _api.setHomeSearchAndSort(
+                              query: _searchQuery,
+                              sortMode: _sortMode,
+                            );
+                            _persistFilters();
+                          },
+                          onSortSelected: (v) {
+                            setState(() => _sortMode = v);
+                            _api.setHomeSearchAndSort(
+                              query: _searchQuery,
+                              sortMode: _sortMode,
+                            );
+                            _persistFilters();
+                          },
+                        ),
+                    ],
+                  ).animate().fadeIn(delay: 300.ms),
+                  const SizedBox(height: 32),
+                  if (_loading)
+                    const WeeklyChartSkeleton().animate().fadeIn(
+                      duration: 220.ms,
+                    )
+                  else
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          flex: 7,
+                          child: Container(
+                            padding: const EdgeInsets.all(24),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(24),
+                              border: Border.all(
+                                color: const Color(0xFFE2E8F0),
+                              ),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Sesiones por Día',
+                                  style: theme.textTheme.titleMedium?.copyWith(
+                                    fontWeight: FontWeight.w800,
+                                    color: const Color(0xFF1E293B),
+                                  ),
+                                ),
+                                const SizedBox(height: 32),
+                                WeeklyChart(counts: _weeklyCounts),
+                              ],
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 24),
+                        Expanded(
+                          flex: 4,
+                          child: Container(
+                            padding: const EdgeInsets.all(24),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(24),
+                              border: Border.all(
+                                color: const Color(0xFFE2E8F0),
+                              ),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Distribución de Estado',
+                                  style: theme.textTheme.titleMedium?.copyWith(
+                                    fontWeight: FontWeight.w800,
+                                    color: const Color(0xFF1E293B),
+                                  ),
+                                ),
+                                const SizedBox(height: 32),
+                                StatusChart(
+                                  completed:
+                                      _statusCounts(_daysFilter)['completed'] ??
+                                      0,
+                                  pending:
+                                      _statusCounts(_daysFilter)['pending'] ??
+                                      0,
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ).animate().fadeIn(delay: 400.ms),
+                  const SizedBox(height: 64),
+                  Row(
+                    children: [
+                      const Icon(
+                        Icons.history_rounded,
+                        size: 20,
+                        color: Color(0xFF1A237E),
+                      ),
+                      const SizedBox(width: 12),
+                      Text(
+                        'REGISTRO DE ACTIVIDAD',
+                        style: theme.textTheme.labelSmall?.copyWith(
+                          color: const Color(0xFF64748B),
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: 1.5,
+                        ),
+                      ),
+                    ],
+                  ).animate().fadeIn(delay: 500.ms),
+                  const SizedBox(height: 24),
                   HomeRecentActivitySection(
                     loading: _loading,
                     sessions: _filteredRecent(),
@@ -360,15 +454,15 @@ class HomeScreenState extends State<HomeScreen> {
                           '/patient_detail',
                           extra: {'name': name, 'id': pid},
                         );
-                        if (result == true) {
-                          await _fetch();
-                        }
+                        if (result == true) await _fetch();
                       } else {
                         context.push('/history');
                       }
                     },
+                  ).animate().fadeIn(delay: 600.ms),
+                    ],
                   ),
-                ],
+                ),
               ),
             ),
           ),
@@ -462,69 +556,6 @@ extension on HomeScreenState {
 
   Map<String, int> _statusCounts(int days) {
     return _statusCountsHelper(_allSessions, days);
-  }
-
-  List<Map<String, dynamic>> _filteredAllForExport() {
-    final now = DateTime.now();
-    final since = DateTime(
-      now.year,
-      now.month,
-      now.day,
-    ).subtract(Duration(days: _daysFilter - 1));
-    var list = _allSessions.where((s) {
-      final dateStr = s['date']?.toString();
-      DateTime? d;
-      if (dateStr != null) d = DateTime.tryParse(dateStr);
-      if (d == null) return false;
-      final dd = DateTime(d.year, d.month, d.day);
-      if (dd.isBefore(since)) return false;
-      final st = (s['status'] ?? '').toString().toLowerCase();
-      if (_statusFilter == 'completed') {
-        return st == 'completed' || st == 'completada';
-      }
-      if (_statusFilter == 'pending') {
-        return !(st == 'completed' || st == 'completada');
-      }
-      return true;
-    }).toList();
-    if (_searchQuery.trim().isNotEmpty) {
-      final q = _searchQuery.trim().toLowerCase();
-      list = list.where((s) {
-        final pid = s['patient_id'];
-        final name = pid is int ? (_patientNames[pid] ?? 'Paciente #$pid') : '';
-        final notes = (s['notes'] ?? '').toString();
-        return name.toLowerCase().contains(q) ||
-            notes.toLowerCase().contains(q);
-      }).toList();
-    }
-    list.sort(
-      (a, b) =>
-          (b['date']?.toString() ?? '').compareTo(a['date']?.toString() ?? ''),
-    );
-    return list;
-  }
-
-  Future<void> _exportCsv() async {
-    final list = _filteredAllForExport();
-    final buffer = StringBuffer();
-    buffer.writeln('patient,date,status,notes');
-    for (final s in list) {
-      final pid = s['patient_id'];
-      final name = pid is int ? (_patientNames[pid] ?? 'Paciente #$pid') : '';
-      final date = s['date']?.toString() ?? '';
-      final status = (s['status'] ?? '').toString();
-      final notes = (s['notes'] ?? '').toString().replaceAll(',', ';');
-      buffer.writeln('$name,$date,$status,$notes');
-    }
-    final csv = buffer.toString();
-    await Clipboard.setData(ClipboardData(text: csv));
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('CSV copiado al portapapeles'),
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
   }
 }
 

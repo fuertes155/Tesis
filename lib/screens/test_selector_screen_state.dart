@@ -11,31 +11,45 @@ class TestSelectorScreenState extends State<TestSelectorScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final primaryColor = const Color(0xFF1A237E);
 
     return Scaffold(
-      backgroundColor: theme.colorScheme.surface,
+      backgroundColor: const Color(0xFFF8FAFC),
       appBar: AppBar(
-        title: const Text('Seleccionar Pruebas'),
-        centerTitle: true,
+        backgroundColor: Colors.white,
+        surfaceTintColor: Colors.white,
+        elevation: 0,
+        title: const Text(
+          'Configurar Sesión',
+          style: TextStyle(
+            fontWeight: FontWeight.w800,
+            color: Color(0xFF1E293B),
+          ),
+        ),
+        centerTitle: false,
       ),
       body: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Padding(
             padding: const EdgeInsets.all(24.0),
             child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                const SizedBox(height: 16),
                 Text(
-                  'Configurar Sesión',
-                  style: theme.textTheme.headlineSmall?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: theme.colorScheme.primary,
+                  'SELECCIÓN DE PRUEBAS',
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    color: const Color(0xFF64748B),
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 1.5,
                   ),
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Seleccione las pruebas específicas a realizar',
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    color: Colors.grey[600],
+                  'Personalice el protocolo de evaluación seleccionando las pruebas específicas para este paciente.',
+                  style: theme.textTheme.bodyLarge?.copyWith(
+                    color: const Color(0xFF64748B),
                   ),
                 ),
               ],
@@ -45,33 +59,33 @@ class TestSelectorScreenState extends State<TestSelectorScreen> {
             child: ListView.separated(
               padding: const EdgeInsets.symmetric(horizontal: 24),
               itemCount: _selectedTests.length,
-              separatorBuilder: (context, index) => const SizedBox(height: 16),
+              separatorBuilder: (context, index) => const SizedBox(height: 12),
               itemBuilder: (context, index) {
                 final key = _selectedTests.keys.elementAt(index);
                 final isSelected = _selectedTests[key]!;
 
                 IconData icon;
                 if (key.contains('Memoria')) {
-                  icon = Icons.memory_rounded;
+                  icon = Icons.visibility_outlined;
                 } else if (key.contains('Atención')) {
-                  icon = Icons.timer_rounded;
+                  icon = Icons.timer_outlined;
                 } else if (key.contains('Fluidez')) {
-                  icon = Icons.record_voice_over_rounded;
+                  icon = Icons.mic_none_outlined;
                 } else {
-                  icon = Icons.psychology_alt_rounded;
+                  icon = Icons.psychology_outlined;
                 }
 
-                return Card(
-                  elevation: 0,
-                  color: isSelected
-                      ? theme.colorScheme.primary.withValues(alpha: 0.05)
-                      : Colors.white,
-                  shape: RoundedRectangleBorder(
+                return AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
+                  decoration: BoxDecoration(
+                    color: isSelected
+                        ? primaryColor.withValues(alpha: 0.03)
+                        : Colors.white,
                     borderRadius: BorderRadius.circular(16),
-                    side: BorderSide(
+                    border: Border.all(
                       color: isSelected
-                          ? theme.colorScheme.primary
-                          : Colors.grey.withValues(alpha: 0.2),
+                          ? primaryColor
+                          : const Color(0xFFE2E8F0),
                       width: isSelected ? 2 : 1,
                     ),
                   ),
@@ -81,30 +95,42 @@ class TestSelectorScreenState extends State<TestSelectorScreen> {
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
                         color: isSelected
-                            ? theme.colorScheme.primary
-                            : Colors.grey[200],
+                            ? primaryColor
+                            : const Color(0xFFF1F5F9),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Icon(
                         icon,
-                        color: isSelected ? Colors.white : Colors.grey[600],
+                        color: isSelected
+                            ? Colors.white
+                            : const Color(0xFF64748B),
                         size: 24,
                       ),
                     ),
                     title: Text(
                       key,
                       style: TextStyle(
-                        fontWeight: FontWeight.bold,
+                        fontWeight: FontWeight.w800,
                         fontSize: 16,
                         color: isSelected
-                            ? theme.colorScheme.primary
-                            : Colors.black87,
+                            ? primaryColor
+                            : const Color(0xFF1E293B),
+                        letterSpacing: -0.5,
+                      ),
+                    ),
+                    subtitle: Text(
+                      'Duración estimada: 5-8 min',
+                      style: TextStyle(
+                        color: isSelected
+                            ? primaryColor.withValues(alpha: 0.6)
+                            : const Color(0xFF94A3B8),
+                        fontSize: 12,
                       ),
                     ),
                     value: isSelected,
-                    activeColor: theme.colorScheme.primary,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
+                    activeColor: primaryColor,
+                    checkboxShape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(4),
                     ),
                     onChanged: (bool? value) {
                       setState(() {
@@ -120,26 +146,48 @@ class TestSelectorScreenState extends State<TestSelectorScreen> {
             padding: const EdgeInsets.all(24.0),
             child: SizedBox(
               width: double.infinity,
+              height: 54,
               child: ElevatedButton(
                 onPressed: _selectedTests.containsValue(true)
                     ? () {
-                        if (_selectedTests['Prueba de Memoria Visual'] ==
-                            true) {
-                          context.push('/game_memory');
-                        } else if (_selectedTests['Prueba de Atención Sostenida'] ==
-                            true) {
-                          context.push('/game_reaction');
-                        } else if (_selectedTests['Prueba de Fluidez Verbal'] ==
-                            true) {
-                          context.push('/game_fluency');
-                        } else if (_selectedTests['Prueba de Funciones Ejecutivas (Stroop)'] ==
-                            true) {
-                          context.push('/game_stroop');
-                        } else {
-                          context.push('/test_placeholder');
+                        final routes = <String>[];
+                        if (_selectedTests['Prueba de Memoria Visual'] == true) {
+                          routes.add('/game_memory');
                         }
+                        if (_selectedTests['Prueba de Atención Sostenida'] ==
+                            true) {
+                          routes.add('/game_reaction');
+                        }
+                        if (_selectedTests['Prueba de Fluidez Verbal'] == true) {
+                          routes.add('/game_fluency');
+                        }
+                        if (_selectedTests[
+                                'Prueba de Funciones Ejecutivas (Stroop)'] ==
+                            true) {
+                          routes.add('/game_stroop');
+                        }
+                        if (routes.isEmpty) {
+                          context.push('/test_placeholder');
+                          return;
+                        }
+                        context.push(
+                          '/game_flow',
+                          extra: {'routes': routes},
+                        );
                       }
                     : null,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: primaryColor,
+                  foregroundColor: Colors.white,
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  textStyle: const TextStyle(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 16,
+                  ),
+                ),
                 child: const Text('COMENZAR EVALUACIÓN'),
               ),
             ),

@@ -10,6 +10,7 @@ class ResultsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final primaryColor = const Color(0xFF1A237E);
     if (dataFuture != null) {
       return FutureBuilder<Map<String, dynamic>>(
         future: dataFuture,
@@ -17,10 +18,19 @@ class ResultsScreen extends StatelessWidget {
           if (snapshot.connectionState != ConnectionState.done) {
             final theme = Theme.of(context);
             return Scaffold(
-              backgroundColor: theme.colorScheme.surface,
+              backgroundColor: const Color(0xFFF8FAFC),
               appBar: AppBar(
-                title: const Text('Resultados'),
-                centerTitle: true,
+                backgroundColor: Colors.white,
+                surfaceTintColor: Colors.white,
+                elevation: 0,
+                title: const Text(
+                  'Resultados',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w800,
+                    color: Color(0xFF1E293B),
+                  ),
+                ),
+                centerTitle: false,
               ),
               body: SingleChildScrollView(
                 padding: const EdgeInsets.all(24.0),
@@ -31,23 +41,26 @@ class ResultsScreen extends StatelessWidget {
                         .animate()
                         .fadeIn(duration: 260.ms, curve: Curves.easeOut)
                         .moveY(begin: 8, end: 0, duration: 260.ms),
-                    const SizedBox(height: 32),
+                    const SizedBox(height: 48),
                     Row(
                       children: [
                         Icon(
                           Icons.analytics_outlined,
-                          color: theme.colorScheme.primary,
+                          color: primaryColor,
+                          size: 20,
                         ),
                         const SizedBox(width: 12),
                         Text(
-                          'Detalle por Dominios',
-                          style: theme.textTheme.titleLarge?.copyWith(
-                            fontWeight: FontWeight.bold,
+                          'DETALLE POR DOMINIOS',
+                          style: theme.textTheme.labelSmall?.copyWith(
+                            color: const Color(0xFF64748B),
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: 1.5,
                           ),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 24),
                     ..._buildSkeletonCards(theme, 4).asMap().entries.map(
                       (e) => e.value
                           .animate()
@@ -71,15 +84,19 @@ class ResultsScreen extends StatelessWidget {
           if (snapshot.hasError) {
             final theme = Theme.of(context);
             return Scaffold(
-              backgroundColor: theme.colorScheme.surface,
-              appBar: AppBar(title: const Text('Resultados')),
+              backgroundColor: const Color(0xFFF8FAFC),
+              appBar: AppBar(
+                backgroundColor: Colors.white,
+                title: const Text('Resultados'),
+                elevation: 0,
+              ),
               body: Center(
                 child: Padding(
                   padding: const EdgeInsets.all(24.0),
                   child: Text(
                     'Error al cargar resultados',
                     style: theme.textTheme.titleMedium?.copyWith(
-                      color: theme.colorScheme.error,
+                      color: const Color(0xFFEF4444),
                     ),
                   ),
                 ),
@@ -94,26 +111,29 @@ class ResultsScreen extends StatelessWidget {
     final title = data?['title'] as String? ?? 'Resultados';
     final globalScore = (data?['score'] as num?)?.toDouble();
     final highGlobal = (globalScore ?? 75) >= 90;
-    final pulseGlobal = (globalScore ?? 75) >= 95;
-    final isLoading = (data?['loading'] as bool?) ?? false;
     final details = data?['details'] as Map<String, dynamic>? ?? {};
 
     return Scaffold(
-      backgroundColor: theme.colorScheme.surface,
+      backgroundColor: const Color(0xFFF8FAFC),
       appBar: AppBar(
-        title: Text(title),
-        centerTitle: true,
+        backgroundColor: Colors.white,
+        surfaceTintColor: Colors.white,
+        elevation: 0,
+        title: Text(
+          title,
+          style: const TextStyle(
+            fontWeight: FontWeight.w800,
+            color: Color(0xFF1E293B),
+          ),
+        ),
+        centerTitle: false,
         actions: [
           IconButton(
-            icon: const Icon(Icons.picture_as_pdf_outlined),
-            onPressed: () => context.push('/report_preview'),
-            tooltip: 'Ver Informe',
+            icon: const Icon(Icons.share_outlined, color: Color(0xFF64748B)),
+            onPressed: () {},
+            tooltip: 'Compartir Informe',
           ),
-          IconButton(
-            icon: const Icon(Icons.home_outlined),
-            onPressed: () => context.go('/home'),
-            tooltip: 'Ir a Inicio',
-          ),
+          const SizedBox(width: 16),
         ],
       ),
       body: SingleChildScrollView(
@@ -121,265 +141,143 @@ class ResultsScreen extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            if (isLoading)
-              _buildGlobalSkeleton(theme)
-                  .animate()
-                  .fadeIn(duration: 260.ms, curve: Curves.easeOut)
-                  .moveY(begin: 8, end: 0, duration: 260.ms),
-            if (!isLoading)
-              Container(
-                    padding: const EdgeInsets.all(24),
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [
-                          theme.colorScheme.surface,
-                          theme.colorScheme.surfaceContainerHighest,
-                        ],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
-                      borderRadius: BorderRadius.circular(24),
-                      border: Border.all(
-                        color: theme.colorScheme.primary.withValues(alpha: 0.1),
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: theme.colorScheme.primary.withValues(
-                            alpha: highGlobal ? 0.12 : 0.06,
+            Container(
+              padding: const EdgeInsets.all(32),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(24),
+                border: Border.all(color: const Color(0xFFE2E8F0)),
+              ),
+              child: Column(
+                children: [
+                  Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      SizedBox(
+                        width: 120,
+                        height: 120,
+                        child: CircularProgressIndicator(
+                          value: (globalScore ?? 75) / 100,
+                          strokeWidth: 12,
+                          backgroundColor: const Color(0xFFF1F5F9),
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            highGlobal ? const Color(0xFF10B981) : primaryColor,
                           ),
-                          blurRadius: highGlobal ? 36 : 28,
-                          offset: const Offset(0, 10),
+                          strokeCap: StrokeCap.round,
                         ),
-                        if (highGlobal)
-                          BoxShadow(
-                            color: theme.colorScheme.primary.withValues(
-                              alpha: 0.18,
+                      ),
+                      Column(
+                        children: [
+                          Text(
+                            '${(globalScore ?? 75).toInt()}',
+                            style: theme.textTheme.displayMedium?.copyWith(
+                              fontWeight: FontWeight.w900,
+                              color: const Color(0xFF1E293B),
+                              letterSpacing: -2,
                             ),
-                            blurRadius: 48,
-                            spreadRadius: 4,
-                            offset: const Offset(0, 6),
                           ),
-                      ],
+                          const Text(
+                            'Puntos',
+                            style: TextStyle(
+                              color: Color(0xFF64748B),
+                              fontWeight: FontWeight.w600,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 32),
+                  Text(
+                    'PUNTUACIÓN GLOBAL',
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      color: const Color(0xFF94A3B8),
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 1.5,
                     ),
-                    child: Column(
-                      children: [
-                        Text(
-                          'Puntuación Global',
-                          style: theme.textTheme.titleLarge?.copyWith(
-                            fontWeight: FontWeight.bold,
-                            color: theme.colorScheme.onSurface,
-                          ),
-                        ),
-                        const SizedBox(height: 24),
-                        TweenAnimationBuilder<double>(
-                          tween: Tween(
-                            begin: 0,
-                            end: (globalScore ?? 75) / 100,
-                          ),
-                          duration: const Duration(milliseconds: 900),
-                          curve: Curves.easeOutCubic,
-                          builder: (context, value, _) => Stack(
-                            alignment: Alignment.center,
-                            children: [
-                              Container(
-                                width: 200,
-                                height: 200,
-                                decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: theme.colorScheme.primary
-                                          .withValues(
-                                            alpha:
-                                                0.15 +
-                                                (highGlobal
-                                                    ? (value * 0.15)
-                                                    : 0),
-                                          ),
-                                      blurRadius:
-                                          40 + (highGlobal ? (20 * value) : 0),
-                                      spreadRadius:
-                                          8 + (highGlobal ? (4 * value) : 0),
-                                    ),
-                                  ],
-                                  gradient: SweepGradient(
-                                    colors: [
-                                      theme.colorScheme.primary.withValues(
-                                        alpha: 0.2,
-                                      ),
-                                      theme.colorScheme.primary,
-                                    ],
-                                    stops: const [0.0, 1.0],
-                                  ),
-                                ),
-                              ),
-                              SizedBox(
-                                width: 180,
-                                height: 180,
-                                child: CircularProgressIndicator(
-                                  value: value.clamp(0, 1),
-                                  strokeWidth: 16,
-                                  backgroundColor:
-                                      theme.colorScheme.surfaceContainerHighest,
-                                  valueColor: AlwaysStoppedAnimation<Color>(
-                                    theme.colorScheme.primary,
-                                  ),
-                                  strokeCap: StrokeCap.round,
-                                ),
-                              ),
-                              Column(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Text(
-                                        (globalScore ?? 75).toInt().toString(),
-                                        style: theme.textTheme.displayLarge
-                                            ?.copyWith(
-                                              fontWeight: FontWeight.bold,
-                                              color: theme.colorScheme.primary,
-                                            ),
-                                      )
-                                      .animate(target: pulseGlobal ? 1 : 0)
-                                      .scale(
-                                        duration: 200.ms,
-                                        curve: Curves.easeOut,
-                                        begin: const Offset(1, 1),
-                                        end: const Offset(1.06, 1.06),
-                                      ),
-                                  Text(
-                                    'Normal',
-                                    style: theme.textTheme.titleMedium
-                                        ?.copyWith(
-                                          color: theme.colorScheme.secondary,
-                                          fontWeight: FontWeight.w500,
-                                        ),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(height: 24),
-                        Text(
-                          'El paciente presenta un desempeño general dentro del rango esperado para su edad y nivel educativo.',
-                          textAlign: TextAlign.center,
-                          style: theme.textTheme.bodyMedium?.copyWith(
-                            color: theme.colorScheme.onSurfaceVariant,
-                          ),
-                        ),
-                      ],
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    highGlobal
+                        ? 'Rendimiento Superior'
+                        : 'Rendimiento Estándar',
+                    style: TextStyle(
+                      color: highGlobal
+                          ? const Color(0xFF10B981)
+                          : primaryColor,
+                      fontWeight: FontWeight.w800,
+                      fontSize: 18,
                     ),
-                  )
-                  .animate()
-                  .fadeIn(duration: 300.ms, curve: Curves.easeOut)
-                  .moveY(begin: 10, end: 0, duration: 300.ms),
-            const SizedBox(height: 32),
-
-            // Domains Header
+                  ),
+                ],
+              ),
+            ).animate().fadeIn().scale(delay: 100.ms),
+            const SizedBox(height: 48),
             Row(
               children: [
-                Icon(
-                  Icons.analytics_outlined,
-                  color: theme.colorScheme.primary,
-                ),
+                Icon(Icons.analytics_outlined, color: primaryColor, size: 20),
                 const SizedBox(width: 12),
                 Text(
-                  'Detalle por Dominios',
-                  style: theme.textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.bold,
+                  'DETALLE POR DOMINIOS',
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    color: const Color(0xFF64748B),
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 1.5,
                   ),
                 ),
               ],
-            ),
-            const SizedBox(height: 16),
-            if (isLoading)
-              ..._buildSkeletonCards(theme, 4).asMap().entries.map(
-                (e) => e.value
-                    .animate()
-                    .fadeIn(
-                      duration: 220.ms,
-                      delay: (60 * e.key).ms,
-                      curve: Curves.easeOut,
-                    )
-                    .moveY(
-                      begin: 6,
-                      end: 0,
-                      duration: 220.ms,
-                      delay: (60 * e.key).ms,
-                    ),
-              )
-            else
-              ..._buildDomainCards(details, theme).asMap().entries.map(
-                (e) => e.value
-                    .animate()
-                    .fadeIn(
-                      duration: 240.ms,
-                      delay: (80 * e.key).ms,
-                      curve: Curves.easeOut,
-                    )
-                    .moveY(
-                      begin: 8,
-                      end: 0,
-                      duration: 240.ms,
-                      delay: (80 * e.key).ms,
-                    ),
+            ).animate().fadeIn(delay: 300.ms),
+            const SizedBox(height: 24),
+            ...details.entries.toList().asMap().entries.map((entry) {
+              final idx = entry.key;
+              final detail = entry.value;
+              final score = (detail.value as num?)?.toInt() ?? 50;
+              final status = score >= 80
+                  ? ResultStatus.normal
+                  : score >= 60
+                  ? ResultStatus.warning
+                  : ResultStatus.critical;
+
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 16),
+                child:
+                    DomainResultCard(
+                          domain: detail.key,
+                          score: score,
+                          status: status,
+                          icon: _domainIcon(detail.key),
+                        )
+                        .animate()
+                        .fadeIn(delay: (400 + idx * 50).ms)
+                        .slideX(begin: 0.1),
+              );
+            }),
+            const SizedBox(height: 40),
+            SizedBox(
+              width: double.infinity,
+              height: 54,
+              child: ElevatedButton(
+                onPressed: () => context.go('/home'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: primaryColor,
+                  foregroundColor: Colors.white,
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  textStyle: const TextStyle(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 16,
+                  ),
+                ),
+                child: const Text('FINALIZAR Y VOLVER AL INICIO'),
               ),
+            ).animate().fadeIn(delay: 800.ms),
           ],
         ),
       ),
     );
-  }
-
-  List<Widget> _buildDomainCards(
-    Map<String, dynamic> details,
-    ThemeData theme,
-  ) {
-    if (details.isEmpty) {
-      return [
-        DomainResultCard(
-          domain: 'Memoria',
-          score: 85,
-          status: ResultStatus.normal,
-          icon: Icons.psychology_outlined,
-        ),
-        DomainResultCard(
-          domain: 'Atención',
-          score: 60,
-          status: ResultStatus.warning,
-          icon: Icons.visibility_outlined,
-        ),
-        DomainResultCard(
-          domain: 'Lenguaje',
-          score: 90,
-          status: ResultStatus.normal,
-          icon: Icons.record_voice_over_outlined,
-        ),
-        DomainResultCard(
-          domain: 'Funciones Ejecutivas',
-          score: 40,
-          status: ResultStatus.critical,
-          icon: Icons.settings_suggest_outlined,
-        ),
-      ];
-    }
-    final items = <Widget>[];
-    details.forEach((domain, value) {
-      final score = (value as num?)?.toInt() ?? 50;
-      final status = score >= 80
-          ? ResultStatus.normal
-          : score >= 60
-          ? ResultStatus.warning
-          : ResultStatus.critical;
-      final icon = _domainIcon(domain);
-      items.add(
-        DomainResultCard(
-          domain: domain,
-          score: score,
-          status: status,
-          icon: icon,
-        ),
-      );
-    });
-    return items;
   }
 
   IconData _domainIcon(String domain) {

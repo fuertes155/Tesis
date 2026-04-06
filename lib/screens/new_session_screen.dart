@@ -1,60 +1,76 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import '../services/api_service.dart';
 
 class NewSessionScreen extends StatelessWidget {
-  const NewSessionScreen({super.key});
+  final int? patientId;
+
+  const NewSessionScreen({super.key, this.patientId});
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final primaryColor = const Color(0xFF1A237E);
+    final pid = patientId;
+    if (pid != null) {
+      ApiService().setCurrentPatientId(pid);
+    }
 
     return Scaffold(
-      backgroundColor: theme.colorScheme.surface,
+      backgroundColor: const Color(0xFFF8FAFC),
       appBar: AppBar(
-        title: const Text('Nueva Sesión'),
-        centerTitle: true,
+        backgroundColor: Colors.white,
+        surfaceTintColor: Colors.white,
+        elevation: 0,
+        title: const Text(
+          'Nueva Sesión',
+          style: TextStyle(
+            fontWeight: FontWeight.w800,
+            color: Color(0xFF1E293B),
+          ),
+        ),
+        centerTitle: false,
       ),
       body: ListView(
         padding: const EdgeInsets.all(24.0),
         children: [
+          const SizedBox(height: 16),
           Text(
-            'Seleccione Batería',
-            style: theme.textTheme.headlineSmall?.copyWith(
-              fontWeight: FontWeight.bold,
-              color: theme.colorScheme.primary,
+            'SELECCIONE BATERÍA',
+            style: theme.textTheme.labelSmall?.copyWith(
+              color: const Color(0xFF64748B),
+              fontWeight: FontWeight.w800,
+              letterSpacing: 1.5,
             ),
-            textAlign: TextAlign.center,
           ),
           const SizedBox(height: 8),
           Text(
-            'Elija el conjunto de pruebas a aplicar',
-            style: theme.textTheme.bodyMedium?.copyWith(
-              color: Colors.grey[600],
+            'Elija el protocolo de evaluación que desea aplicar al paciente.',
+            style: theme.textTheme.bodyLarge?.copyWith(
+              color: const Color(0xFF64748B),
             ),
-            textAlign: TextAlign.center,
           ),
-          const SizedBox(height: 32),
+          const SizedBox(height: 40),
           _BatteryCard(
-            title: 'Batería Neuropsicológica Completa',
-            description: 'Evaluación integral de todas las funciones cognitivas principales.',
-            icon: Icons.psychology_rounded,
-            color: Colors.indigo,
+            title: 'Protocolo Integral',
+            description: 'Evaluación completa de funciones cognitivas principales.',
+            icon: Icons.psychology_outlined,
+            color: primaryColor,
             onTap: () => context.push('/test_selector'),
           ),
           const SizedBox(height: 16),
           _BatteryCard(
             title: 'Atención y Memoria',
-            description: 'Enfoque específico en procesos atencionales y retención.',
-            icon: Icons.memory_rounded,
-            color: Colors.teal,
+            description: 'Enfoque específico en retención y procesos atencionales.',
+            icon: Icons.memory_outlined,
+            color: const Color(0xFF0F172A),
             onTap: () => context.push('/test_selector'),
           ),
-          const SizedBox(height: 16),
           _BatteryCard(
             title: 'Screening Rápido',
-            description: 'Evaluación breve para detección temprana de deterioro.',
-            icon: Icons.speed_rounded,
-            color: Colors.orange,
+            description: 'Evaluación breve para detección temprana.',
+            icon: Icons.speed_outlined,
+            color: const Color(0xFF64748B),
             onTap: () => context.push('/test_selector'),
           ),
         ],
@@ -80,55 +96,58 @@ class _BatteryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      elevation: 0,
-      color: Colors.white,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(20),
-        side: BorderSide(color: Colors.grey.withValues(alpha: 0.1)),
-      ),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(20),
-        child: Padding(
-          padding: const EdgeInsets.all(20.0),
-          child: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: color.withValues(alpha: 0.1),
-                  shape: BoxShape.circle,
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: const Color(0xFFE2E8F0)),
+        ),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(20),
+          child: Padding(
+            padding: const EdgeInsets.all(24.0),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: color.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Icon(icon, color: color, size: 28),
                 ),
-                child: Icon(icon, color: color, size: 32),
-              ),
-              const SizedBox(width: 20),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      style: const TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
+                const SizedBox(width: 20),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w800,
+                          fontSize: 17,
+                          color: Color(0xFF1E293B),
+                          letterSpacing: -0.5,
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 6),
-                    Text(
-                      description,
-                      style: TextStyle(
-                        color: Colors.grey[600],
-                        height: 1.4,
-                        fontSize: 14,
+                      const SizedBox(height: 4),
+                      Text(
+                        description,
+                        style: const TextStyle(
+                          color: Color(0xFF64748B),
+                          fontSize: 14,
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
-              const SizedBox(width: 8),
-              Icon(Icons.chevron_right_rounded, color: Colors.grey[400]),
-            ],
+                const SizedBox(width: 12),
+                const Icon(Icons.arrow_forward_ios_rounded, size: 16, color: Color(0xFFCBD5E1)),
+              ],
+            ),
           ),
         ),
       ),
