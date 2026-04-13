@@ -1,9 +1,9 @@
-from pydantic import BaseModel, EmailStr, field_validator
+from pydantic import BaseModel, field_validator
 from typing import Optional
 from datetime import datetime
 
 class UserBase(BaseModel):
-    username: EmailStr
+    username: str
     role: str = "doctor"
 
     @field_validator("username")
@@ -15,7 +15,7 @@ class UserCreate(UserBase):
     password: str
 
 class UserLogin(BaseModel):
-    username: EmailStr
+    username: str
     password: str
 
     @field_validator("username")
@@ -27,10 +27,22 @@ class User(UserBase):
     id: int
     is_active: bool = True
     is_available: bool = True
-    registration_date: datetime
+    registration_date: Optional[datetime] = None
 
     class Config:
         from_attributes = True
+
+class UserUpdate(BaseModel):
+    username: Optional[str] = None
+    is_active: Optional[bool] = None
+    is_available: Optional[bool] = None
+
+    @field_validator("username")
+    @classmethod
+    def _normalize_update_username(cls, v: Optional[str]) -> Optional[str]:
+        if v is None:
+            return None
+        return v.strip().lower()
 
 class Token(BaseModel):
     access_token: str

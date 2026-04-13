@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'common/game_results.dart';
 import 'package:flutter_animate/flutter_animate.dart';
@@ -103,10 +104,12 @@ class _StroopGameState extends State<StroopGame> {
 
     setState(() {
       if (isCorrect) {
+        HapticFeedback.lightImpact();
         _score += 10 + (_correctStreak * 2); // Bonus for streak
         _correctStreak++;
         _correct += 1;
       } else {
+        HapticFeedback.vibrate();
         _correctStreak = 0;
         _wrong += 1;
       }

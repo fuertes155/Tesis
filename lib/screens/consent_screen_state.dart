@@ -6,19 +6,22 @@ class ConsentScreenState extends State<ConsentScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final primaryColor = const Color(0xFF1A237E);
+    final cs = theme.colorScheme;
+    final r = context.radii;
+    final spacing = context.spacing;
+    final sem = context.sem;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
+      backgroundColor: cs.surface,
       appBar: AppBar(
-        backgroundColor: Colors.white,
-        surfaceTintColor: Colors.white,
+        backgroundColor: cs.surfaceContainerLowest,
+        surfaceTintColor: cs.surfaceContainerLowest,
         elevation: 0,
-        title: const Text(
+        title: Text(
           'Consentimiento',
           style: TextStyle(
             fontWeight: FontWeight.w800,
-            color: Color(0xFF1E293B),
+            color: cs.onSurface,
           ),
         ),
         centerTitle: false,
@@ -27,49 +30,49 @@ class ConsentScreenState extends State<ConsentScreen> {
         children: [
           Expanded(
             child: Container(
-              margin: const EdgeInsets.all(24),
+              margin: EdgeInsets.all(spacing.lg),
               decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(24),
-                border: Border.all(color: const Color(0xFFE2E8F0)),
+                color: cs.surfaceContainerLowest,
+                borderRadius: r.radiusXl,
+                border: Border.all(color: cs.outlineVariant),
               ),
               child: ClipRRect(
-                borderRadius: BorderRadius.circular(24),
+                borderRadius: r.radiusXl,
                 child: SingleChildScrollView(
-                  padding: const EdgeInsets.all(32),
+                  padding: EdgeInsets.all(spacing.xl),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Row(
                         children: [
                           Container(
-                            padding: const EdgeInsets.all(10),
+                            padding: EdgeInsets.all(spacing.sm - 2), // ~10
                             decoration: BoxDecoration(
-                              color: primaryColor.withValues(alpha: 0.1),
-                              borderRadius: BorderRadius.circular(10),
+                              color: cs.primary.withValues(alpha: 0.1),
+                              borderRadius: r.radiusSm, // ~12/10
                             ),
                             child: Icon(
                               Icons.assignment_outlined,
-                              color: primaryColor,
+                              color: cs.primary,
                               size: 24,
                             ),
                           ),
-                          const SizedBox(width: 16),
+                          SizedBox(width: spacing.md),
                           Expanded(
                             child: Text(
                               'Consentimiento Informado',
                               style: theme.textTheme.titleLarge?.copyWith(
                                 fontWeight: FontWeight.w800,
-                                color: const Color(0xFF1E293B),
+                                color: cs.onSurface,
                                 letterSpacing: -0.5,
                               ),
                             ),
                           ),
                         ],
                       ),
-                      const SizedBox(height: 32),
-                      const Divider(color: Color(0xFFF1F5F9)),
-                      const SizedBox(height: 32),
+                      SizedBox(height: spacing.xl),
+                      Divider(color: cs.outlineVariant),
+                      SizedBox(height: spacing.xl),
                       Text(
                         'Por medio de la presente, autorizo la realización de las pruebas psicológicas y neuropsicológicas necesarias para la evaluación cognitiva.\n\n'
                         'Entiendo que:\n'
@@ -80,40 +83,38 @@ class ConsentScreenState extends State<ConsentScreen> {
                         'He leído y comprendido la información anterior y he tenido la oportunidad de hacer preguntas.',
                         style: theme.textTheme.bodyLarge?.copyWith(
                           height: 1.7,
-                          color: const Color(0xFF475569),
+                          color: cs.onSurfaceVariant,
                           fontSize: 15,
                         ),
                       ),
-                      const SizedBox(height: 40),
+                      SizedBox(height: spacing.x2l),
                       Container(
-                        padding: const EdgeInsets.all(16),
+                        padding: EdgeInsets.all(spacing.md),
                         decoration: BoxDecoration(
-                          color: const Color(0xFFF0F9FF),
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: const Color(0xFFBAE6FD)),
+                          color: sem.info.withValues(alpha: 0.1),
+                          borderRadius: r.radiusMd,
+                          border: Border.all(color: sem.info.withValues(alpha: 0.2)),
                         ),
                         child: Row(
                           children: [
                             Container(
-                              padding: const EdgeInsets.all(10),
+                              padding: EdgeInsets.all(spacing.sm - 2), // ~10
                               decoration: BoxDecoration(
-                                color: const Color(
-                                  0xFF0284C7,
-                                ).withValues(alpha: 0.1),
+                                color: sem.info.withValues(alpha: 0.1),
                                 borderRadius: BorderRadius.circular(8),
                               ),
-                              child: const Icon(
+                              child: Icon(
                                 Icons.info_outline_rounded,
-                                color: Color(0xFF0284C7),
+                                color: sem.info,
                                 size: 20,
                               ),
                             ),
-                            const SizedBox(width: 12),
-                            const Expanded(
+                            SizedBox(width: spacing.sm),
+                            Expanded(
                               child: Text(
                                 'Este documento es legalmente vinculante.',
                                 style: TextStyle(
-                                  color: Color(0xFF075985),
+                                  color: sem.info,
                                   fontWeight: FontWeight.w600,
                                   fontSize: 13,
                                 ),
@@ -129,37 +130,37 @@ class ConsentScreenState extends State<ConsentScreen> {
             ),
           ),
           Container(
-            padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
-            decoration: const BoxDecoration(
-              color: Colors.white,
-              border: Border(top: BorderSide(color: Color(0xFFE2E8F0))),
+            padding: EdgeInsets.fromLTRB(spacing.lg, spacing.md, spacing.lg, spacing.lg),
+            decoration: BoxDecoration(
+              color: cs.surfaceContainerLowest,
+              border: Border(top: BorderSide(color: cs.outlineVariant)),
             ),
             child: Column(
               children: [
                 InkWell(
                   onTap: () => setState(() => _accepted = !_accepted),
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: r.radiusSm,
                   child: Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    padding: EdgeInsets.symmetric(vertical: spacing.xs),
                     child: Row(
                       children: [
                         Checkbox(
                           value: _accepted,
-                          activeColor: primaryColor,
+                          activeColor: cs.primary,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(4),
                           ),
                           onChanged: (v) =>
                               setState(() => _accepted = v ?? false),
                         ),
-                        const SizedBox(width: 8),
-                        const Expanded(
+                        SizedBox(width: spacing.xs),
+                        Expanded(
                           child: Text(
                             'He leído y acepto los términos y condiciones.',
                             style: TextStyle(
                               fontSize: 14,
                               fontWeight: FontWeight.w600,
-                              color: Color(0xFF334155),
+                              color: cs.onSurface,
                             ),
                           ),
                         ),
@@ -167,7 +168,7 @@ class ConsentScreenState extends State<ConsentScreen> {
                     ),
                   ),
                 ),
-                const SizedBox(height: 24),
+                SizedBox(height: spacing.lg),
                 SizedBox(
                   width: double.infinity,
                   height: 54,
@@ -189,11 +190,11 @@ class ConsentScreenState extends State<ConsentScreen> {
                           }
                         : null,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: primaryColor,
-                      foregroundColor: Colors.white,
+                      backgroundColor: cs.primary,
+                      foregroundColor: cs.onPrimary,
                       elevation: 0,
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
+                        borderRadius: r.radiusSm,
                       ),
                       textStyle: const TextStyle(
                         fontWeight: FontWeight.w700,

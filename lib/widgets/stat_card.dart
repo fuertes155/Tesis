@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../core/theme/app_theme.dart';
 import 'mini_bars_sparkline.dart';
 
 class StatCard extends StatelessWidget {
@@ -24,43 +25,49 @@ class StatCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+    final s = context.spacing;
+    final r = context.radii;
+    final sem = context.sem;
 
     return Container(
-      padding: const EdgeInsets.all(24),
+      padding: EdgeInsets.all(s.lg),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
+        color: theme.cardColor,
+        borderRadius: r.radiusXl,
+        border: Border.all(color: cs.outlineVariant),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF0F172A).withValues(alpha: 0.04),
-            blurRadius: 16,
-            offset: const Offset(0, 4),
+            color: cs.primary.withValues(alpha: 0.04),
+            blurRadius: 24,
+            offset: const Offset(0, 8),
           ),
         ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
         children: [
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Container(
-                padding: const EdgeInsets.all(10),
+                padding: EdgeInsets.all(s.sm),
                 decoration: BoxDecoration(
                   color: color.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: r.radiusMd,
+                  border: Border.all(color: color.withValues(alpha: 0.05)),
                 ),
-                child: Icon(icon, color: color, size: 22),
+                child: Icon(icon, color: color, size: 24),
               ),
               if (trendText != null)
                 Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 4,
+                  padding: EdgeInsets.symmetric(
+                    horizontal: s.sm - 2,
+                    vertical: 6,
                   ),
                   decoration: BoxDecoration(
-                    color: (trendUp ? Colors.green : Colors.red).withValues(
+                    color: (trendUp ? sem.success : sem.danger).withValues(
                       alpha: 0.1,
                     ),
                     borderRadius: BorderRadius.circular(20),
@@ -68,17 +75,16 @@ class StatCard extends StatelessWidget {
                   child: Row(
                     children: [
                       Icon(
-                        trendUp ? Icons.arrow_upward : Icons.arrow_downward,
-                        size: 12,
-                        color: trendUp ? Colors.green : Colors.red,
+                        trendUp ? Icons.trending_up : Icons.trending_down,
+                        size: 14,
+                        color: trendUp ? sem.success : sem.danger,
                       ),
                       const SizedBox(width: 4),
                       Text(
                         trendText!,
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                          color: trendUp ? Colors.green : Colors.red,
+                        style: theme.textTheme.labelSmall?.copyWith(
+                          fontWeight: FontWeight.w800,
+                          color: trendUp ? sem.success : sem.danger,
                         ),
                       ),
                     ],
@@ -86,31 +92,42 @@ class StatCard extends StatelessWidget {
                 ),
             ],
           ),
-          const Spacer(),
+          SizedBox(height: s.md),
           Text(
-            title.toUpperCase(),
-            style: theme.textTheme.labelSmall?.copyWith(
-              color: const Color(0xFF64748B),
-              fontWeight: FontWeight.w800,
-              letterSpacing: 1.2,
+            title,
+            style: theme.textTheme.labelMedium?.copyWith(
+              color: cs.onSurfaceVariant,
+              fontWeight: FontWeight.w600,
+              letterSpacing: 0.2,
             ),
           ),
-          const SizedBox(height: 8),
-          Text(
-            value,
-            style: theme.textTheme.headlineMedium?.copyWith(
-              fontWeight: FontWeight.w900,
-              color: const Color(0xFF1E293B),
-              letterSpacing: -1,
-            ),
+          const SizedBox(height: 6),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.baseline,
+            textBaseline: TextBaseline.alphabetic,
+            children: [
+              Text(
+                value,
+                style: theme.textTheme.headlineMedium?.copyWith(
+                  fontWeight: FontWeight.w800,
+                  color: cs.onSurface,
+                  letterSpacing: -1,
+                ),
+              ),
+              if (sparklinePoints != null) ...[
+                const SizedBox(width: 12),
+                Expanded(
+                  child: SizedBox(
+                    height: 32,
+                    child: MiniBarsSparkline(
+                      points: sparklinePoints!,
+                      color: color.withValues(alpha: 0.4),
+                    ),
+                  ),
+                ),
+              ],
+            ],
           ),
-          if (sparklinePoints != null) ...[
-            const SizedBox(height: 12),
-            SizedBox(
-              height: 30,
-              child: MiniBarsSparkline(points: sparklinePoints!, color: color),
-            ),
-          ],
         ],
       ),
     );

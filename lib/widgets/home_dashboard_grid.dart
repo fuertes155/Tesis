@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:get_it/get_it.dart';
 import 'package:go_router/go_router.dart';
-import 'dashboard_card.dart';
 import '../services/api_service.dart';
+import '../core/theme/app_theme.dart';
+import 'dashboard_card.dart';
 
 class HomeDashboardGrid extends StatelessWidget {
   const HomeDashboardGrid({super.key});
@@ -9,7 +11,11 @@ class HomeDashboardGrid extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final initFuture = ApiService().init();
+    final cs = theme.colorScheme;
+    final s = context.spacing;
+    final r = context.radii;
+    final api = GetIt.I<ApiService>();
+    final initFuture = api.init();
     return FutureBuilder<void>(
       future: initFuture,
       builder: (context, snapshot) {
@@ -17,11 +23,11 @@ class HomeDashboardGrid extends StatelessWidget {
           return SizedBox(
             width: double.infinity,
             child: Container(
-              padding: const EdgeInsets.all(20),
+              padding: EdgeInsets.all(s.lg),
               decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: const Color(0xFFE2E8F0)),
+                color: theme.cardColor,
+                borderRadius: r.radiusMd,
+                border: Border.all(color: cs.outlineVariant),
               ),
               child: Row(
                 children: [
@@ -30,7 +36,7 @@ class HomeDashboardGrid extends StatelessWidget {
                     height: 18,
                     child: CircularProgressIndicator(
                       strokeWidth: 2,
-                      color: theme.colorScheme.primary,
+                      color: cs.primary,
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -38,7 +44,7 @@ class HomeDashboardGrid extends StatelessWidget {
                     child: Text(
                       'Cargando accesos rápidos...',
                       style: theme.textTheme.bodyMedium?.copyWith(
-                        color: theme.colorScheme.onSurfaceVariant,
+                        color: cs.onSurfaceVariant,
                         fontWeight: FontWeight.w700,
                       ),
                     ),
@@ -62,7 +68,7 @@ class HomeDashboardGrid extends StatelessWidget {
             } else if (width > 600) {
               crossAxisCount = 2;
             }
-            final role = ApiService().currentRole;
+            final role = GetIt.I<ApiService>().currentRole;
             final tiles = <Widget>[];
 
             if (role == 'gestor') {
@@ -169,7 +175,7 @@ class HomeDashboardGrid extends StatelessWidget {
               ]);
             }
 
-            const spacing = 20.0;
+            final spacing = s.lg;
             final itemWidth =
                 ((width - (crossAxisCount - 1) * spacing) / crossAxisCount)
                     .clamp(240.0, 520.0);
@@ -179,24 +185,24 @@ class HomeDashboardGrid extends StatelessWidget {
               return SizedBox(
                 width: double.infinity,
                 child: Container(
-                  padding: const EdgeInsets.all(20),
+                  padding: EdgeInsets.all(s.lg),
                   decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: const Color(0xFFE2E8F0)),
+                    color: theme.cardColor,
+                    borderRadius: r.radiusMd,
+                    border: Border.all(color: cs.outlineVariant),
                   ),
                   child: Row(
                     children: [
                       Icon(
                         Icons.info_outline,
-                        color: theme.colorScheme.primary,
+                        color: cs.primary,
                       ),
                       const SizedBox(width: 12),
                       Expanded(
                         child: Text(
                           'No hay accesos rápidos para este usuario ($label).',
                           style: theme.textTheme.bodyMedium?.copyWith(
-                            color: theme.colorScheme.onSurfaceVariant,
+                            color: cs.onSurfaceVariant,
                             fontWeight: FontWeight.w700,
                           ),
                         ),

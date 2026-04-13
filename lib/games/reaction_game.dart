@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'common/game_results.dart';
 import 'common/game_intro.dart';
@@ -75,6 +76,7 @@ class _ReactionGameState extends State<ReactionGame> {
   void _handleTap() {
     if (_state == GameState.waiting) {
       _timer?.cancel();
+      HapticFeedback.vibrate();
       setState(() {
         _state = GameState.tooEarly;
         _backgroundColor = Colors.orange;
@@ -82,6 +84,7 @@ class _ReactionGameState extends State<ReactionGame> {
         _tooEarly += 1;
       });
     } else if (_state == GameState.ready) {
+      HapticFeedback.selectionClick();
       final endTime = DateTime.now();
       final duration = endTime.difference(_startTime!).inMilliseconds;
       _times.add(duration);

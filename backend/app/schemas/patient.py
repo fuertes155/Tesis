@@ -14,6 +14,15 @@ class PatientBase(BaseModel):
 class PatientCreate(PatientBase):
     pass
 
+class PatientUpdate(BaseModel):
+    name: Optional[str] = None
+    age: Optional[int] = None
+    birth_date: Optional[str] = None
+    document_id: Optional[str] = None
+    phone: Optional[str] = None
+    diagnosis: Optional[str] = None
+    doctor_id: Optional[int] = None
+
 class Patient(PatientBase):
     id: int
     registration_date: datetime

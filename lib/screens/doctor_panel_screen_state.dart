@@ -1,11 +1,11 @@
 part of 'doctor_panel_screen.dart';
 
 class DoctorPanelScreenState extends State<DoctorPanelScreen> {
-  final _api = ApiService();
+  final _api = GetIt.I<ApiService>();
   bool _loading = true;
   String _query = '';
-  Map<String, dynamic>? _me;
-  List<dynamic> _patients = [];
+  User? _me;
+  List<Patient> _patients = [];
 
   @override
   void initState() {
@@ -37,11 +37,10 @@ class DoctorPanelScreenState extends State<DoctorPanelScreen> {
   }
 
   Future<void> _toggleAvailability() async {
-    final userId = _api.currentUserId ?? (_me?['id'] as int?);
-    final isAvailable = (_me?['is_available'] ?? true) as bool;
-    if (userId == null) return;
+    final me = _me;
+    if (me == null) return;
     try {
-      await _api.updateUserAvailability(userId, !isAvailable);
+      await _api.updateUserAvailability(me.id, !me.isAvailable);
       await _fetch();
     } catch (e) {
       if (!mounted) return;
@@ -63,42 +62,43 @@ class DoctorPanelScreenState extends State<DoctorPanelScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+    final spacing = context.spacing;
+    final r = context.radii;
+    final sem = context.sem;
     final me = _me;
-    final idObj = me == null ? null : me['id'];
-    final int? myId =
-        _api.currentUserId ?? (idObj is int ? idObj : int.tryParse('$idObj'));
-    final bool isAvailable = (me?['is_available'] ?? true) as bool;
-    final username =
-        me?['username']?.toString() ?? _api.currentUsername ?? 'Doctor';
+    final int? myId = _api.currentUserId ?? me?.id;
+    final bool isAvailable = me?.isAvailable ?? true;
+    final username = me?.username ?? _api.currentUsername ?? 'Doctor';
 
     final assigned = myId == null
-        ? <dynamic>[]
+        ? <Patient>[]
         : _patients.where((p) {
-            final did = p['doctor_id'];
-            final int? pid = did is int
-                ? did
-                : (did is String ? int.tryParse(did) : null);
-            return pid == myId;
+            return p.doctorId == myId;
           }).toList();
 
     final filtered = assigned.where((p) {
       final q = _query.trim().toLowerCase();
       if (q.isEmpty) return true;
-      final name = (p['name'] ?? '').toString().toLowerCase();
-      final diag = (p['diagnosis'] ?? '').toString().toLowerCase();
+      final name = p.name.toLowerCase();
+      final diag = (p.diagnosis ?? '').toLowerCase();
       return name.contains(q) || diag.contains(q);
     }).toList();
 
     return Scaffold(
-      backgroundColor: theme.colorScheme.surface,
+      backgroundColor: cs.surface,
       appBar: AppBar(
         title: const Text('Panel Médico'),
+        backgroundColor: cs.surfaceContainerLowest,
+        surfaceTintColor: cs.surfaceContainerLowest,
+        elevation: 0,
         actions: [
           IconButton(
             tooltip: 'Actualizar',
             onPressed: _fetch,
-            icon: const Icon(Icons.refresh_rounded),
+            icon: Icon(Icons.refresh_rounded, color: cs.onSurfaceVariant),
           ),
+          SizedBox(width: spacing.sm),
         ],
       ),
       body: _loading
@@ -106,11 +106,11 @@ class DoctorPanelScreenState extends State<DoctorPanelScreen> {
           : LayoutBuilder(
               builder: (context, constraints) {
                 final w = constraints.maxWidth;
-                final horizontal = w < 640 ? 16.0 : 24.0;
+                final horizontal = w < 640 ? spacing.lg : spacing.xl;
                 return ListView(
                   padding: EdgeInsets.symmetric(
                     horizontal: horizontal,
-                    vertical: 24,
+                    vertical: spacing.xl,
                   ),
                   children: [
                     PageContainer(
@@ -126,10 +126,10 @@ class DoctorPanelScreenState extends State<DoctorPanelScreen> {
                               .animate()
                               .fadeIn(duration: 220.ms)
                               .moveY(begin: 6, end: 0),
-                          const SizedBox(height: 16),
+                          SizedBox(height: spacing.md),
                           Wrap(
-                            spacing: 12,
-                            runSpacing: 12,
+                            spacing: spacing.md,
+                            runSpacing: spacing.md,
                             children: [
                               SizedBox(
                                 width: w < 640 ? double.infinity : null,
@@ -137,7 +137,7 @@ class DoctorPanelScreenState extends State<DoctorPanelScreen> {
                                   title: 'Pacientes asignados',
                                   value: '${assigned.length}',
                                   icon: Icons.people_alt_outlined,
-                                  color: theme.colorScheme.primary,
+                                  color: cs.primary,
                                 ),
                               ),
                               SizedBox(
@@ -151,56 +151,55 @@ class DoctorPanelScreenState extends State<DoctorPanelScreen> {
                                       ? Icons.check_circle_outline
                                       : Icons.do_not_disturb_on_outlined,
                                   color: isAvailable
-                                      ? const Color(0xFF10B981)
-                                      : theme.colorScheme.error,
+                                      ? sem.success
+                                      : sem.danger,
                                 ),
                               ),
                             ],
                           ).animate().fadeIn(duration: 220.ms, delay: 50.ms),
-                          const SizedBox(height: 24),
+                          SizedBox(height: spacing.x2l),
                           Text(
                             'Mis Pacientes',
                             style: theme.textTheme.titleLarge?.copyWith(
                               fontWeight: FontWeight.w900,
+                              color: cs.onSurface,
                             ),
                           ),
-                          const SizedBox(height: 12),
+                          SizedBox(height: spacing.sm),
                           TextField(
                             decoration: InputDecoration(
                               hintText: 'Buscar por nombre o diagnóstico...',
-                              prefixIcon: const Icon(Icons.search_rounded),
+                              hintStyle: TextStyle(color: cs.onSurfaceVariant),
+                              prefixIcon: Icon(Icons.search_rounded, color: cs.onSurfaceVariant),
                               filled: true,
-                              fillColor:
-                                  theme.colorScheme.surfaceContainerHighest,
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(16),
-                                borderSide: BorderSide.none,
+                              fillColor: cs.surfaceContainerLowest,
+                              enabledBorder: OutlineInputBorder(
+                                borderRadius: r.radiusSm,
+                                borderSide: BorderSide(color: cs.outlineVariant),
+                              ),
+                              focusedBorder: OutlineInputBorder(
+                                borderRadius: r.radiusSm,
+                                borderSide: BorderSide(color: cs.primary, width: 2),
                               ),
                             ),
                             onChanged: (v) => setState(() => _query = v),
                           ),
-                          const SizedBox(height: 16),
+                          SizedBox(height: spacing.lg),
                           if (filtered.isEmpty)
                             _EmptyPatientsCard().animate().fadeIn(
                               duration: 200.ms,
                             )
                           else
                             ...filtered.map((p) {
-                              final idVal = p['id'];
-                              final int? patientId = idVal is int
-                                  ? idVal
-                                  : int.tryParse('$idVal');
+                              final int patientId = p.id;
                               return _PatientRowCard(
-                                    patient: p as Map<String, dynamic>,
-                                    onStartSession: patientId == null
-                                        ? null
-                                        : () => context.push(
-                                            '/new_session',
-                                            extra: {'patientId': patientId},
-                                          ),
-                                    onViewLatestResults: patientId == null
-                                        ? null
-                                        : () => _openLatestResults(patientId),
+                                    patient: p,
+                                    onStartSession: () => context.push(
+                                      '/new_session',
+                                      extra: {'patientId': patientId},
+                                    ),
+                                    onViewLatestResults: () =>
+                                        _openLatestResults(patientId),
                                   )
                                   .animate()
                                   .fadeIn(duration: 220.ms)
@@ -231,9 +230,19 @@ class _HeaderCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return Card(
+    final cs = theme.colorScheme;
+    final r = context.radii;
+    final spacing = context.spacing;
+    final sem = context.sem;
+    
+    return Container(
+      decoration: BoxDecoration(
+        color: cs.surfaceContainerLowest,
+        borderRadius: r.radiusLg,
+        border: Border.all(color: cs.outlineVariant),
+      ),
       child: Padding(
-        padding: const EdgeInsets.all(20),
+        padding: EdgeInsets.all(spacing.lg),
         child: LayoutBuilder(
           builder: (context, constraints) {
             final isNarrow = constraints.maxWidth < 520;
@@ -247,15 +256,15 @@ class _HeaderCard extends StatelessWidget {
                   style: theme.textTheme.labelLarge?.copyWith(
                     fontWeight: FontWeight.w900,
                     color: isAvailable
-                        ? const Color(0xFF10B981)
-                        : theme.colorScheme.error,
+                        ? sem.success
+                        : sem.danger,
                   ),
                 ),
-                const SizedBox(height: 6),
+                SizedBox(height: spacing.xs),
                 Switch(
                   value: isAvailable,
                   onChanged: (_) => onToggleAvailability(),
-                  activeThumbColor: const Color(0xFF10B981),
+                  activeColor: sem.success,
                 ),
               ],
             );
@@ -267,14 +276,15 @@ class _HeaderCard extends StatelessWidget {
                   username,
                   style: theme.textTheme.titleLarge?.copyWith(
                     fontWeight: FontWeight.w900,
+                    color: cs.onSurface,
                   ),
                   overflow: TextOverflow.ellipsis,
                 ),
-                const SizedBox(height: 4),
+                SizedBox(height: spacing.xs - 4),
                 Text(
                   'Rol: Doctor',
                   style: theme.textTheme.bodyMedium?.copyWith(
-                    color: theme.colorScheme.onSurfaceVariant,
+                    color: cs.onSurfaceVariant,
                   ),
                 ),
               ],
@@ -288,19 +298,19 @@ class _HeaderCard extends StatelessWidget {
                     children: [
                       CircleAvatar(
                         radius: 24,
-                        backgroundColor: theme.colorScheme.primary.withValues(
+                        backgroundColor: cs.primary.withValues(
                           alpha: 0.12,
                         ),
                         child: Icon(
                           Icons.medical_services_outlined,
-                          color: theme.colorScheme.primary,
+                          color: cs.primary,
                         ),
                       ),
-                      const SizedBox(width: 16),
+                      SizedBox(width: spacing.md),
                       Expanded(child: info),
                     ],
                   ),
-                  const SizedBox(height: 12),
+                  SizedBox(height: spacing.md),
                   status,
                 ],
               );
@@ -310,7 +320,7 @@ class _HeaderCard extends StatelessWidget {
               children: [
                 CircleAvatar(
                   radius: 24,
-                  backgroundColor: theme.colorScheme.primary.withValues(
+                  backgroundColor: cs.primary.withValues(
                     alpha: 0.12,
                   ),
                   child: Icon(
@@ -390,7 +400,7 @@ class _KpiCard extends StatelessWidget {
 }
 
 class _PatientRowCard extends StatelessWidget {
-  final Map<String, dynamic> patient;
+  final Patient patient;
   final VoidCallback? onStartSession;
   final VoidCallback? onViewLatestResults;
 
@@ -403,9 +413,9 @@ class _PatientRowCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final name = patient['name']?.toString() ?? 'Paciente';
-    final age = patient['age']?.toString();
-    final diagnosis = patient['diagnosis']?.toString();
+    final name = patient.name;
+    final age = patient.age;
+    final diagnosis = patient.diagnosis;
 
     return Card(
       child: Padding(
@@ -450,11 +460,10 @@ class _PatientRowCard extends StatelessWidget {
                         spacing: 10,
                         runSpacing: 6,
                         children: [
-                          if (age != null)
-                            _Tag(
-                              text: '$age años',
-                              color: theme.colorScheme.primary,
-                            ),
+                          _Tag(
+                            text: '$age años',
+                            color: theme.colorScheme.primary,
+                          ),
                           if (diagnosis != null && diagnosis.trim().isNotEmpty)
                             _Tag(
                               text: diagnosis,
@@ -518,11 +527,10 @@ class _PatientRowCard extends StatelessWidget {
                               spacing: 10,
                               runSpacing: 6,
                               children: [
-                                if (age != null)
-                                  _Tag(
-                                    text: '$age años',
-                                    color: theme.colorScheme.primary,
-                                  ),
+                                _Tag(
+                                  text: '$age años',
+                                  color: theme.colorScheme.primary,
+                                ),
                                 if (diagnosis != null &&
                                     diagnosis.trim().isNotEmpty)
                                   _Tag(

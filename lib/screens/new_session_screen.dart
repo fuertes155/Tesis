@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:get_it/get_it.dart';
 import 'package:go_router/go_router.dart';
 import '../services/api_service.dart';
+import '../core/theme/app_theme.dart';
 
 class NewSessionScreen extends StatelessWidget {
   final int? patientId;
@@ -10,67 +12,71 @@ class NewSessionScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final primaryColor = const Color(0xFF1A237E);
-    final pid = patientId;
-    if (pid != null) {
-      ApiService().setCurrentPatientId(pid);
+    final cs = theme.colorScheme;
+    final spacing = context.spacing;
+    
+    if (patientId != null) {
+      GetIt.I<ApiService>().setCurrentPatientId(patientId!);
     }
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
+      backgroundColor: cs.surface,
       appBar: AppBar(
-        backgroundColor: Colors.white,
-        surfaceTintColor: Colors.white,
+        backgroundColor: cs.surfaceContainerLowest,
+        surfaceTintColor: cs.surfaceContainerLowest,
         elevation: 0,
-        title: const Text(
+        title: Text(
           'Nueva Sesión',
           style: TextStyle(
             fontWeight: FontWeight.w800,
-            color: Color(0xFF1E293B),
+            color: cs.onSurface,
           ),
         ),
         centerTitle: false,
       ),
       body: ListView(
-        padding: const EdgeInsets.all(24.0),
+        padding: EdgeInsets.all(spacing.lg),
         children: [
-          const SizedBox(height: 16),
+          SizedBox(height: spacing.md),
           Text(
             'SELECCIONE BATERÍA',
             style: theme.textTheme.labelSmall?.copyWith(
-              color: const Color(0xFF64748B),
+              color: cs.onSurfaceVariant,
               fontWeight: FontWeight.w800,
               letterSpacing: 1.5,
             ),
           ),
-          const SizedBox(height: 8),
+          SizedBox(height: spacing.xs),
           Text(
             'Elija el protocolo de evaluación que desea aplicar al paciente.',
             style: theme.textTheme.bodyLarge?.copyWith(
-              color: const Color(0xFF64748B),
+              color: cs.onSurfaceVariant,
             ),
           ),
-          const SizedBox(height: 40),
+          SizedBox(height: spacing.xl),
           _BatteryCard(
             title: 'Protocolo Integral',
-            description: 'Evaluación completa de funciones cognitivas principales.',
+            description:
+                'Evaluación completa de funciones cognitivas principales.',
             icon: Icons.psychology_outlined,
-            color: primaryColor,
+            color: cs.primary,
             onTap: () => context.push('/test_selector'),
           ),
-          const SizedBox(height: 16),
+          SizedBox(height: spacing.md),
           _BatteryCard(
             title: 'Atención y Memoria',
-            description: 'Enfoque específico en retención y procesos atencionales.',
+            description:
+                'Enfoque específico en retención y procesos atencionales.',
             icon: Icons.memory_outlined,
-            color: const Color(0xFF0F172A),
+            color: cs.onSurface,
             onTap: () => context.push('/test_selector'),
           ),
+          SizedBox(height: spacing.md),
           _BatteryCard(
             title: 'Screening Rápido',
             description: 'Evaluación breve para detección temprana.',
             icon: Icons.speed_outlined,
-            color: const Color(0xFF64748B),
+            color: cs.onSurfaceVariant,
             onTap: () => context.push('/test_selector'),
           ),
         ],
@@ -96,56 +102,64 @@ class _BatteryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final r = context.radii;
+    final spacing = context.spacing;
+    
     return Padding(
-      padding: const EdgeInsets.only(bottom: 16),
+      padding: EdgeInsets.only(bottom: spacing.md),
       child: Container(
         decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: const Color(0xFFE2E8F0)),
+          color: cs.surfaceContainerLowest,
+          borderRadius: r.radiusLg,
+          border: Border.all(color: cs.outlineVariant),
         ),
         child: InkWell(
           onTap: onTap,
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: r.radiusLg,
           child: Padding(
-            padding: const EdgeInsets.all(24.0),
+            padding: EdgeInsets.all(spacing.lg),
             child: Row(
               children: [
                 Container(
-                  padding: const EdgeInsets.all(16),
+                  padding: EdgeInsets.all(spacing.md),
                   decoration: BoxDecoration(
                     color: color.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(16),
+                    borderRadius: r.radiusMd,
                   ),
                   child: Icon(icon, color: color, size: 28),
                 ),
-                const SizedBox(width: 20),
+                SizedBox(width: spacing.lg),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
                         title,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontWeight: FontWeight.w800,
                           fontSize: 17,
-                          color: Color(0xFF1E293B),
+                          color: cs.onSurface,
                           letterSpacing: -0.5,
                         ),
                       ),
-                      const SizedBox(height: 4),
+                      SizedBox(height: spacing.xs - 4),
                       Text(
                         description,
-                        style: const TextStyle(
-                          color: Color(0xFF64748B),
+                        style: TextStyle(
+                          color: cs.onSurfaceVariant,
                           fontSize: 14,
                         ),
                       ),
                     ],
                   ),
                 ),
-                const SizedBox(width: 12),
-                const Icon(Icons.arrow_forward_ios_rounded, size: 16, color: Color(0xFFCBD5E1)),
+                SizedBox(width: spacing.sm),
+                Icon(
+                  Icons.arrow_forward_ios_rounded,
+                  size: 16,
+                  color: cs.outline,
+                ),
               ],
             ),
           ),

@@ -11,19 +11,21 @@ class TestSelectorScreenState extends State<TestSelectorScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final primaryColor = const Color(0xFF1A237E);
+    final cs = theme.colorScheme;
+    final r = context.radii;
+    final spacing = context.spacing;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
+      backgroundColor: cs.surface,
       appBar: AppBar(
-        backgroundColor: Colors.white,
-        surfaceTintColor: Colors.white,
+        backgroundColor: cs.surfaceContainerLowest,
+        surfaceTintColor: cs.surfaceContainerLowest,
         elevation: 0,
-        title: const Text(
+        title: Text(
           'Configurar Sesión',
           style: TextStyle(
             fontWeight: FontWeight.w800,
-            color: Color(0xFF1E293B),
+            color: cs.onSurface,
           ),
         ),
         centerTitle: false,
@@ -32,24 +34,24 @@ class TestSelectorScreenState extends State<TestSelectorScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Padding(
-            padding: const EdgeInsets.all(24.0),
+            padding: EdgeInsets.all(spacing.lg),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const SizedBox(height: 16),
+                SizedBox(height: spacing.md),
                 Text(
                   'SELECCIÓN DE PRUEBAS',
                   style: theme.textTheme.labelSmall?.copyWith(
-                    color: const Color(0xFF64748B),
+                    color: cs.onSurfaceVariant,
                     fontWeight: FontWeight.w800,
                     letterSpacing: 1.5,
                   ),
                 ),
-                const SizedBox(height: 8),
+                SizedBox(height: spacing.xs),
                 Text(
                   'Personalice el protocolo de evaluación seleccionando las pruebas específicas para este paciente.',
                   style: theme.textTheme.bodyLarge?.copyWith(
-                    color: const Color(0xFF64748B),
+                    color: cs.onSurfaceVariant,
                   ),
                 ),
               ],
@@ -57,9 +59,9 @@ class TestSelectorScreenState extends State<TestSelectorScreen> {
           ),
           Expanded(
             child: ListView.separated(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
+              padding: EdgeInsets.symmetric(horizontal: spacing.lg),
               itemCount: _selectedTests.length,
-              separatorBuilder: (context, index) => const SizedBox(height: 12),
+              separatorBuilder: (context, index) => SizedBox(height: spacing.sm),
               itemBuilder: (context, index) {
                 final key = _selectedTests.keys.elementAt(index);
                 final isSelected = _selectedTests[key]!;
@@ -79,31 +81,31 @@ class TestSelectorScreenState extends State<TestSelectorScreen> {
                   duration: const Duration(milliseconds: 200),
                   decoration: BoxDecoration(
                     color: isSelected
-                        ? primaryColor.withValues(alpha: 0.03)
-                        : Colors.white,
-                    borderRadius: BorderRadius.circular(16),
+                        ? cs.primary.withValues(alpha: 0.03)
+                        : cs.surfaceContainerLowest,
+                    borderRadius: r.radiusMd,
                     border: Border.all(
                       color: isSelected
-                          ? primaryColor
-                          : const Color(0xFFE2E8F0),
+                          ? cs.primary
+                          : cs.outlineVariant,
                       width: isSelected ? 2 : 1,
                     ),
                   ),
                   child: CheckboxListTile(
-                    contentPadding: const EdgeInsets.all(16),
+                    contentPadding: EdgeInsets.all(spacing.md),
                     secondary: Container(
-                      padding: const EdgeInsets.all(12),
+                      padding: EdgeInsets.all(spacing.sm),
                       decoration: BoxDecoration(
                         color: isSelected
-                            ? primaryColor
-                            : const Color(0xFFF1F5F9),
-                        borderRadius: BorderRadius.circular(12),
+                            ? cs.primary
+                            : cs.surfaceContainerHighest,
+                        borderRadius: r.radiusSm,
                       ),
                       child: Icon(
                         icon,
                         color: isSelected
-                            ? Colors.white
-                            : const Color(0xFF64748B),
+                            ? cs.onPrimary
+                            : cs.onSurfaceVariant,
                         size: 24,
                       ),
                     ),
@@ -113,8 +115,8 @@ class TestSelectorScreenState extends State<TestSelectorScreen> {
                         fontWeight: FontWeight.w800,
                         fontSize: 16,
                         color: isSelected
-                            ? primaryColor
-                            : const Color(0xFF1E293B),
+                            ? cs.primary
+                            : cs.onSurface,
                         letterSpacing: -0.5,
                       ),
                     ),
@@ -122,15 +124,15 @@ class TestSelectorScreenState extends State<TestSelectorScreen> {
                       'Duración estimada: 5-8 min',
                       style: TextStyle(
                         color: isSelected
-                            ? primaryColor.withValues(alpha: 0.6)
-                            : const Color(0xFF94A3B8),
+                            ? cs.primary.withValues(alpha: 0.6)
+                            : cs.onSurfaceVariant,
                         fontSize: 12,
                       ),
                     ),
                     value: isSelected,
-                    activeColor: primaryColor,
+                    activeColor: cs.primary,
                     checkboxShape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(4),
+                      borderRadius: r.radiusSm,
                     ),
                     onChanged: (bool? value) {
                       setState(() {
@@ -143,7 +145,7 @@ class TestSelectorScreenState extends State<TestSelectorScreen> {
             ),
           ),
           Padding(
-            padding: const EdgeInsets.all(24.0),
+            padding: EdgeInsets.all(spacing.lg),
             child: SizedBox(
               width: double.infinity,
               height: 54,
@@ -177,11 +179,11 @@ class TestSelectorScreenState extends State<TestSelectorScreen> {
                       }
                     : null,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: primaryColor,
-                  foregroundColor: Colors.white,
+                  backgroundColor: cs.primary,
+                  foregroundColor: cs.onPrimary,
                   elevation: 0,
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: r.radiusSm,
                   ),
                   textStyle: const TextStyle(
                     fontWeight: FontWeight.w700,

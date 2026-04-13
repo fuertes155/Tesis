@@ -2,12 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'recent_activity_card.dart';
 import 'recent_activity_skeleton.dart';
+import '../models/session.dart';
 
 class HomeRecentActivitySection extends StatelessWidget {
   final bool loading;
-  final List<Map<String, dynamic>> sessions;
+  final List<Session> sessions;
   final Map<int, String> patientNames;
-  final Future<void> Function(Map<String, dynamic> s) onTapSession;
+  final Future<void> Function(Session s) onTapSession;
 
   const HomeRecentActivitySection({
     super.key,
@@ -76,11 +77,10 @@ class HomeRecentActivitySection extends StatelessWidget {
     return Column(
       children: List.generate(sessions.length, (i) {
         final s = sessions[i];
-        final pid = s['patient_id'];
-        final name =
-            pid is int ? (patientNames[pid] ?? 'Paciente #$pid') : 'Sesión';
-        final status = (s['status'] ?? '').toString();
-        final date = s['date']?.toString() ?? '';
+        final pid = s.patientId;
+        final name = patientNames[pid] ?? 'Paciente #$pid';
+        final status = s.status;
+        final date = s.date;
         final isCompleted =
             status.toLowerCase() == 'completed' || status.toLowerCase() == 'completada';
         final icon =
@@ -98,15 +98,11 @@ class HomeRecentActivitySection extends StatelessWidget {
               onTap: () => onTapSession(s),
             )
             .animate()
-            .fadeIn(
-              duration: 250.ms,
-              curve: Curves.easeOut,
-              delay: (i * 80).ms,
-            )
+            .fadeIn(duration: 220.ms, delay: (i * 80).ms)
             .moveY(
               begin: 6,
               end: 0,
-              duration: 250.ms,
+              duration: 220.ms,
               delay: (i * 80).ms,
             );
       }),

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../widgets/domain_result_card.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import '../core/theme/app_theme.dart';
 
 class ResultsScreen extends StatelessWidget {
   final Map<String, dynamic>? data;
@@ -10,30 +11,34 @@ class ResultsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final primaryColor = const Color(0xFF1A237E);
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+    final r = context.radii;
+    final spacing = context.spacing;
+    final sem = context.sem;
+
     if (dataFuture != null) {
       return FutureBuilder<Map<String, dynamic>>(
         future: dataFuture,
         builder: (context, snapshot) {
           if (snapshot.connectionState != ConnectionState.done) {
-            final theme = Theme.of(context);
             return Scaffold(
-              backgroundColor: const Color(0xFFF8FAFC),
+              backgroundColor: cs.surface,
               appBar: AppBar(
-                backgroundColor: Colors.white,
-                surfaceTintColor: Colors.white,
+                backgroundColor: cs.surfaceContainerLowest,
+                surfaceTintColor: cs.surfaceContainerLowest,
                 elevation: 0,
-                title: const Text(
+                title: Text(
                   'Resultados',
                   style: TextStyle(
                     fontWeight: FontWeight.w800,
-                    color: Color(0xFF1E293B),
+                    color: cs.onSurface,
                   ),
                 ),
                 centerTitle: false,
               ),
               body: SingleChildScrollView(
-                padding: const EdgeInsets.all(24.0),
+                padding: EdgeInsets.all(spacing.lg),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -41,26 +46,26 @@ class ResultsScreen extends StatelessWidget {
                         .animate()
                         .fadeIn(duration: 260.ms, curve: Curves.easeOut)
                         .moveY(begin: 8, end: 0, duration: 260.ms),
-                    const SizedBox(height: 48),
+                    SizedBox(height: spacing.x2l),
                     Row(
                       children: [
                         Icon(
                           Icons.analytics_outlined,
-                          color: primaryColor,
+                          color: cs.primary,
                           size: 20,
                         ),
-                        const SizedBox(width: 12),
+                        SizedBox(width: spacing.sm),
                         Text(
                           'DETALLE POR DOMINIOS',
                           style: theme.textTheme.labelSmall?.copyWith(
-                            color: const Color(0xFF64748B),
+                            color: cs.onSurfaceVariant,
                             fontWeight: FontWeight.w800,
                             letterSpacing: 1.5,
                           ),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 24),
+                    SizedBox(height: spacing.lg),
                     ..._buildSkeletonCards(theme, 4).asMap().entries.map(
                       (e) => e.value
                           .animate()
@@ -82,21 +87,20 @@ class ResultsScreen extends StatelessWidget {
             );
           }
           if (snapshot.hasError) {
-            final theme = Theme.of(context);
             return Scaffold(
-              backgroundColor: const Color(0xFFF8FAFC),
+              backgroundColor: cs.surface,
               appBar: AppBar(
-                backgroundColor: Colors.white,
+                backgroundColor: cs.surfaceContainerLowest,
                 title: const Text('Resultados'),
                 elevation: 0,
               ),
               body: Center(
                 child: Padding(
-                  padding: const EdgeInsets.all(24.0),
+                  padding: EdgeInsets.all(spacing.lg),
                   child: Text(
                     'Error al cargar resultados',
                     style: theme.textTheme.titleMedium?.copyWith(
-                      color: const Color(0xFFEF4444),
+                      color: sem.danger,
                     ),
                   ),
                 ),
@@ -107,46 +111,46 @@ class ResultsScreen extends StatelessWidget {
         },
       );
     }
-    final theme = Theme.of(context);
+    
     final title = data?['title'] as String? ?? 'Resultados';
     final globalScore = (data?['score'] as num?)?.toDouble();
     final highGlobal = (globalScore ?? 75) >= 90;
     final details = data?['details'] as Map<String, dynamic>? ?? {};
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
+      backgroundColor: cs.surface,
       appBar: AppBar(
-        backgroundColor: Colors.white,
-        surfaceTintColor: Colors.white,
+        backgroundColor: cs.surfaceContainerLowest,
+        surfaceTintColor: cs.surfaceContainerLowest,
         elevation: 0,
         title: Text(
           title,
-          style: const TextStyle(
+          style: TextStyle(
             fontWeight: FontWeight.w800,
-            color: Color(0xFF1E293B),
+            color: cs.onSurface,
           ),
         ),
         centerTitle: false,
         actions: [
           IconButton(
-            icon: const Icon(Icons.share_outlined, color: Color(0xFF64748B)),
+            icon: Icon(Icons.share_outlined, color: cs.onSurfaceVariant),
             onPressed: () {},
             tooltip: 'Compartir Informe',
           ),
-          const SizedBox(width: 16),
+          SizedBox(width: spacing.md),
         ],
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(24.0),
+        padding: EdgeInsets.all(spacing.lg),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Container(
-              padding: const EdgeInsets.all(32),
+              padding: EdgeInsets.all(spacing.xl),
               decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(24),
-                border: Border.all(color: const Color(0xFFE2E8F0)),
+                color: cs.surfaceContainerLowest,
+                borderRadius: r.radiusXl,
+                border: Border.all(color: cs.outlineVariant),
               ),
               child: Column(
                 children: [
@@ -159,9 +163,9 @@ class ResultsScreen extends StatelessWidget {
                         child: CircularProgressIndicator(
                           value: (globalScore ?? 75) / 100,
                           strokeWidth: 12,
-                          backgroundColor: const Color(0xFFF1F5F9),
+                          backgroundColor: cs.surfaceContainerHighest,
                           valueColor: AlwaysStoppedAnimation<Color>(
-                            highGlobal ? const Color(0xFF10B981) : primaryColor,
+                            highGlobal ? sem.success : cs.primary,
                           ),
                           strokeCap: StrokeCap.round,
                         ),
@@ -172,14 +176,14 @@ class ResultsScreen extends StatelessWidget {
                             '${(globalScore ?? 75).toInt()}',
                             style: theme.textTheme.displayMedium?.copyWith(
                               fontWeight: FontWeight.w900,
-                              color: const Color(0xFF1E293B),
+                              color: cs.onSurface,
                               letterSpacing: -2,
                             ),
                           ),
-                          const Text(
+                          Text(
                             'Puntos',
                             style: TextStyle(
-                              color: Color(0xFF64748B),
+                              color: cs.onSurfaceVariant,
                               fontWeight: FontWeight.w600,
                               fontSize: 12,
                             ),
@@ -188,24 +192,24 @@ class ResultsScreen extends StatelessWidget {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 32),
+                  SizedBox(height: spacing.xl),
                   Text(
                     'PUNTUACIÓN GLOBAL',
                     style: theme.textTheme.labelSmall?.copyWith(
-                      color: const Color(0xFF94A3B8),
+                      color: cs.onSurfaceVariant,
                       fontWeight: FontWeight.w800,
                       letterSpacing: 1.5,
                     ),
                   ),
-                  const SizedBox(height: 12),
+                  SizedBox(height: spacing.sm),
                   Text(
                     highGlobal
                         ? 'Rendimiento Superior'
                         : 'Rendimiento Estándar',
                     style: TextStyle(
                       color: highGlobal
-                          ? const Color(0xFF10B981)
-                          : primaryColor,
+                          ? sem.success
+                          : cs.primary,
                       fontWeight: FontWeight.w800,
                       fontSize: 18,
                     ),
@@ -213,22 +217,22 @@ class ResultsScreen extends StatelessWidget {
                 ],
               ),
             ).animate().fadeIn().scale(delay: 100.ms),
-            const SizedBox(height: 48),
+            SizedBox(height: spacing.x2l),
             Row(
               children: [
-                Icon(Icons.analytics_outlined, color: primaryColor, size: 20),
-                const SizedBox(width: 12),
+                Icon(Icons.analytics_outlined, color: cs.primary, size: 20),
+                SizedBox(width: spacing.sm),
                 Text(
                   'DETALLE POR DOMINIOS',
                   style: theme.textTheme.labelSmall?.copyWith(
-                    color: const Color(0xFF64748B),
+                    color: cs.onSurfaceVariant,
                     fontWeight: FontWeight.w800,
                     letterSpacing: 1.5,
                   ),
                 ),
               ],
             ).animate().fadeIn(delay: 300.ms),
-            const SizedBox(height: 24),
+            SizedBox(height: spacing.lg),
             ...details.entries.toList().asMap().entries.map((entry) {
               final idx = entry.key;
               final detail = entry.value;
@@ -240,7 +244,7 @@ class ResultsScreen extends StatelessWidget {
                   : ResultStatus.critical;
 
               return Padding(
-                padding: const EdgeInsets.only(bottom: 16),
+                padding: EdgeInsets.only(bottom: spacing.md),
                 child:
                     DomainResultCard(
                           domain: detail.key,
@@ -253,18 +257,18 @@ class ResultsScreen extends StatelessWidget {
                         .slideX(begin: 0.1),
               );
             }),
-            const SizedBox(height: 40),
+            SizedBox(height: spacing.xl),
             SizedBox(
               width: double.infinity,
               height: 54,
               child: ElevatedButton(
                 onPressed: () => context.go('/home'),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: primaryColor,
-                  foregroundColor: Colors.white,
+                  backgroundColor: cs.primary,
+                  foregroundColor: cs.onPrimary,
                   elevation: 0,
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: r.radiusSm,
                   ),
                   textStyle: const TextStyle(
                     fontWeight: FontWeight.w700,

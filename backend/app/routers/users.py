@@ -200,3 +200,37 @@ def update_user_availability(
     db.commit()
     db.refresh(db_user)
     return db_user
+
+@router.put("/{user_id}", response_model=schemas.User)
+def update_user(
+    user_id: int,
+    payload: schemas.UserUpdate,
+    db: Session = Depends(get_db),
+    _user: models.User = Depends(require_roles("gestor")),
+):
+    db_user = db.query(models.User).filter(models.User.id == user_id).first()
+    if not db_user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    data = payload.model_dump(exclude_unset=True)
+
+    if "username" in data and data["username"] is not None:
+        normalized = data["username"].strip().lower()
+        if normalized != db_user.username:
+            existing = _get_user_by_username_ci(db, normalized)
+            if existing and existing.id != db_user.id:
+                raise HTTPException(
+                    status_code=status.HTTP_409_CONFLICT,
+                    detail="Email ya registrado",
+                )
+            db_user.username = normalized
+
+    if "is_active" in data and data["is_active"] is not None:
+        db_user.is_active = bool(data["is_active"])
+
+    if "is_available" in data and data["is_available"] is not None:
+        db_user.is_available = bool(data["is_available"])
+
+    db.commit()
+    db.refresh(db_user)
+    return db_user

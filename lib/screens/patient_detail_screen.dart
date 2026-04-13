@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:get_it/get_it.dart';
 import 'package:go_router/go_router.dart';
 import '../services/api_service.dart';
 import '../widgets/info_row.dart';
+import '../core/theme/app_theme.dart';
 
 class PatientDetailScreen extends StatelessWidget {
   final String patientName;
@@ -16,35 +18,39 @@ class PatientDetailScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final primaryColor = const Color(0xFF1A237E);
+    final cs = theme.colorScheme;
+    final r = context.radii;
+    final spacing = context.spacing;
+    final sem = context.sem;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
+      backgroundColor: cs.surface,
       appBar: AppBar(
-        backgroundColor: Colors.white,
-        surfaceTintColor: Colors.white,
+        backgroundColor: cs.surfaceContainerLowest,
+        surfaceTintColor: cs.surfaceContainerLowest,
         elevation: 0,
         title: Text(
           patientName,
-          style: const TextStyle(
+          style: TextStyle(
             fontWeight: FontWeight.w800,
-            color: Color(0xFF1E293B),
+            color: cs.onSurface,
           ),
         ),
         centerTitle: false,
         actions: [
-          if (patientId != null && ApiService().currentRole == 'gestor')
+          if (patientId != null &&
+              GetIt.I<ApiService>().currentRole == 'gestor')
             IconButton(
               tooltip: 'Eliminar Paciente',
-              icon: const Icon(
+              icon: Icon(
                 Icons.delete_outline_rounded,
-                color: Color(0xFFEF4444),
+                color: sem.danger,
               ),
               onPressed: () async {
                 int? count;
                 try {
                   if (patientId != null) {
-                    final api = ApiService();
+                    final api = GetIt.I<ApiService>();
                     count = await api.getSessionsCountForPatient(patientId!);
                   }
                 } catch (_) {
@@ -68,8 +74,8 @@ class PatientDetailScreen extends StatelessWidget {
                       FilledButton(
                         onPressed: () => Navigator.of(ctx).pop(true),
                         style: FilledButton.styleFrom(
-                          backgroundColor: const Color(0xFFEF4444),
-                          foregroundColor: Colors.white,
+                          backgroundColor: sem.danger,
+                          foregroundColor: cs.onError,
                         ),
                         child: const Text('ELIMINAR'),
                       ),
@@ -79,14 +85,15 @@ class PatientDetailScreen extends StatelessWidget {
                 if (!context.mounted) return;
                 if (confirmed != true) return;
                 try {
-                  final api = ApiService();
+                  final api = GetIt.I<ApiService>();
                   await api.deletePatient(patientId!);
                   if (!context.mounted) return;
                   if (context.mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Paciente eliminado correctamente'),
+                      SnackBar(
+                        content: const Text('Paciente eliminado correctamente'),
                         behavior: SnackBarBehavior.floating,
+                        backgroundColor: sem.success,
                       ),
                     );
                     Navigator.of(context).pop(true);
@@ -97,27 +104,27 @@ class PatientDetailScreen extends StatelessWidget {
                       SnackBar(
                         content: Text('No se pudo eliminar: $e'),
                         behavior: SnackBarBehavior.floating,
-                        backgroundColor: const Color(0xFFEF4444),
+                        backgroundColor: sem.danger,
                       ),
                     );
                   }
                 }
               },
             ),
-          const SizedBox(width: 8),
+          SizedBox(width: spacing.xs),
         ],
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(24.0),
+        padding: EdgeInsets.all(spacing.lg),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Container(
-              padding: const EdgeInsets.all(24),
+              padding: EdgeInsets.all(spacing.lg),
               decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(24),
-                border: Border.all(color: const Color(0xFFE2E8F0)),
+                color: cs.surfaceContainerLowest,
+                borderRadius: r.radiusXl,
+                border: Border.all(color: cs.outlineVariant),
               ),
               child: Column(
                 children: [
@@ -125,7 +132,7 @@ class PatientDetailScreen extends StatelessWidget {
                     children: [
                       CircleAvatar(
                         radius: 32,
-                        backgroundColor: primaryColor.withValues(alpha: 0.1),
+                        backgroundColor: cs.primary.withValues(alpha: 0.1),
                         child: Text(
                           patientName.isNotEmpty
                               ? patientName[0].toUpperCase()
@@ -133,11 +140,11 @@ class PatientDetailScreen extends StatelessWidget {
                           style: TextStyle(
                             fontSize: 28,
                             fontWeight: FontWeight.w900,
-                            color: primaryColor,
+                            color: cs.primary,
                           ),
                         ),
                       ),
-                      const SizedBox(width: 20),
+                      SizedBox(width: spacing.lg),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -146,22 +153,22 @@ class PatientDetailScreen extends StatelessWidget {
                               patientName,
                               style: theme.textTheme.headlineSmall?.copyWith(
                                 fontWeight: FontWeight.w800,
-                                color: const Color(0xFF1E293B),
+                                color: cs.onSurface,
                               ),
                             ),
-                            const SizedBox(height: 4),
+                            SizedBox(height: spacing.xs - 4), // ~4
                             Text(
                               'Expediente del Paciente',
-                              style: TextStyle(color: const Color(0xFF64748B)),
+                              style: TextStyle(color: cs.onSurfaceVariant),
                             ),
                           ],
                         ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 32),
-                  const Divider(color: Color(0xFFF1F5F9)),
-                  const SizedBox(height: 24),
+                  SizedBox(height: spacing.xl),
+                  Divider(color: cs.outlineVariant),
+                  SizedBox(height: spacing.lg),
                   InfoRow(
                     icon: Icons.badge_outlined,
                     label: 'ID Único',
@@ -180,49 +187,53 @@ class PatientDetailScreen extends StatelessWidget {
                 ],
               ),
             ),
-            const SizedBox(height: 40),
+            SizedBox(height: spacing.x2l),
             Text(
               'ACCIONES DISPONIBLES',
               style: theme.textTheme.labelSmall?.copyWith(
-                color: const Color(0xFF64748B),
+                color: cs.onSurfaceVariant,
                 fontWeight: FontWeight.w800,
                 letterSpacing: 1.5,
               ),
             ),
-            const SizedBox(height: 20),
+            SizedBox(height: spacing.lg),
             GridView.count(
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
               crossAxisCount: 2,
-              mainAxisSpacing: 16,
-              crossAxisSpacing: 16,
+              mainAxisSpacing: spacing.md,
+              crossAxisSpacing: spacing.md,
               childAspectRatio: 2.5,
               children: [
                 _buildActionCard(
+                  context,
                   icon: Icons.play_circle_outline_rounded,
                   label: 'Iniciar Sesión',
-                  color: primaryColor,
+                  color: cs.primary,
                   onTap: () => context.push(
                     '/new_session',
                     extra: {'patientId': patientId},
                   ),
                 ),
                 _buildActionCard(
+                  context,
                   icon: Icons.analytics_outlined,
                   label: 'Ver Historial',
-                  color: const Color(0xFF0F172A),
+                  color: cs.onSurface,
                   onTap: () => context.push('/history'),
                 ),
                 _buildActionCard(
+                  context,
                   icon: Icons.edit_outlined,
                   label: 'Editar Perfil',
-                  color: const Color(0xFF64748B),
+                  color: cs.onSurfaceVariant,
                   onTap: () {},
                 ),
                 _buildActionCard(
+                  context,
                   icon: Icons.ios_share_rounded,
                   label: 'Exportar Datos',
-                  color: const Color(0xFF64748B),
+                  color: cs.onSurfaceVariant,
                   onTap: () {},
                 ),
               ],
@@ -233,40 +244,45 @@ class PatientDetailScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildActionCard({
+  Widget _buildActionCard(
+    BuildContext context, {
     required IconData icon,
     required String label,
     required Color color,
     required VoidCallback onTap,
   }) {
+    final cs = Theme.of(context).colorScheme;
+    final r = context.radii;
+    final spacing = context.spacing;
+    
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(16),
+      borderRadius: r.radiusMd,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        padding: EdgeInsets.symmetric(horizontal: spacing.md, vertical: spacing.sm),
         decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: const Color(0xFFE2E8F0)),
+          color: cs.surfaceContainerLowest,
+          borderRadius: r.radiusMd,
+          border: Border.all(color: cs.outlineVariant),
         ),
         child: Row(
           children: [
             Container(
-              padding: const EdgeInsets.all(8),
+              padding: EdgeInsets.all(spacing.xs),
               decoration: BoxDecoration(
                 color: color.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(10),
+                borderRadius: r.radiusSm,
               ),
               child: Icon(icon, color: color, size: 20),
             ),
-            const SizedBox(width: 12),
+            SizedBox(width: spacing.sm),
             Expanded(
               child: Text(
                 label,
-                style: const TextStyle(
+                style: TextStyle(
                   fontWeight: FontWeight.w700,
                   fontSize: 14,
-                  color: Color(0xFF1E293B),
+                  color: cs.onSurface,
                 ),
               ),
             ),

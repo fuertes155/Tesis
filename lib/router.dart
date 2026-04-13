@@ -19,6 +19,7 @@ import 'games/reaction_game.dart';
 import 'games/fluency_game.dart';
 import 'games/stroop_game.dart';
 import 'games/common/game_flow.dart';
+import 'package:get_it/get_it.dart';
 import 'services/api_service.dart';
 import 'screens/patient_welcome_screen.dart';
 import 'screens/users_admin_screen.dart';
@@ -26,7 +27,8 @@ import 'screens/users_admin_screen.dart';
 final router = GoRouter(
   initialLocation: '/',
   redirect: (context, state) {
-    final role = ApiService().currentRole;
+    final api = GetIt.I<ApiService>();
+    final role = api.currentRole;
     final loc = state.uri.path;
     if (role == null && loc != '/' && loc != '/reset_password') {
       return '/';
@@ -47,10 +49,7 @@ final router = GoRouter(
       }
     } else if (role == 'doctor') {
       // Rutas restringidas para Doctor: gestión de pacientes/usuarios
-      const blocked = {
-        '/create_patient',
-        '/users_admin',
-      };
+      const blocked = {'/create_patient', '/users_admin'};
       if (blocked.contains(loc)) {
         return '/home';
       }
@@ -264,7 +263,7 @@ final router = GoRouter(
         final extra = state.extra;
         final routes = extra is Map ? extra['routes'] : null;
         final list = routes is List ? routes.cast<String>() : const <String>[];
-        return GameFlowScreen(gameRoutes: list);
+        return GameFlow(gameRoutes: list);
       },
     ),
   ],

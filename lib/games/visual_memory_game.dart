@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:go_router/go_router.dart';
 import 'common/game_results.dart';
@@ -120,6 +121,7 @@ class _VisualMemoryGameState extends State<VisualMemoryGame> {
     });
 
     if (_targetIndices.contains(index)) {
+      HapticFeedback.mediumImpact();
       // Correct selection
       if (_selectedIndices.where((i) => _targetIndices.contains(i)).length ==
           _targetIndices.length) {
@@ -145,6 +147,7 @@ class _VisualMemoryGameState extends State<VisualMemoryGame> {
       }
     } else {
       // Wrong selection - Game Over
+      HapticFeedback.vibrate();
       setState(() {
         _wrongIndex = index;
       });

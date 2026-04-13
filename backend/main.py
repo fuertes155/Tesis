@@ -5,6 +5,8 @@ from app.database import engine, Base, SessionLocal
 from app import models
 from app.security import get_password_hash
 from sqlalchemy import text
+import time
+import logging
 
 # Create database tables
 Base.metadata.create_all(bind=engine)
@@ -58,6 +60,32 @@ app = FastAPI(
     description="Backend API for Neuropsychological Evaluation App",
     version="0.1.0"
 )
+
+_logger = logging.getLogger("neuroapp")
+
+@app.middleware("http")
+async def request_log_middleware(request, call_next):
+    start = time.perf_counter()
+    try:
+        response = await call_next(request)
+    except Exception:
+        elapsed_ms = (time.perf_counter() - start) * 1000.0
+        _logger.exception(
+            "HTTP %s %s -> EXCEPTION (%.1fms)",
+            request.method,
+            request.url.path,
+            elapsed_ms,
+        )
+        raise
+    elapsed_ms = (time.perf_counter() - start) * 1000.0
+    _logger.info(
+        "HTTP %s %s -> %s (%.1fms)",
+        request.method,
+        request.url.path,
+        response.status_code,
+        elapsed_ms,
+    )
+    return response
 
 # Configure CORS
 app.add_middleware(

@@ -1,8 +1,8 @@
 part of 'users_admin_screen.dart';
 
 class UsersAdminScreenState extends State<UsersAdminScreen> {
-  List<dynamic> _users = [];
-  List<dynamic> _patients = [];
+  List<Map<String, dynamic>> _users = [];
+  List<Map<String, dynamic>> _patients = [];
   bool _isLoading = true;
   String _patientQuery = '';
   String _doctorQuery = '';
@@ -17,11 +17,13 @@ class UsersAdminScreenState extends State<UsersAdminScreen> {
   Future<void> _fetchData() async {
     setState(() => _isLoading = true);
     try {
-      final api = ApiService();
+      final api = GetIt.I<ApiService>();
       final results = await Future.wait([api.getUsers(), api.getPatients()]);
+      final users = results[0] as List<User>;
+      final patients = results[1] as List<Patient>;
       setState(() {
-        _users = results[0];
-        _patients = results[1];
+        _users = users.map(_userToMap).toList();
+        _patients = patients.map(_patientToMap).toList();
         _isLoading = false;
       });
     } catch (e) {
@@ -39,7 +41,8 @@ class UsersAdminScreenState extends State<UsersAdminScreen> {
 
   Future<void> _toggleAvailability(int userId, bool currentStatus) async {
     try {
-      await ApiService().updateUserAvailability(userId, !currentStatus);
+      final api = GetIt.I<ApiService>();
+      await api.updateUserAvailability(userId, !currentStatus);
       await _fetchData();
     } catch (e) {
       if (mounted) {
@@ -84,7 +87,8 @@ class UsersAdminScreenState extends State<UsersAdminScreen> {
 
     if (doctorId != null) {
       try {
-        await ApiService().assignDoctorToPatient(patientId, doctorId);
+        final api = GetIt.I<ApiService>();
+        await api.assignDoctorToPatient(patientId, doctorId);
         await _fetchData();
       } catch (e) {
         if (mounted) {
@@ -100,162 +104,154 @@ class UsersAdminScreenState extends State<UsersAdminScreen> {
     final emailController = TextEditingController();
     final passController = TextEditingController();
     String selectedRole = 'doctor';
-    final api = ApiService();
+    final api = GetIt.I<ApiService>();
 
     final result = await showDialog<bool>(
       context: context,
       builder: (ctx) => StatefulBuilder(
-        builder: (context, setDialogState) => AlertDialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(24),
-          ),
-          title: const Text(
-            'Crear Nuevo Usuario',
-            style: TextStyle(fontWeight: FontWeight.w900),
-          ),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextField(
-                  controller: emailController,
-                  decoration: InputDecoration(
-                    labelText: 'Correo Electrónico',
-                    prefixIcon: const Icon(Icons.email_outlined),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
+        builder: (context, setDialogState) {
+          final theme = Theme.of(context);
+          final cs = theme.colorScheme;
+          final r = context.radii;
+          return AlertDialog(
+            title: const Text(
+              'Crear Nuevo Usuario',
+              style: TextStyle(fontWeight: FontWeight.w900),
+            ),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextField(
+                    controller: emailController,
+                    decoration: InputDecoration(
+                      labelText: 'Correo Electrónico',
+                      prefixIcon: const Icon(Icons.email_outlined),
+                      border: OutlineInputBorder(borderRadius: r.radiusSm),
                     ),
                   ),
-                ),
-                const SizedBox(height: 16),
-                TextField(
-                  controller: passController,
-                  obscureText: true,
-                  decoration: InputDecoration(
-                    labelText: 'Contraseña',
-                    prefixIcon: const Icon(Icons.lock_outline_rounded),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: passController,
+                    obscureText: true,
+                    decoration: InputDecoration(
+                      labelText: 'Contraseña',
+                      prefixIcon: const Icon(Icons.lock_outline_rounded),
+                      border: OutlineInputBorder(borderRadius: r.radiusSm),
                     ),
                   ),
-                ),
-                const SizedBox(height: 24),
-                const Align(
-                  alignment: Alignment.centerLeft,
-                  child: Text(
-                    'Rol del Usuario',
-                    style: TextStyle(
-                      fontWeight: FontWeight.w700,
-                      fontSize: 13,
-                      color: Color(0xFF64748B),
+                  const SizedBox(height: 24),
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      'Rol del Usuario',
+                      style: theme.textTheme.labelMedium?.copyWith(
+                        color: cs.onSurfaceVariant,
+                      ),
                     ),
                   ),
-                ),
-                const SizedBox(height: 8),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
-                  decoration: BoxDecoration(
-                    border: Border.all(color: const Color(0xFFE2E8F0)),
-                    borderRadius: BorderRadius.circular(12),
+                  const SizedBox(height: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    decoration: BoxDecoration(
+                      border: Border.all(color: cs.outlineVariant),
+                      borderRadius: r.radiusSm,
+                    ),
+                    child: DropdownButtonHideUnderline(
+                      child: DropdownButton<String>(
+                        value: selectedRole,
+                        isExpanded: true,
+                        onChanged: (v) =>
+                            setDialogState(() => selectedRole = v!),
+                        items: const [
+                          DropdownMenuItem(
+                            value: 'gestor',
+                            child: Text('Administrador (Gestor)'),
+                          ),
+                          DropdownMenuItem(
+                            value: 'doctor',
+                            child: Text('Doctor'),
+                          ),
+                          DropdownMenuItem(
+                            value: 'user',
+                            child: Text('Paciente (User)'),
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
-                  child: DropdownButtonHideUnderline(
-                    child: DropdownButton<String>(
-                      value: selectedRole,
-                      isExpanded: true,
-                      onChanged: (v) => setDialogState(() => selectedRole = v!),
-                      items: const [
-                        DropdownMenuItem(
-                          value: 'gestor',
-                          child: Text('Administrador (Gestor)'),
+                  if (selectedRole == 'doctor') ...[
+                    const SizedBox(height: 24),
+                    Row(
+                      children: [
+                        Text(
+                          '¿Disponible inicialmente?',
+                          style: theme.textTheme.labelMedium?.copyWith(
+                            color: cs.onSurfaceVariant,
+                          ),
                         ),
-                        DropdownMenuItem(
-                          value: 'doctor',
-                          child: Text('Doctor'),
-                        ),
-                        DropdownMenuItem(
-                          value: 'user',
-                          child: Text('Paciente (User)'),
+                        const Spacer(),
+                        Switch(
+                          value: true, // Default to available
+                          onChanged: (val) {
+                            // This is a simplified UI for the dialog
+                            // The backend default is already 1 (True)
+                          },
                         ),
                       ],
                     ),
-                  ),
-                ),
-                if (selectedRole == 'doctor') ...[
-                  const SizedBox(height: 24),
-                  Row(
-                    children: [
-                      const Text(
-                        '¿Disponible inicialmente?',
-                        style: TextStyle(
-                          fontWeight: FontWeight.w700,
-                          fontSize: 13,
-                          color: Color(0xFF64748B),
-                        ),
+                    Text(
+                      'Los doctores se crean como "DISPONIBLES" por defecto.',
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: cs.onSurfaceVariant,
+                        fontStyle: FontStyle.italic,
                       ),
-                      const Spacer(),
-                      Switch(
-                        value: true, // Default to available
-                        onChanged: (val) {
-                          // This is a simplified UI for the dialog
-                          // The backend default is already 1 (True)
-                        },
-                        activeThumbColor: const Color(0xFF10B981),
-                      ),
-                    ],
-                  ),
-                  const Text(
-                    'Los doctores se crean como "DISPONIBLES" por defecto.',
-                    style: TextStyle(
-                      fontSize: 11,
-                      color: Color(0xFF94A3B8),
-                      fontStyle: FontStyle.italic,
                     ),
-                  ),
+                  ],
                 ],
-              ],
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: const Text('CANCELAR'),
-            ),
-            FilledButton(
-              onPressed: () async {
-                if (emailController.text.isEmpty ||
-                    passController.text.isEmpty) {
-                  return;
-                }
-                try {
-                  await api.adminCreateUser(
-                    username: emailController.text,
-                    password: passController.text,
-                    role: selectedRole,
-                  );
-                  if (ctx.mounted) {
-                    Navigator.pop(ctx, true);
-                  }
-                } catch (e) {
-                  if (ctx.mounted) {
-                    ScaffoldMessenger.of(ctx).showSnackBar(
-                      SnackBar(
-                        content: Text('Error: $e'),
-                        backgroundColor: Colors.red,
-                      ),
-                    );
-                  }
-                }
-              },
-              style: FilledButton.styleFrom(
-                backgroundColor: const Color(0xFF1A237E),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
               ),
-              child: const Text('CREAR USUARIO'),
             ),
-          ],
-        ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text('Cancelar'),
+              ),
+              FilledButton(
+                onPressed: () async {
+                  if (emailController.text.isEmpty ||
+                      passController.text.isEmpty) {
+                    return;
+                  }
+                  try {
+                    await api.adminCreateUser(
+                      username: emailController.text,
+                      password: passController.text,
+                      role: selectedRole,
+                    );
+                    if (ctx.mounted) {
+                      Navigator.pop(ctx, true);
+                    }
+                  } catch (e) {
+                    if (ctx.mounted) {
+                      ScaffoldMessenger.of(ctx).showSnackBar(
+                        SnackBar(
+                          content: Text('Error: $e'),
+                          backgroundColor: cs.error,
+                        ),
+                      );
+                    }
+                  }
+                },
+                style: FilledButton.styleFrom(
+                  backgroundColor: cs.primary,
+                  foregroundColor: cs.onPrimary,
+                  shape: RoundedRectangleBorder(borderRadius: r.radiusSm),
+                ),
+                child: const Text('Crear usuario'),
+              ),
+            ],
+          );
+        },
       ),
     );
 
@@ -267,6 +263,10 @@ class UsersAdminScreenState extends State<UsersAdminScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+    final s = context.spacing;
+    final r = context.radii;
+    final sem = context.sem;
     final doctorsAll = _users.where((u) => u['role'] == 'doctor').toList();
     final doctors = _showOnlyAvailableDoctors
         ? doctorsAll.where((d) => (d['is_available'] ?? true) == true).toList()
@@ -314,23 +314,21 @@ class UsersAdminScreenState extends State<UsersAdminScreen> {
     }).toList();
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
+      backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
-        backgroundColor: Colors.white,
-        surfaceTintColor: Colors.white,
-        elevation: 0,
         title: const HomeHeader(),
         centerTitle: false,
         actions: [
           IconButton(
-            icon: const Icon(Icons.refresh_rounded, color: Color(0xFF64748B)),
+            icon: const Icon(Icons.refresh_rounded),
             onPressed: _fetchData,
             tooltip: 'Actualizar',
           ),
           IconButton(
-            icon: const Icon(Icons.logout_rounded, color: Color(0xFF64748B)),
+            icon: const Icon(Icons.logout_rounded),
             onPressed: () async {
-              await ApiService().logout();
+              final api = GetIt.I<ApiService>();
+              await api.logout();
               if (!context.mounted) return;
               context.go('/');
             },
@@ -344,230 +342,242 @@ class UsersAdminScreenState extends State<UsersAdminScreen> {
           : LayoutBuilder(
               builder: (context, constraints) {
                 final w = constraints.maxWidth;
-                final horizontal = w < 720 ? 16.0 : 60.0;
-                final vertical = w < 720 ? 24.0 : 48.0;
+                final horizontal = w < 720 ? s.md : s.x2l + s.md;
+                final vertical = w < 720 ? s.lg : s.x2l;
 
-                return SingleChildScrollView(
-                  child: PageContainer(
-                    maxWidth: 1400,
-                    padding: EdgeInsets.symmetric(
-                      horizontal: horizontal,
-                      vertical: vertical,
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Panel de Administrador',
-                          style: theme.textTheme.headlineMedium?.copyWith(
-                            fontWeight: FontWeight.w900,
-                            color: const Color(0xFF1E293B),
-                            letterSpacing: -1,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          'Gestiona usuarios, médicos y pacientes desde un solo lugar.',
-                          style: theme.textTheme.bodyLarge?.copyWith(
-                            color: const Color(0xFF64748B),
-                          ),
-                        ),
-                        const SizedBox(height: 28),
-                        LayoutBuilder(
-                          builder: (context, c) {
-                            final isNarrow = c.maxWidth < 980;
-                            final cardWidth = isNarrow
-                                ? double.infinity
-                                : (c.maxWidth - 16 * 3) / 4;
-                            return Wrap(
-                              spacing: 16,
-                              runSpacing: 16,
-                              children: [
-                                SizedBox(
-                                  width: cardWidth,
-                                  child: StatCard(
-                                    title: 'Pacientes',
-                                    value: '${_patients.length}',
-                                    icon: Icons.people_alt_outlined,
-                                    color: theme.colorScheme.secondary,
-                                  ),
+                return CustomScrollView(
+                  slivers: [
+                    SliverPadding(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: horizontal,
+                        vertical: vertical,
+                      ),
+                      sliver: SliverToBoxAdapter(
+                        child: PageContainer(
+                          maxWidth: 1400,
+                          padding: EdgeInsets.zero,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Panel de Administrador',
+                                style: theme.textTheme.headlineMedium?.copyWith(
+                                  fontWeight: FontWeight.w900,
+                                  letterSpacing: -1,
                                 ),
-                                SizedBox(
-                                  width: cardWidth,
-                                  child: StatCard(
-                                    title: 'Doctores',
-                                    value: '${doctorsAll.length}',
-                                    icon: Icons.medical_services_outlined,
-                                    color: theme.colorScheme.primary,
-                                  ),
+                              ),
+                              SizedBox(height: s.xs),
+                              Text(
+                                'Gestiona usuarios, médicos y pacientes desde un solo lugar.',
+                                style: theme.textTheme.bodyLarge?.copyWith(
+                                  color: cs.onSurfaceVariant,
                                 ),
-                                SizedBox(
-                                  width: cardWidth,
-                                  child: StatCard(
-                                    title: 'Disponibles',
-                                    value:
-                                        '${doctorsAll.where((d) => (d['is_available'] ?? true) == true).length}',
-                                    icon: Icons.check_circle_outline,
-                                    color: const Color(0xFF10B981),
-                                  ),
+                              ),
+                              SizedBox(height: s.lg + s.xs),
+                              LayoutBuilder(
+                                builder: (context, c) {
+                                  final isNarrow = c.maxWidth < 980;
+                                  final cardWidth = isNarrow
+                                      ? double.infinity
+                                      : (c.maxWidth - 16 * 3) / 4;
+                                  return Wrap(
+                                    spacing: s.md,
+                                    runSpacing: s.md,
+                                    children: [
+                                      SizedBox(
+                                        width: cardWidth,
+                                        child: StatCard(
+                                          title: 'Pacientes',
+                                          value: '${_patients.length}',
+                                          icon: Icons.people_alt_outlined,
+                                          color: theme.colorScheme.secondary,
+                                        ),
+                                      ),
+                                      SizedBox(
+                                        width: cardWidth,
+                                        child: StatCard(
+                                          title: 'Doctores',
+                                          value: '${doctorsAll.length}',
+                                          icon: Icons.medical_services_outlined,
+                                          color: theme.colorScheme.primary,
+                                        ),
+                                      ),
+                                      SizedBox(
+                                        width: cardWidth,
+                                        child: StatCard(
+                                          title: 'Disponibles',
+                                          value:
+                                              '${doctorsAll.where((d) => (d['is_available'] ?? true) == true).length}',
+                                          icon: Icons.check_circle_outline,
+                                          color: sem.success,
+                                        ),
+                                      ),
+                                      SizedBox(
+                                        width: cardWidth,
+                                        height: 84,
+                                        child: FilledButton.icon(
+                                          onPressed: _showCreateUserDialog,
+                                          icon: const Icon(
+                                            Icons.person_add_alt_1_rounded,
+                                            size: 20,
+                                          ),
+                                          label: const Text('Nuevo Usuario'),
+                                          style: FilledButton.styleFrom(
+                                            backgroundColor: cs.primary,
+                                            foregroundColor: cs.onPrimary,
+                                            shape: RoundedRectangleBorder(
+                                              borderRadius: r.radiusLg,
+                                            ),
+                                            textStyle: const TextStyle(
+                                              fontWeight: FontWeight.w800,
+                                              fontSize: 16,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  );
+                                },
+                              ),
+                              SizedBox(height: s.xl),
+
+                              _buildSectionHeader(
+                                'Médicos',
+                                Icons.medical_services_outlined,
+                              ),
+                              SizedBox(height: s.md + s.xs),
+                              Container(
+                                padding: EdgeInsets.all(s.md),
+                                decoration: BoxDecoration(
+                                  color: theme.cardColor,
+                                  borderRadius: r.radiusMd,
+                                  border: Border.all(color: cs.outlineVariant),
                                 ),
-                                SizedBox(
-                                  width: cardWidth,
-                                  height: 84,
-                                  child: FilledButton.icon(
-                                    onPressed: _showCreateUserDialog,
-                                    icon: const Icon(
-                                      Icons.person_add_alt_1_rounded,
+                                child: LayoutBuilder(
+                                  builder: (context, c) {
+                                    final stacked = c.maxWidth < 520;
+                                    final field = TextField(
+                                      decoration: InputDecoration(
+                                        hintText: 'Buscar médico...',
+                                        prefixIcon: const Icon(
+                                          Icons.search_rounded,
+                                          size: 20,
+                                        ),
+                                        filled: true,
+                                        fillColor: theme
+                                            .colorScheme
+                                            .surfaceContainerHighest,
+                                        border: OutlineInputBorder(
+                                          borderRadius: BorderRadius.circular(
+                                            14,
+                                          ),
+                                          borderSide: BorderSide.none,
+                                        ),
+                                      ),
+                                      onChanged: (v) =>
+                                          setState(() => _doctorQuery = v),
+                                    );
+                                    final chip = FilterChip(
+                                      label: const Text('Solo disponibles'),
+                                      selected: _showOnlyAvailableDoctors,
+                                      onSelected: (v) => setState(
+                                        () => _showOnlyAvailableDoctors = v,
+                                      ),
+                                    );
+                                    if (stacked) {
+                                      return Column(
+                                        children: [
+                                          field,
+                                          SizedBox(height: s.sm),
+                                          Align(
+                                            alignment: Alignment.centerLeft,
+                                            child: chip,
+                                          ),
+                                        ],
+                                      );
+                                    }
+                                    return Row(
+                                      children: [
+                                        Expanded(child: field),
+                                        SizedBox(width: s.md),
+                                        chip,
+                                      ],
+                                    );
+                                  },
+                                ),
+                              ),
+                              SizedBox(height: s.md),
+                              _buildProfessionalTable(
+                                filteredDoctors,
+                                tableType: 'doctor',
+                                doctorNamesById: doctorNamesById,
+                                patientsPerDoctor: patientsPerDoctor,
+                              ),
+
+                              SizedBox(height: s.x2l + s.sm),
+
+                              _buildSectionHeader(
+                                'Pacientes',
+                                Icons.people_alt_outlined,
+                              ),
+                              SizedBox(height: s.md + s.xs),
+                              Container(
+                                padding: EdgeInsets.all(s.md),
+                                decoration: BoxDecoration(
+                                  color: theme.cardColor,
+                                  borderRadius: r.radiusMd,
+                                  border: Border.all(color: cs.outlineVariant),
+                                ),
+                                child: TextField(
+                                  decoration: InputDecoration(
+                                    hintText:
+                                        'Buscar paciente (nombre, teléfono, diagnóstico)...',
+                                    prefixIcon: const Icon(
+                                      Icons.search_rounded,
                                       size: 20,
                                     ),
-                                    label: const Text('Nuevo Usuario'),
-                                    style: FilledButton.styleFrom(
-                                      backgroundColor:
-                                          theme.colorScheme.primary,
-                                      foregroundColor: Colors.white,
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(20),
-                                      ),
-                                      textStyle: const TextStyle(
-                                        fontWeight: FontWeight.w800,
-                                        fontSize: 16,
-                                      ),
+                                    filled: true,
+                                    fillColor: theme
+                                        .colorScheme
+                                        .surfaceContainerHighest,
+                                    border: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(14),
+                                      borderSide: BorderSide.none,
                                     ),
                                   ),
+                                  onChanged: (v) =>
+                                      setState(() => _patientQuery = v),
                                 ),
-                              ],
-                            );
-                          },
-                        ),
-                        const SizedBox(height: 40),
-
-                        _buildSectionHeader(
-                          'Médicos',
-                          Icons.medical_services_outlined,
-                        ),
-                        const SizedBox(height: 20),
-                        Container(
-                          padding: const EdgeInsets.all(16),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(16),
-                            border: Border.all(color: const Color(0xFFE2E8F0)),
-                          ),
-                          child: LayoutBuilder(
-                            builder: (context, c) {
-                              final stacked = c.maxWidth < 520;
-                              final field = TextField(
-                                decoration: InputDecoration(
-                                  hintText: 'Buscar médico...',
-                                  prefixIcon: const Icon(
-                                    Icons.search_rounded,
-                                    size: 20,
-                                  ),
-                                  filled: true,
-                                  fillColor:
-                                      theme.colorScheme.surfaceContainerHighest,
-                                  border: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(14),
-                                    borderSide: BorderSide.none,
-                                  ),
-                                ),
-                                onChanged: (v) =>
-                                    setState(() => _doctorQuery = v),
-                              );
-                              final chip = FilterChip(
-                                label: const Text('Solo disponibles'),
-                                selected: _showOnlyAvailableDoctors,
-                                onSelected: (v) => setState(
-                                  () => _showOnlyAvailableDoctors = v,
-                                ),
-                              );
-                              if (stacked) {
-                                return Column(
-                                  children: [
-                                    field,
-                                    const SizedBox(height: 12),
-                                    Align(
-                                      alignment: Alignment.centerLeft,
-                                      child: chip,
-                                    ),
-                                  ],
-                                );
-                              }
-                              return Row(
-                                children: [
-                                  Expanded(child: field),
-                                  const SizedBox(width: 16),
-                                  chip,
-                                ],
-                              );
-                            },
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        _buildProfessionalTable(
-                          filteredDoctors,
-                          tableType: 'doctor',
-                          doctorNamesById: doctorNamesById,
-                          patientsPerDoctor: patientsPerDoctor,
-                        ),
-
-                        const SizedBox(height: 56),
-
-                        _buildSectionHeader(
-                          'Pacientes',
-                          Icons.people_alt_outlined,
-                        ),
-                        const SizedBox(height: 20),
-                        Container(
-                          padding: const EdgeInsets.all(16),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(16),
-                            border: Border.all(color: const Color(0xFFE2E8F0)),
-                          ),
-                          child: TextField(
-                            decoration: InputDecoration(
-                              hintText:
-                                  'Buscar paciente (nombre, teléfono, diagnóstico)...',
-                              prefixIcon: const Icon(
-                                Icons.search_rounded,
-                                size: 20,
                               ),
-                              filled: true,
-                              fillColor:
-                                  theme.colorScheme.surfaceContainerHighest,
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(14),
-                                borderSide: BorderSide.none,
+                              SizedBox(height: s.md),
+                              _buildProfessionalTable(
+                                filteredPatients,
+                                tableType: 'patient',
+                                doctorNamesById: doctorNamesById,
+                                patientsPerDoctor: patientsPerDoctor,
                               ),
-                            ),
-                            onChanged: (v) => setState(() => _patientQuery = v),
+
+                              SizedBox(height: s.x2l + s.sm),
+
+                              _buildSectionHeader(
+                                'Administradores del Sistema',
+                                Icons.admin_panel_settings_outlined,
+                              ),
+                              SizedBox(height: s.md + s.xs),
+                              _buildProfessionalTable(
+                                _users
+                                    .where((u) => u['role'] == 'gestor')
+                                    .toList(),
+                                tableType: 'admin',
+                              ),
+
+                              SizedBox(height: s.x2l + s.lg),
+                            ],
                           ),
                         ),
-                        const SizedBox(height: 16),
-                        _buildProfessionalTable(
-                          filteredPatients,
-                          tableType: 'patient',
-                          doctorNamesById: doctorNamesById,
-                          patientsPerDoctor: patientsPerDoctor,
-                        ),
-
-                        const SizedBox(height: 56),
-
-                        _buildSectionHeader(
-                          'Administradores del Sistema',
-                          Icons.admin_panel_settings_outlined,
-                        ),
-                        const SizedBox(height: 20),
-                        _buildProfessionalTable(
-                          _users.where((u) => u['role'] == 'gestor').toList(),
-                          tableType: 'admin',
-                        ),
-
-                        const SizedBox(height: 80),
-                      ],
+                      ),
                     ),
-                  ),
+                  ],
                 );
               },
             ),
@@ -575,18 +585,19 @@ class UsersAdminScreenState extends State<UsersAdminScreen> {
   }
 
   Widget _buildSectionHeader(String title, IconData icon) {
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+    final s = context.spacing;
     return Container(
       padding: const EdgeInsets.only(left: 4),
       child: Row(
         children: [
-          Icon(icon, size: 26, color: const Color(0xFF1A237E)),
-          const SizedBox(width: 14),
+          Icon(icon, size: 26, color: cs.primary),
+          SizedBox(width: s.sm),
           Text(
             title,
-            style: const TextStyle(
-              fontSize: 22,
+            style: theme.textTheme.titleLarge?.copyWith(
               fontWeight: FontWeight.w900,
-              color: Color(0xFF334155),
               letterSpacing: -0.5,
             ),
           ),
@@ -601,11 +612,14 @@ class UsersAdminScreenState extends State<UsersAdminScreen> {
     Map<int, String>? doctorNamesById,
     Map<int, int>? patientsPerDoctor,
   }) {
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+    final r = context.radii;
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
+        color: theme.cardColor,
+        borderRadius: r.radiusSm,
+        border: Border.all(color: cs.outlineVariant),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.03),
@@ -615,7 +629,7 @@ class UsersAdminScreenState extends State<UsersAdminScreen> {
         ],
       ),
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: r.radiusSm,
         child: LayoutBuilder(
           builder: (context, constraints) {
             final available =
@@ -635,18 +649,20 @@ class UsersAdminScreenState extends State<UsersAdminScreen> {
                         horizontal: 32,
                         vertical: 24,
                       ),
-                      decoration: const BoxDecoration(color: Color(0xFFF8FAFC)),
+                      decoration: BoxDecoration(
+                        color: cs.surfaceContainerHighest,
+                      ),
                       child: Row(
                         children: [
                           Expanded(flex: 3, child: _headerCell('USUARIO')),
                           Expanded(flex: 3, child: _headerCell('CONTACTO')),
                           SizedBox(width: 160, child: _headerCell('REGISTRO')),
                           SizedBox(width: 140, child: _headerCell('ESTADO')),
-                          SizedBox(width: 100, child: _headerCell('ACCIONES')),
+                          SizedBox(width: 120, child: _headerCell('ACCIONES')),
                         ],
                       ),
                     ),
-                    const Divider(height: 1, color: Color(0xFFE2E8F0)),
+                    Divider(height: 1, color: cs.outlineVariant),
                     if (items.isEmpty)
                       _buildEmptyState()
                     else
@@ -664,10 +680,7 @@ class UsersAdminScreenState extends State<UsersAdminScreen> {
                               patientsPerDoctor: patientsPerDoctor,
                             ),
                             if (index != items.length - 1)
-                              const Divider(
-                                height: 1,
-                                color: Color(0xFFF1F5F9),
-                              ),
+                              Divider(height: 1, color: cs.outlineVariant),
                           ],
                         ],
                       ),
@@ -682,12 +695,13 @@ class UsersAdminScreenState extends State<UsersAdminScreen> {
   }
 
   Widget _headerCell(String text) {
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
     return Text(
       text,
-      style: const TextStyle(
-        fontSize: 13,
+      style: theme.textTheme.labelSmall?.copyWith(
         fontWeight: FontWeight.w900,
-        color: Color(0xFF94A3B8),
+        color: cs.onSurfaceVariant,
         letterSpacing: 1.5,
       ),
     );
@@ -699,6 +713,9 @@ class UsersAdminScreenState extends State<UsersAdminScreen> {
     Map<int, String>? doctorNamesById,
     Map<int, int>? patientsPerDoctor,
   }) {
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+    final sem = context.sem;
     final bool isStaff = tableType == 'admin' || tableType == 'doctor';
     final name = isStaff
         ? (item['username'] ?? 'Sin nombre')
@@ -718,21 +735,15 @@ class UsersAdminScreenState extends State<UsersAdminScreen> {
     if (tableType == 'admin') {
       isActive = item['is_active'] ?? true;
       statusText = isActive ? 'ACTIVO' : 'INACTIVO';
-      statusColor = isActive
-          ? const Color(0xFF10B981)
-          : const Color(0xFFEF4444);
+      statusColor = isActive ? sem.success : sem.danger;
     } else if (tableType == 'doctor') {
       isActive = item['is_available'] ?? true;
       statusText = isActive ? 'DISPONIBLE' : 'OCUPADO';
-      statusColor = isActive
-          ? const Color(0xFF10B981)
-          : const Color(0xFFEF4444);
+      statusColor = isActive ? sem.success : sem.danger;
     } else {
       final isAssigned = item['doctor_id'] != null;
       statusText = isAssigned ? 'ASIGNADO' : 'PENDIENTE';
-      statusColor = isAssigned
-          ? const Color(0xFF3B82F6)
-          : const Color(0xFFF59E0B);
+      statusColor = isAssigned ? sem.info : sem.warning;
     }
 
     // Initials for avatar (first two words)
@@ -759,16 +770,15 @@ class UsersAdminScreenState extends State<UsersAdminScreen> {
                   width: 44,
                   height: 44,
                   decoration: BoxDecoration(
-                    color: const Color(0xFF1A237E).withValues(alpha: 0.08),
+                    color: cs.primary.withValues(alpha: 0.10),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   alignment: Alignment.center,
                   child: Text(
                     initials,
-                    style: const TextStyle(
-                      color: Color(0xFF1A237E),
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      color: cs.primary,
                       fontWeight: FontWeight.w900,
-                      fontSize: 16,
                     ),
                   ),
                 ),
@@ -779,20 +789,18 @@ class UsersAdminScreenState extends State<UsersAdminScreen> {
                     children: [
                       Text(
                         name,
-                        style: const TextStyle(
+                        style: theme.textTheme.titleMedium?.copyWith(
                           fontWeight: FontWeight.w800,
-                          color: Color(0xFF1E293B),
-                          fontSize: 16,
+                          color: cs.onSurface,
                         ),
                         overflow: TextOverflow.ellipsis,
                       ),
                       const SizedBox(height: 4),
                       Text(
                         'ID: $id ${isStaff ? "(${item['role'].toString().toUpperCase()})" : ""}',
-                        style: const TextStyle(
-                          fontSize: 12,
+                        style: theme.textTheme.labelSmall?.copyWith(
                           fontWeight: FontWeight.w700,
-                          color: Color(0xFF94A3B8),
+                          color: cs.onSurfaceVariant,
                         ),
                       ),
                     ],
@@ -809,7 +817,7 @@ class UsersAdminScreenState extends State<UsersAdminScreen> {
                 Icon(
                   isStaff ? Icons.email_outlined : Icons.phone_android_outlined,
                   size: 18,
-                  color: const Color(0xFF3B82F6),
+                  color: sem.info,
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -818,10 +826,9 @@ class UsersAdminScreenState extends State<UsersAdminScreen> {
                     children: [
                       Text(
                         email,
-                        style: const TextStyle(
-                          fontSize: 15,
+                        style: theme.textTheme.bodyMedium?.copyWith(
                           fontWeight: FontWeight.w600,
-                          color: Color(0xFF475569),
+                          color: cs.onSurface,
                         ),
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -844,8 +851,8 @@ class UsersAdminScreenState extends State<UsersAdminScreen> {
                                 fontSize: 12,
                                 fontWeight: FontWeight.w700,
                                 color: doctorName == null
-                                    ? const Color(0xFFF59E0B)
-                                    : const Color(0xFF3B82F6),
+                                    ? sem.warning
+                                    : sem.info,
                               ),
                               overflow: TextOverflow.ellipsis,
                             );
@@ -866,10 +873,9 @@ class UsersAdminScreenState extends State<UsersAdminScreen> {
                                 : 0;
                             return Text(
                               'Pacientes asignados: $count',
-                              style: const TextStyle(
-                                fontSize: 12,
+                              style: theme.textTheme.labelSmall?.copyWith(
                                 fontWeight: FontWeight.w700,
-                                color: Color(0xFF94A3B8),
+                                color: cs.onSurfaceVariant,
                               ),
                             );
                           },
@@ -886,18 +892,17 @@ class UsersAdminScreenState extends State<UsersAdminScreen> {
             width: 160,
             child: Row(
               children: [
-                const Icon(
+                Icon(
                   Icons.calendar_month_outlined,
                   size: 18,
-                  color: Color(0xFF94A3B8),
+                  color: cs.onSurfaceVariant,
                 ),
                 const SizedBox(width: 12),
                 Text(
                   dateStr,
-                  style: const TextStyle(
-                    fontSize: 15,
+                  style: theme.textTheme.bodyMedium?.copyWith(
                     fontWeight: FontWeight.w600,
-                    color: Color(0xFF475569),
+                    color: cs.onSurface,
                   ),
                 ),
               ],
@@ -931,15 +936,16 @@ class UsersAdminScreenState extends State<UsersAdminScreen> {
           ),
           // ACTIONS
           SizedBox(
-            width: 100,
+            width: 120,
             child: Row(
+              mainAxisSize: MainAxisSize.min,
               children: [
                 if (tableType == 'patient')
                   IconButton(
-                    icon: const Icon(
+                    icon: Icon(
                       Icons.person_add_alt_1_rounded,
                       size: 22,
-                      color: Color(0xFF3B82F6),
+                      color: sem.info,
                     ),
                     onPressed: () => _assignDoctor(item['id']),
                     tooltip: 'Asignar Médico',
@@ -953,20 +959,24 @@ class UsersAdminScreenState extends State<UsersAdminScreen> {
                           ? Icons.toggle_on_rounded
                           : Icons.toggle_off_rounded,
                       size: 32,
-                      color: isActive
-                          ? const Color(0xFF10B981)
-                          : const Color(0xFFCBD5E1),
+                      color: isActive ? sem.success : cs.outlineVariant,
                     ),
                     onPressed: () => _toggleAvailability(item['id'], isActive),
                     tooltip: 'Cambiar Disponibilidad',
                     padding: EdgeInsets.zero,
                     constraints: const BoxConstraints(),
                   ),
-                const SizedBox(width: 16),
-                const Icon(
-                  Icons.edit_square,
-                  size: 20,
-                  color: Color(0xFFCBD5E1),
+                const SizedBox(width: 8),
+                IconButton(
+                  icon: Icon(
+                    Icons.edit_square,
+                    size: 20,
+                    color: cs.onSurfaceVariant,
+                  ),
+                  onPressed: () => _editItem(item, tableType),
+                  tooltip: 'Editar',
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
                 ),
               ],
             ),
@@ -974,6 +984,176 @@ class UsersAdminScreenState extends State<UsersAdminScreen> {
         ],
       ),
     );
+  }
+
+  Future<void> _editItem(dynamic item, String tableType) async {
+    final api = GetIt.I<ApiService>();
+
+    if (tableType == 'patient') {
+      final nameCtrl = TextEditingController(
+        text: (item['name'] ?? '').toString(),
+      );
+      final ageCtrl = TextEditingController(
+        text: (item['age'] ?? '').toString(),
+      );
+      final phoneCtrl = TextEditingController(
+        text: (item['phone'] ?? '').toString(),
+      );
+      final diagnosisCtrl = TextEditingController(
+        text: (item['diagnosis'] ?? '').toString(),
+      );
+
+      final res = await showDialog<bool>(
+        context: context,
+        builder: (ctx) {
+          return AlertDialog(
+            title: const Text('Editar paciente'),
+            content: SizedBox(
+              width: 480,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextField(
+                    controller: nameCtrl,
+                    decoration: const InputDecoration(labelText: 'Nombre'),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: ageCtrl,
+                    decoration: const InputDecoration(labelText: 'Edad'),
+                    keyboardType: TextInputType.number,
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: phoneCtrl,
+                    decoration: const InputDecoration(labelText: 'Teléfono'),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: diagnosisCtrl,
+                    decoration: const InputDecoration(labelText: 'Diagnóstico'),
+                  ),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(ctx).pop(false),
+                child: const Text('Cancelar'),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.of(ctx).pop(true),
+                child: const Text('Guardar'),
+              ),
+            ],
+          );
+        },
+      );
+
+      if (res != true) return;
+
+      final name = nameCtrl.text.trim();
+      final age = int.tryParse(ageCtrl.text.trim());
+      if (name.isEmpty || age == null) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Nombre y edad son obligatorios')),
+        );
+        return;
+      }
+
+      await api.updatePatient(int.parse(item['id'].toString()), {
+        'name': name,
+        'age': age,
+        'phone': phoneCtrl.text.trim().isEmpty ? null : phoneCtrl.text.trim(),
+        'diagnosis': diagnosisCtrl.text.trim().isEmpty
+            ? null
+            : diagnosisCtrl.text.trim(),
+      });
+      await _fetchData();
+      return;
+    }
+
+    final usernameCtrl = TextEditingController(
+      text: (item['username'] ?? '').toString(),
+    );
+    bool isActive = (item['is_active'] ?? true) == true;
+    bool isAvailable = (item['is_available'] ?? true) == true;
+
+    final res = await showDialog<bool>(
+      context: context,
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (ctx, setLocal) {
+            return AlertDialog(
+              title: Text(
+                tableType == 'doctor'
+                    ? 'Editar médico'
+                    : 'Editar administrador',
+              ),
+              content: SizedBox(
+                width: 480,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    TextField(
+                      controller: usernameCtrl,
+                      decoration: const InputDecoration(
+                        labelText: 'Correo/Usuario',
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    if (tableType == 'admin')
+                      SwitchListTile.adaptive(
+                        contentPadding: EdgeInsets.zero,
+                        value: isActive,
+                        onChanged: (v) => setLocal(() => isActive = v),
+                        title: const Text('Activo'),
+                      ),
+                    if (tableType == 'doctor')
+                      SwitchListTile.adaptive(
+                        contentPadding: EdgeInsets.zero,
+                        value: isAvailable,
+                        onChanged: (v) => setLocal(() => isAvailable = v),
+                        title: const Text('Disponible'),
+                      ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(ctx).pop(false),
+                  child: const Text('Cancelar'),
+                ),
+                FilledButton(
+                  onPressed: () => Navigator.of(ctx).pop(true),
+                  child: const Text('Guardar'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+
+    if (res != true) return;
+
+    final username = usernameCtrl.text.trim();
+    if (username.isEmpty) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('El usuario/correo es obligatorio')),
+      );
+      return;
+    }
+
+    final userId = int.parse(item['id'].toString());
+    final payload = <String, dynamic>{'username': username};
+    if (tableType == 'admin') payload['is_active'] = isActive;
+    if (tableType == 'doctor') payload['is_available'] = isAvailable;
+
+    await api.updateUser(userId, payload);
+    await _fetchData();
   }
 
   Widget _buildEmptyState() {
@@ -996,5 +1176,28 @@ class UsersAdminScreenState extends State<UsersAdminScreen> {
         ),
       ),
     );
+  }
+
+  Map<String, dynamic> _userToMap(User u) {
+    return {
+      'id': u.id,
+      'username': u.username,
+      'role': u.role,
+      'is_active': u.isActive,
+      'is_available': u.isAvailable,
+      'registration_date': u.registrationDate ?? u.createdAt,
+    };
+  }
+
+  Map<String, dynamic> _patientToMap(Patient p) {
+    return {
+      'id': p.id,
+      'name': p.name,
+      'age': p.age,
+      'phone': p.phone,
+      'diagnosis': p.diagnosis,
+      'doctor_id': p.doctorId,
+      'created_at': p.createdAt,
+    };
   }
 }

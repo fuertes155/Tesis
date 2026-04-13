@@ -9,7 +9,8 @@ class StatusChart extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
-    final total = (completed + pending).clamp(1, 999);
+    final rawTotal = completed + pending;
+    final total = rawTotal.clamp(1, 999);
     final cw = completed / total;
     final pw = pending / total;
     return Card(
@@ -46,31 +47,49 @@ class StatusChart extends StatelessWidget {
               height: 20,
               child: Row(
                 children: [
-                  Expanded(
-                    flex: (cw * 1000).round(),
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: Colors.green.withValues(alpha: 0.2),
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(
-                          color: Colors.green.withValues(alpha: 0.3),
+                  if (rawTotal == 0)
+                    Expanded(
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: cs.surfaceContainerHighest.withValues(
+                            alpha: 0.6,
+                          ),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                            color: cs.outlineVariant.withValues(alpha: 0.4),
+                          ),
                         ),
                       ),
-                    ),
-                  ),
-                  const SizedBox(width: 6),
-                  Expanded(
-                    flex: (pw * 1000).round(),
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: Colors.orange.withValues(alpha: 0.2),
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(
-                          color: Colors.orange.withValues(alpha: 0.3),
+                    )
+                  else ...[
+                    if (completed > 0)
+                      Expanded(
+                        flex: (cw * 1000).round().clamp(1, 1000),
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: Colors.green.withValues(alpha: 0.2),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(
+                              color: Colors.green.withValues(alpha: 0.3),
+                            ),
+                          ),
                         ),
                       ),
-                    ),
-                  ),
+                    if (completed > 0 && pending > 0) const SizedBox(width: 6),
+                    if (pending > 0)
+                      Expanded(
+                        flex: (pw * 1000).round().clamp(1, 1000),
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: Colors.orange.withValues(alpha: 0.2),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(
+                              color: Colors.orange.withValues(alpha: 0.3),
+                            ),
+                          ),
+                        ),
+                      ),
+                  ],
                 ],
               ),
             ),

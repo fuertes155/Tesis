@@ -6,7 +6,6 @@ class LoginScreenState extends State<LoginScreen> {
   bool _isLoading = false;
   String? _errorMessage;
   bool _showPassword = false;
-  String _role = 'doctor';
 
   @override
   void dispose() {
@@ -36,29 +35,16 @@ class LoginScreenState extends State<LoginScreen> {
     });
 
     try {
-      final username = _usernameController.text;
-      final password = _passwordController.text;
+      final username = _usernameController.text.trim();
+      final password = _passwordController.text.trim();
       if (username.isEmpty || password.isEmpty) {
         throw Exception('Ingresa usuario y contraseña');
       }
-      final api = ApiService();
-      await api.login(username, password, role: _role);
+      final api = GetIt.I<ApiService>();
+      await api.login(username, password);
 
       if (!mounted) return;
-      final role = api.currentRole ?? _role;
-      if (role != _role) {
-        setState(() {
-          _role = role;
-        });
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              'Tu cuenta está asignada al rol "$role". Se iniciará con ese rol.',
-            ),
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-      }
+      final role = api.currentRole ?? 'doctor';
       _navigateBasedOnRole(role);
     } catch (e) {
       setState(() {
@@ -76,13 +62,12 @@ class LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final primaryColor = const Color(0xFF1A237E); // Deep Indigo/Navy
-    final accentColor = const Color(0xFF3949AB);
+    final cs = theme.colorScheme;
+    final s = context.spacing;
+    final r = context.radii;
 
     return Scaffold(
-      backgroundColor: const Color(
-        0xFFF8FAFC,
-      ), // Very light gray/blue background
+      backgroundColor: theme.scaffoldBackgroundColor,
       body: LayoutBuilder(
         builder: (context, constraints) {
           final isWide = constraints.maxWidth >= 1000;
@@ -92,73 +77,100 @@ class LoginScreenState extends State<LoginScreen> {
               children: [
                 // Left Branding Panel
                 Expanded(
-                  flex: 4,
+                  flex: 5,
                   child: Container(
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
-                        colors: [primaryColor, accentColor],
+                        colors: [cs.primary, cs.tertiary],
                       ),
                     ),
-                    child: Padding(
-                      padding: const EdgeInsets.all(60),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Container(
-                                padding: const EdgeInsets.all(16),
-                                decoration: BoxDecoration(
-                                  color: Colors.white.withValues(alpha: 0.1),
-                                  borderRadius: BorderRadius.circular(16),
-                                ),
-                                child: const Icon(
-                                  Icons.psychology_outlined,
-                                  size: 48,
-                                  color: Colors.white,
-                                ),
-                              )
-                              .animate()
-                              .fadeIn(duration: 600.ms)
-                              .scale(delay: 200.ms),
-                          const SizedBox(height: 40),
-                          Text(
-                            'NeuroApp',
-                            style: theme.textTheme.displaySmall?.copyWith(
-                              color: Colors.white,
-                              fontWeight: FontWeight.w800,
-                              letterSpacing: -1,
-                            ),
-                          ).animate().fadeIn(delay: 300.ms).slideX(begin: -0.2),
-                          const SizedBox(height: 24),
-                          Container(
-                            width: 60,
-                            height: 4,
-                            decoration: BoxDecoration(
-                              color: Colors.white.withValues(alpha: 0.3),
-                              borderRadius: BorderRadius.circular(2),
-                            ),
-                          ).animate().fadeIn(delay: 400.ms).scaleX(begin: 0),
-                          const SizedBox(height: 32),
-                          Text(
-                            'Plataforma integral para evaluación y seguimiento cognitivo profesional.',
-                            style: theme.textTheme.headlineSmall?.copyWith(
-                              color: Colors.white.withValues(alpha: 0.9),
-                              fontWeight: FontWeight.w300,
-                              height: 1.4,
-                            ),
-                          ).animate().fadeIn(delay: 500.ms).slideY(begin: 0.2),
-                          const Spacer(),
-                          Text(
-                            '© 2024 NeuroApp Systems. v2.1.0',
-                            style: theme.textTheme.bodySmall?.copyWith(
-                              color: Colors.white54,
-                              letterSpacing: 0.5,
-                            ),
+                    child: Stack(
+                      children: [
+                        Positioned.fill(
+                          child: Opacity(
+                            opacity: 0.05,
+                            child: CustomPaint(painter: _PatternPainter()),
                           ),
-                        ],
-                      ),
+                        ),
+                        Padding(
+                          padding: EdgeInsets.all(s.x2l),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Container(
+                                    padding: EdgeInsets.all(s.md),
+                                    decoration: BoxDecoration(
+                                      color: Colors.white.withValues(
+                                        alpha: 0.15,
+                                      ),
+                                      borderRadius: r.radiusLg,
+                                      border: Border.all(
+                                        color: Colors.white.withValues(
+                                          alpha: 0.2,
+                                        ),
+                                      ),
+                                    ),
+                                    child: const Icon(
+                                      Icons.psychology_outlined,
+                                      size: 56,
+                                      color: Colors.white,
+                                    ),
+                                  )
+                                  .animate()
+                                  .fadeIn(duration: 800.ms)
+                                  .scale(curve: Curves.easeOutBack),
+                              SizedBox(height: s.x2l),
+                              Text(
+                                    'NeuroApp',
+                                    style: theme.textTheme.displayMedium
+                                        ?.copyWith(
+                                          color: Colors.white,
+                                          fontWeight: FontWeight.w900,
+                                          letterSpacing: -1.5,
+                                        ),
+                                  )
+                                  .animate()
+                                  .fadeIn(delay: 200.ms)
+                                  .slideX(begin: -0.1),
+                              SizedBox(height: s.lg),
+                              Container(
+                                    width: 80,
+                                    height: 6,
+                                    decoration: BoxDecoration(
+                                      color: Colors.white.withValues(
+                                        alpha: 0.4,
+                                      ),
+                                      borderRadius: BorderRadius.circular(3),
+                                    ),
+                                  )
+                                  .animate()
+                                  .fadeIn(delay: 400.ms)
+                                  .scaleX(begin: 0),
+                              SizedBox(height: s.xl),
+                              Text(
+                                'Potenciando la salud cognitiva a través de la tecnología.',
+                                style: theme.textTheme.headlineSmall?.copyWith(
+                                  color: Colors.white.withValues(alpha: 0.95),
+                                  fontWeight: FontWeight.w300,
+                                  height: 1.5,
+                                ),
+                              ).animate().fadeIn(delay: 600.ms).slideY(begin: 0.1),
+                              const Spacer(),
+                              Text(
+                                '© 2026 NeuroApp Systems • v2.5.0',
+                                style: theme.textTheme.bodySmall?.copyWith(
+                                  color: Colors.white60,
+                                  letterSpacing: 1,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ),
@@ -167,10 +179,10 @@ class LoginScreenState extends State<LoginScreen> {
                   flex: 6,
                   child: Center(
                     child: SingleChildScrollView(
-                      padding: const EdgeInsets.symmetric(horizontal: 100),
+                      padding: EdgeInsets.symmetric(horizontal: s.x2l + s.xl),
                       child: ConstrainedBox(
-                        constraints: const BoxConstraints(maxWidth: 500),
-                        child: _buildProfessionalForm(theme, primaryColor),
+                        constraints: const BoxConstraints(maxWidth: 460),
+                        child: _buildProfessionalForm(context),
                       ),
                     ),
                   ),
@@ -180,30 +192,49 @@ class LoginScreenState extends State<LoginScreen> {
           }
 
           // Mobile View
-          return Center(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(32),
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 400),
-                child: Column(
-                  children: [
-                    const Icon(
-                      Icons.psychology_outlined,
-                      size: 64,
-                      color: Color(0xFF1A237E),
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      'NeuroApp',
-                      style: theme.textTheme.headlineMedium?.copyWith(
-                        fontWeight: FontWeight.w900,
-                        color: const Color(0xFF1A237E),
-                        letterSpacing: -0.5,
+          return Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [cs.surface, cs.surfaceContainerHighest],
+              ),
+            ),
+            child: Center(
+              child: SingleChildScrollView(
+                padding: EdgeInsets.all(s.xl),
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 400),
+                  child: Column(
+                    children: [
+                      Container(
+                        padding: EdgeInsets.all(s.lg),
+                        decoration: BoxDecoration(
+                          color: cs.primary.withValues(alpha: 0.08),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(
+                          Icons.psychology_outlined,
+                          size: 72,
+                          color: cs.primary,
+                        ),
+                      ).animate().scale(
+                        duration: 600.ms,
+                        curve: Curves.bounceOut,
                       ),
-                    ),
-                    const SizedBox(height: 48),
-                    _buildProfessionalForm(theme, primaryColor),
-                  ],
+                      SizedBox(height: s.lg),
+                      Text(
+                        'NeuroApp',
+                        style: theme.textTheme.headlineLarge?.copyWith(
+                          fontWeight: FontWeight.w900,
+                          color: cs.primary,
+                          letterSpacing: -1,
+                        ),
+                      ),
+                      SizedBox(height: s.x2l),
+                      _buildProfessionalForm(context),
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -213,201 +244,125 @@ class LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  Widget _buildProfessionalForm(ThemeData theme, Color primaryColor) {
+  Widget _buildProfessionalForm(BuildContext context) {
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+    final s = context.spacing;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
       children: [
         Text(
-          'Iniciar Sesión',
-          style: theme.textTheme.headlineMedium?.copyWith(
+          'Bienvenido de nuevo',
+          style: theme.textTheme.headlineSmall?.copyWith(
             fontWeight: FontWeight.w800,
-            color: const Color(0xFF1E293B),
-            letterSpacing: -0.5,
           ),
-        ).animate().fadeIn().slideX(begin: 0.1),
-        const SizedBox(height: 8),
+        ),
+        SizedBox(height: s.xs),
         Text(
-          'Acceda a su panel de control con sus credenciales.',
-          style: theme.textTheme.bodyLarge?.copyWith(
-            color: const Color(0xFF64748B),
-          ),
-        ).animate().fadeIn(delay: 100.ms),
-        const SizedBox(height: 40),
-        if (_errorMessage != null)
-          Container(
-            padding: const EdgeInsets.all(16),
-            margin: const EdgeInsets.only(bottom: 24),
-            decoration: BoxDecoration(
-              color: const Color(0xFFFEF2F2),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: const Color(0xFFFEE2E2)),
-            ),
-            child: Row(
-              children: [
-                const Icon(
-                  Icons.error_outline,
-                  color: Color(0xFFDC2626),
-                  size: 20,
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    _errorMessage!,
-                    style: const TextStyle(
-                      color: Color(0xFF991B1B),
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ).animate().shake(hz: 4, curve: Curves.easeInOut),
-        const SizedBox(height: 12),
-        const Text(
-          'Correo Electrónico',
-          style: TextStyle(
-            fontWeight: FontWeight.w800,
-            fontSize: 14,
-            color: Color(0xFF334155),
-            letterSpacing: -0.2,
+          'Ingresa tus credenciales para acceder.',
+          style: theme.textTheme.bodyMedium?.copyWith(
+            color: cs.onSurfaceVariant,
           ),
         ),
-        const SizedBox(height: 8),
-        TextFormField(
+        SizedBox(height: s.xl),
+        TextField(
           controller: _usernameController,
-          decoration: InputDecoration(
-            hintText: 'ejemplo@correo.com',
-            hintStyle: const TextStyle(color: Color(0xFF94A3B8)),
-            prefixIcon: const Icon(
-              Icons.email_outlined,
-              color: Color(0xFF64748B),
-            ),
-            filled: true,
-            fillColor: Colors.white,
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(14),
-              borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(14),
-              borderSide: BorderSide(color: primaryColor, width: 2),
-            ),
-            contentPadding: const EdgeInsets.symmetric(vertical: 18),
+          decoration: const InputDecoration(
+            labelText: 'Usuario',
+            prefixIcon: Icon(Icons.person_outline),
           ),
         ),
-        const SizedBox(height: 24),
-        Wrap(
-          alignment: WrapAlignment.spaceBetween,
-          crossAxisAlignment: WrapCrossAlignment.center,
-          runSpacing: 4,
-          children: [
-            const Text(
-              'Contraseña',
-              style: TextStyle(
-                fontWeight: FontWeight.w800,
-                fontSize: 14,
-                color: Color(0xFF334155),
-                letterSpacing: -0.2,
-              ),
-            ),
-            TextButton(
-              onPressed: () => context.push('/reset_password'),
-              child: Text(
-                '¿Olvidó su contraseña?',
-                style: TextStyle(
-                  color: primaryColor,
-                  fontWeight: FontWeight.w800,
-                  fontSize: 13,
-                ),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 4),
-        TextFormField(
+        SizedBox(height: s.md),
+        TextField(
           controller: _passwordController,
           obscureText: !_showPassword,
           decoration: InputDecoration(
-            hintText: '••••••••',
-            hintStyle: const TextStyle(color: Color(0xFF94A3B8)),
-            prefixIcon: const Icon(
-              Icons.lock_outline_rounded,
-              color: Color(0xFF64748B),
-            ),
+            labelText: 'Contraseña',
+            prefixIcon: const Icon(Icons.lock_outline),
             suffixIcon: IconButton(
               icon: Icon(
-                _showPassword
-                    ? Icons.visibility_off_rounded
-                    : Icons.visibility_rounded,
-                color: const Color(0xFF64748B),
+                _showPassword ? Icons.visibility_off : Icons.visibility,
                 size: 20,
               ),
               onPressed: () => setState(() => _showPassword = !_showPassword),
             ),
-            filled: true,
-            fillColor: Colors.white,
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(14),
-              borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(14),
-              borderSide: BorderSide(color: primaryColor, width: 2),
-            ),
-            contentPadding: const EdgeInsets.symmetric(vertical: 18),
           ),
         ),
-        const SizedBox(height: 32),
+        SizedBox(height: s.sm),
+        Align(
+          alignment: Alignment.centerRight,
+          child: TextButton(
+            onPressed: () => context.push('/reset_password'),
+            style: TextButton.styleFrom(
+              foregroundColor: cs.primary,
+              textStyle: theme.textTheme.labelLarge?.copyWith(fontSize: 13),
+            ),
+            child: const Text('¿Olvidaste tu contraseña?'),
+          ),
+        ),
+        if (_errorMessage != null) ...[
+          SizedBox(height: s.md),
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: cs.errorContainer.withValues(alpha: 0.5),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: cs.error.withValues(alpha: 0.2)),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.error_outline, color: cs.error, size: 20),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    _errorMessage!,
+                    style: theme.textTheme.bodySmall?.copyWith(color: cs.error),
+                  ),
+                ),
+              ],
+            ),
+          ).animate().shake(),
+        ],
+        SizedBox(height: s.xl),
         SizedBox(
           width: double.infinity,
-          height: 58,
-          child: ElevatedButton(
+          height: 56,
+          child: FilledButton(
             onPressed: _isLoading ? null : _handleSubmit,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: primaryColor,
-              foregroundColor: Colors.white,
-              elevation: 0,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(14),
-              ),
-              shadowColor: primaryColor.withValues(alpha: 0.4),
-            ),
             child: _isLoading
-                ? const SizedBox(
+                ? SizedBox(
                     height: 24,
                     width: 24,
                     child: CircularProgressIndicator(
-                      color: Colors.white,
-                      strokeWidth: 3,
+                      strokeWidth: 2.5,
+                      color: cs.onPrimary,
                     ),
                   )
-                : const Text(
-                    'INICIAR SESIÓN',
-                    style: TextStyle(
-                      fontWeight: FontWeight.w900,
-                      fontSize: 16,
-                      letterSpacing: 0.5,
-                    ),
-                  ),
-          ),
-        ).animate().fadeIn(delay: 400.ms).slideY(begin: 0.2),
-        const SizedBox(height: 40),
-        Center(
-          child: Text(
-            'Si no tiene acceso, solicítelo al administrador del sistema.',
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              color: const Color(0xFF94A3B8),
-              fontSize: 13,
-              fontWeight: FontWeight.w600,
-              height: 1.5,
-            ),
+                : const Text('Iniciar Sesión'),
           ),
         ),
       ],
     );
   }
+}
+
+class _PatternPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = Colors.white
+      ..strokeWidth = 1;
+
+    for (var i = 0; i < size.width; i += 40) {
+      for (var j = 0; j < size.height; j += 40) {
+        canvas.drawCircle(Offset(i.toDouble(), j.toDouble()), 1, paint);
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(CustomPainter oldDelegate) => false;
 }
 
 class WaveClipper extends CustomClipper<Path> {

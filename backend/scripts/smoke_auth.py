@@ -10,13 +10,25 @@ def _base_url() -> str:
     return os.environ.get("NEUROAPP_BASE_URL", "http://127.0.0.1:8000").rstrip("/")
 
 
-def _request_json(method: str, path: str, payload: dict | None = None) -> tuple[int, dict | str]:
+def _request_json(
+    method: str,
+    path: str,
+    payload: dict | None = None,
+    headers: dict | None = None,
+) -> tuple[int, dict | str]:
     url = f"{_base_url()}{path}"
     data = None
-    headers = {"Content-Type": "application/json"}
+    request_headers = {"Content-Type": "application/json"}
+    if headers:
+        request_headers.update(headers)
     if payload is not None:
         data = json.dumps(payload).encode("utf-8")
-    req = urllib.request.Request(url, data=data, headers=headers, method=method)
+    req = urllib.request.Request(
+        url,
+        data=data,
+        headers=request_headers,
+        method=method,
+    )
     try:
         with urllib.request.urlopen(req, timeout=6) as resp:
             raw = resp.read()
@@ -64,6 +76,13 @@ def main() -> int:
         {"username": "samuel1@gmail.com", "password": "Password123!"},
     )
     ok = _expect(200, s, body, "POST /users/auth/login (gestor seed)") and ok
+    token = body.get("access_token") if isinstance(body, dict) else None
+    if token:
+        auth = {"Authorization": f"Bearer {token}"}
+        s2, body2 = _request_json("GET", "/users/", headers=auth)
+        ok = _expect(200, s2, body2, "GET /users/ (gestor token)") and ok
+        s3, body3 = _request_json("GET", "/patients/", headers=auth)
+        ok = _expect(200, s3, body3, "GET /patients/ (gestor token)") and ok
 
     email = f"smoke{int(time.time())}@example.com"
     s, body = _request_json(
@@ -85,4 +104,3 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-

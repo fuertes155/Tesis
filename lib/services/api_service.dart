@@ -1,10 +1,27 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:math';
-import 'package:http/http.dart' as http;
+import 'package:dio/dio.dart' as dio;
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:riverpod_annotation/riverpod_annotation.dart';
+import 'package:get_it/get_it.dart';
+import '../models/patient.dart';
+import '../models/session.dart';
+import '../models/user.dart';
+import '../core/database/local_database_service.dart';
+
+part 'api_service.g.dart';
+
+@riverpod
+ApiService apiService(Ref ref) {
+  return GetIt.I<ApiService>();
+}
 
 class ApiService {
+  final dio.Dio _dio;
+  final LocalDatabaseService? _localDb;
+
   static final String baseUrl = const String.fromEnvironment(
     'API_BASE_URL',
     defaultValue: 'http://127.0.0.1:8000',
@@ -16,13 +33,7 @@ class ApiService {
   static const _prefsUserIdKey = 'api_user_id';
   static const _prefsPendingSessionsKey = 'pending_sessions_v1';
 
-  static final ApiService _instance = ApiService._internal();
-
-  factory ApiService() {
-    return _instance;
-  }
-
-  ApiService._internal();
+  ApiService(this._dio, [this._localDb]);
 
   String? _token;
   String? _currentUsername;
@@ -45,31 +56,25 @@ class ApiService {
     _currentUserId = prefs.getInt(_prefsUserIdKey);
     _currentPatientId = prefs.getInt(_prefsPatientIdKey) ?? 1;
     _initialized = true;
+
+    if (_token != null) {
+      unawaited(flushPendingSessions());
+    }
   }
 
   Future<void> _persist() async {
     final prefs = await SharedPreferences.getInstance();
-    if (_token == null) {
-      await prefs.remove(_prefsTokenKey);
-    } else {
-      await prefs.setString(_prefsTokenKey, _token!);
-    }
-    if (_currentUsername == null) {
-      await prefs.remove(_prefsUsernameKey);
-    } else {
+    if (_token != null) await prefs.setString(_prefsTokenKey, _token!);
+    if (_currentUsername != null) {
       await prefs.setString(_prefsUsernameKey, _currentUsername!);
     }
-    if (_currentRole == null) {
-      await prefs.remove(_prefsRoleKey);
-    } else {
+    if (_currentRole != null) {
       await prefs.setString(_prefsRoleKey, _currentRole!);
     }
-    if (_currentUserId == null) {
-      await prefs.remove(_prefsUserIdKey);
-    } else {
+    await prefs.setInt(_prefsPatientIdKey, _currentPatientId);
+    if (_currentUserId != null) {
       await prefs.setInt(_prefsUserIdKey, _currentUserId!);
     }
-    await prefs.setInt(_prefsPatientIdKey, _currentPatientId);
   }
 
   Future<void> logout() async {
@@ -133,36 +138,17 @@ class ApiService {
     return n;
   }
 
-  Map<String, String> _jsonHeaders() {
-    return {
-      'Content-Type': 'application/json',
-      if (_token != null) 'Authorization': 'Bearer $_token',
-    };
-  }
-
-  T _decode<T>(http.Response response) {
-    return jsonDecode(utf8.decode(response.bodyBytes)) as T;
-  }
-
-  String _tryExtractFastApiDetail(http.Response response) {
+  Future<User> getMe() async {
     try {
-      final decoded = jsonDecode(utf8.decode(response.bodyBytes));
-      if (decoded is Map<String, dynamic>) {
-        final detail = decoded['detail'];
-        if (detail is String) return detail;
-        if (detail is List) return detail.map((e) => e.toString()).join('\n');
-        return decoded.toString();
-      }
-      return decoded.toString();
-    } catch (_) {
-      return response.body.isNotEmpty ? response.body : '';
-    }
-  }
-
-  void _ensureSuccess(http.Response response, {String? message}) {
-    if (response.statusCode < 200 || response.statusCode >= 300) {
-      final body = _tryExtractFastApiDetail(response);
-      throw Exception(message ?? 'Error ${response.statusCode}: $body');
+      final response = await _dio.get('/users/me');
+      final user = User.fromJson(response.data);
+      _currentUserId = user.id;
+      _currentUsername = user.username;
+      _currentRole = user.role;
+      await _persist();
+      return user;
+    } on dio.DioException catch (e) {
+      throw Exception('Error al obtener perfil: ${e.message}');
     }
   }
 
@@ -171,275 +157,191 @@ class ApiService {
     String password, {
     String role = 'doctor',
   }) async {
-    http.Response authResponse;
-    try {
-      authResponse = await http.post(
-        Uri.parse('$baseUrl/users/auth/login'),
-        headers: _jsonHeaders(),
-        body: jsonEncode({'username': username, 'password': password}),
-      );
-    } catch (e) {
-      final msg = e.toString().toLowerCase();
-      if (msg.contains('failed to fetch') ||
-          msg.contains('connection refused') ||
-          msg.contains('connection') ||
-          msg.contains('socket')) {
-        throw Exception(
-          'No se pudo conectar con el servidor. Verifica que el backend esté encendido en $baseUrl',
-        );
-      }
-      rethrow;
-    }
+    if (username.trim().isEmpty) throw Exception('El usuario es requerido');
+    if (password.trim().isEmpty) throw Exception('La contraseña es requerida');
 
-    if (authResponse.statusCode >= 200 && authResponse.statusCode < 300) {
-      final authMap = _decode<Map<String, dynamic>>(authResponse);
+    try {
+      final response = await _dio.post(
+        '/users/auth/login',
+        data: {'username': username, 'password': password},
+      );
+
+      final authMap = response.data;
       final token = authMap['access_token']?.toString();
       if (token != null && token.isNotEmpty) {
         _token = token;
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString(_prefsTokenKey, token);
       }
+
       final user = authMap['user'];
       if (user is Map<String, dynamic>) {
         _currentUsername = user['username']?.toString() ?? username;
         _currentRole = user['role']?.toString() ?? role;
-        final idVal = user['id'];
-        if (idVal is int) {
-          _currentUserId = idVal;
-        } else if (idVal is String) {
-          _currentUserId = int.tryParse(idVal);
-        }
-      } else {
-        _currentUsername = username;
-        _currentRole = role;
+        _currentUserId = user['id'] is int
+            ? user['id']
+            : int.tryParse(user['id'].toString());
       }
+
       await _persist();
       await flushPendingSessions();
       return authMap;
+    } on dio.DioException catch (e) {
+      if (e.response?.statusCode == 401) {
+        throw Exception('Credenciales inválidas');
+      }
+      throw Exception('Error al iniciar sesión: ${e.message}');
+    }
+  }
+
+  Future<List<Patient>> getPatients() async {
+    try {
+      final response = await _dio.get('/patients/');
+      final list = response.data as List;
+      final patients = list
+          .map((e) => Patient.fromJson(e as Map<String, dynamic>))
+          .toList();
+
+      if (_localDb != null) {
+        unawaited(_localDb.savePatients(list.cast<Map<String, dynamic>>()));
+        unawaited(_localDb.setLastSync('patients', DateTime.now()));
+      }
+
+      return patients;
+    } on dio.DioException catch (e) {
+      if (_localDb != null) {
+        final cached = await _localDb.getPatients();
+        if (cached.isNotEmpty) {
+          return cached.map((e) => Patient.fromJson(e)).toList();
+        }
+      }
+      throw Exception('Error al cargar pacientes: ${e.message}');
+    }
+  }
+
+  Future<Patient> createPatient(Map<String, dynamic> patientData) async {
+    if (patientData['name'] == null || patientData['name'].toString().isEmpty) {
+      throw Exception('El nombre del paciente es requerido');
+    }
+    if (patientData['age'] == null) {
+      throw Exception('La edad del paciente es requerida');
     }
 
-    final response = await http.post(
-      Uri.parse('$baseUrl/users/login'),
-      headers: _jsonHeaders(),
-      body: jsonEncode({
-        'username': username,
-        'password': password,
-        'role': role,
-      }),
-    );
-
-    _ensureSuccess(response, message: 'Error al iniciar sesión');
-    final map = _decode<Map<String, dynamic>>(response);
-    _currentUsername = username;
-    _currentRole = map['role']?.toString() ?? role;
-    _currentUserId = null;
-    await _persist();
-    await flushPendingSessions();
-    return map;
-  }
-
-  Future<Map<String, dynamic>> getMe() async {
-    final response = await http.get(
-      Uri.parse('$baseUrl/users/me'),
-      headers: _jsonHeaders(),
-    );
-    _ensureSuccess(response, message: 'Error al obtener perfil');
-    final map = _decode<Map<String, dynamic>>(response);
-    final idVal = map['id'];
-    if (idVal is int) {
-      _currentUserId = idVal;
-    } else if (idVal is String) {
-      _currentUserId = int.tryParse(idVal);
+    try {
+      final response = await _dio.post('/patients/', data: patientData);
+      return Patient.fromJson(response.data);
+    } on dio.DioException catch (e) {
+      throw Exception('Error al crear paciente: ${e.message}');
     }
-    final u = map['username']?.toString();
-    if (u != null && u.isNotEmpty) {
-      _currentUsername = u;
-    }
-    final r = map['role']?.toString();
-    if (r != null && r.isNotEmpty) {
-      _currentRole = r;
-    }
-    await _persist();
-    return map;
-  }
-
-  Future<Map<String, dynamic>> resetPassword(
-    String username,
-    String newPassword,
-  ) async {
-    final response = await http.post(
-      Uri.parse('$baseUrl/users/reset'),
-      headers: _jsonHeaders(),
-      body: jsonEncode({
-        'username': username,
-        'password': newPassword,
-        'role': _currentRole ?? 'doctor',
-      }),
-    );
-    _ensureSuccess(response, message: 'Error al restablecer contraseña');
-    return _decode<Map<String, dynamic>>(response);
-  }
-
-  Future<Map<String, dynamic>> register({
-    required String username,
-    required String password,
-    String role = 'doctor',
-  }) async {
-    final response = await http.post(
-      Uri.parse('$baseUrl/users/'),
-      headers: _jsonHeaders(),
-      body: jsonEncode({
-        'username': username,
-        'password': password,
-        'role': role,
-      }),
-    );
-    _ensureSuccess(response, message: 'Error al registrar usuario');
-    final map = _decode<Map<String, dynamic>>(response);
-    _currentUsername = username;
-    _currentRole = map['role']?.toString() ?? role;
-    return map;
-  }
-
-  Future<Map<String, dynamic>> adminCreateUser({
-    required String username,
-    required String password,
-    required String role,
-  }) async {
-    final response = await http.post(
-      Uri.parse('$baseUrl/users/'),
-      headers: _jsonHeaders(),
-      body: jsonEncode({
-        'username': username,
-        'password': password,
-        'role': role,
-      }),
-    );
-    _ensureSuccess(response, message: 'Error al crear usuario');
-    return _decode<Map<String, dynamic>>(response);
-  }
-
-  Future<List<dynamic>> getUsers() async {
-    final response = await http.get(
-      Uri.parse('$baseUrl/users/'),
-      headers: _jsonHeaders(),
-    );
-    _ensureSuccess(response, message: 'Error al obtener usuarios');
-    return _decode<List<dynamic>>(response);
-  }
-
-  Future<Map<String, dynamic>> updateUserAvailability(
-    int userId,
-    bool isAvailable,
-  ) async {
-    final response = await http.put(
-      Uri.parse(
-        '$baseUrl/users/$userId/availability',
-      ).replace(queryParameters: {'is_available': isAvailable.toString()}),
-      headers: _jsonHeaders(),
-    );
-    _ensureSuccess(response, message: 'Error al actualizar disponibilidad');
-    return _decode<Map<String, dynamic>>(response);
-  }
-
-  Future<List<dynamic>> getPatients() async {
-    final response = await http.get(
-      Uri.parse('$baseUrl/patients/'),
-      headers: _jsonHeaders(),
-    );
-
-    _ensureSuccess(response, message: 'Error al cargar pacientes');
-    return _decode<List<dynamic>>(response);
-  }
-
-  Future<Map<String, dynamic>> getPatient(int patientId) async {
-    final response = await http.get(
-      Uri.parse('$baseUrl/patients/$patientId'),
-      headers: _jsonHeaders(),
-    );
-    _ensureSuccess(response, message: 'Error al cargar paciente');
-    return _decode<Map<String, dynamic>>(response);
-  }
-
-  Future<Map<String, dynamic>> createPatient(
-    Map<String, dynamic> patientData,
-  ) async {
-    final response = await http.post(
-      Uri.parse('$baseUrl/patients/'),
-      headers: _jsonHeaders(),
-      body: jsonEncode(patientData),
-    );
-
-    _ensureSuccess(response, message: 'Error al crear paciente');
-    return _decode<Map<String, dynamic>>(response);
   }
 
   Future<void> deletePatient(int patientId) async {
-    final response = await http.delete(
-      Uri.parse('$baseUrl/patients/$patientId'),
-      headers: _jsonHeaders(),
-    );
-    _ensureSuccess(response, message: 'Error al eliminar paciente');
+    try {
+      await _dio.delete('/patients/$patientId');
+    } on dio.DioException catch (e) {
+      throw Exception('Error al eliminar paciente: ${e.message}');
+    }
+  }
+
+  Future<Patient> updatePatient(int patientId, Map<String, dynamic> patientData) async {
+    try {
+      final response = await _dio.put('/patients/$patientId', data: patientData);
+      return Patient.fromJson(response.data);
+    } on dio.DioException catch (e) {
+      throw Exception('Error al editar paciente: ${e.message}');
+    }
   }
 
   Future<Map<String, dynamic>> assignDoctorToPatient(
     int patientId,
     int doctorId,
   ) async {
-    final response = await http.put(
-      Uri.parse(
-        '$baseUrl/patients/$patientId/assign-doctor',
-      ).replace(queryParameters: {'doctor_id': doctorId.toString()}),
-      headers: _jsonHeaders(),
-    );
-    _ensureSuccess(response, message: 'Error al asignar médico');
-    return _decode<Map<String, dynamic>>(response);
+    try {
+      final response = await _dio.put(
+        '/patients/$patientId/assign-doctor',
+        queryParameters: {'doctor_id': doctorId.toString()},
+      );
+      return response.data;
+    } on dio.DioException catch (e) {
+      throw Exception('Error al asignar médico: ${e.message}');
+    }
   }
 
   Future<int> getSessionsCountForPatient(int patientId) async {
-    // Prefer dedicated count endpoint for efficiency
-    final uri = Uri.parse(
-      '$baseUrl/sessions/count',
-    ).replace(queryParameters: {'patient_id': '$patientId'});
-    final response = await http.get(uri, headers: _jsonHeaders());
-    if (response.statusCode >= 200 && response.statusCode < 300) {
-      final map = _decode<Map<String, dynamic>>(response);
-      final c = map['count'];
+    try {
+      final response = await _dio.get(
+        '/sessions/count',
+        queryParameters: {'patient_id': patientId.toString()},
+      );
+      final c = response.data['count'];
       if (c is int) return c;
       if (c is String) return int.tryParse(c) ?? 0;
+      return 0;
+    } on dio.DioException catch (_) {
+      try {
+        final response = await _dio.get(
+          '/sessions/',
+          queryParameters: {
+            'patient_id': patientId.toString(),
+            'limit': '10000',
+          },
+        );
+        final list = response.data as List;
+        return list.length;
+      } on dio.DioException catch (e) {
+        throw Exception('Error al obtener sesiones: ${e.message}');
+      }
     }
-    // Fallback to list length if count endpoint not available
-    final listUri = Uri.parse(
-      '$baseUrl/sessions/',
-    ).replace(queryParameters: {'patient_id': '$patientId', 'limit': '10000'});
-    final listResp = await http.get(listUri, headers: _jsonHeaders());
-    _ensureSuccess(listResp, message: 'Error al obtener sesiones');
-    final list = _decode<List<dynamic>>(listResp);
-    return list.length;
   }
 
-  Future<Map<String, dynamic>> createSession({
+  Future<Patient> getPatient(int patientId) async {
+    try {
+      final response = await _dio.get('/patients/$patientId');
+      return Patient.fromJson(response.data);
+    } on dio.DioException catch (e) {
+      if (_localDb != null) {
+        final cached = await _localDb.getPatients();
+        final match = cached.firstWhere(
+          (p) => p['id'] == patientId,
+          orElse: () => <String, dynamic>{},
+        );
+        if (match.isNotEmpty) {
+          return Patient.fromJson(match);
+        }
+      }
+      throw Exception('Error al cargar paciente: ${e.message}');
+    }
+  }
+
+  Future<Session> createSession({
     required int patientId,
     required String status,
     required String notes,
     DateTime? date,
     String? externalId,
   }) async {
+    if (patientId <= 0) throw Exception('ID de paciente inválido');
+    if (status.trim().isEmpty) throw Exception('El estado es requerido');
+
     final d = date ?? DateTime.now();
     final isoDate =
         '${d.year.toString().padLeft(4, '0')}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
     final ext = externalId ?? _generateExternalId();
-    final response = await http.post(
-      Uri.parse('$baseUrl/sessions/'),
-      headers: _jsonHeaders(),
-      body: jsonEncode({
-        'patient_id': patientId,
-        'date': isoDate,
-        'status': status,
-        'notes': notes,
-        'external_id': ext,
-      }),
-    );
-    _ensureSuccess(response, message: 'Error al crear sesión');
-    return _decode<Map<String, dynamic>>(response);
+
+    final data = {
+      'patient_id': patientId,
+      'date': isoDate,
+      'status': status,
+      'notes': notes,
+      'external_id': ext,
+    };
+
+    try {
+      final response = await _dio.post('/sessions/', data: data);
+      return Session.fromJson(response.data);
+    } on dio.DioException catch (e) {
+      throw Exception('Error al crear sesión: ${e.message}');
+    }
   }
 
   Future<void> enqueuePendingSession({
@@ -466,55 +368,24 @@ class ApiService {
   Future<void> flushPendingSessions() async {
     final prefs = await SharedPreferences.getInstance();
     final raw = prefs.getString(_prefsPendingSessionsKey);
-    if (raw == null || raw.trim().isEmpty) return;
+    if (raw == null) return;
 
-    List<dynamic> list;
-    try {
-      list = jsonDecode(raw) as List<dynamic>;
-    } catch (_) {
-      await prefs.remove(_prefsPendingSessionsKey);
-      return;
-    }
+    final List<dynamic> list = jsonDecode(raw) as List;
     if (list.isEmpty) return;
 
-    final remaining = <dynamic>[];
-    for (final item in list) {
-      if (item is! Map) continue;
-      final pid = item['patient_id'];
-      final status = item['status'];
-      final notes = item['notes'];
-      final date = item['date'];
-      final externalId = item['external_id'];
-      final int? patientId = pid is int ? pid : int.tryParse('$pid');
-      if (patientId == null ||
-          status is! String ||
-          notes is! String ||
-          date is! String ||
-          externalId is! String) {
-        continue;
-      }
+    final List<dynamic> failed = [];
+    for (final s in list) {
       try {
-        final resp = await http.post(
-          Uri.parse('$baseUrl/sessions/'),
-          headers: _jsonHeaders(),
-          body: jsonEncode({
-            'patient_id': patientId,
-            'date': date,
-            'status': status,
-            'notes': notes,
-            'external_id': externalId,
-          }),
-        );
-        _ensureSuccess(resp, message: 'Error al sincronizar sesión');
-      } catch (_) {
-        remaining.add(item);
+        await _dio.post('/sessions/results', data: s);
+      } catch (e) {
+        failed.add(s);
       }
     }
 
-    if (remaining.isEmpty) {
+    if (failed.isEmpty) {
       await prefs.remove(_prefsPendingSessionsKey);
     } else {
-      await prefs.setString(_prefsPendingSessionsKey, jsonEncode(remaining));
+      await prefs.setString(_prefsPendingSessionsKey, jsonEncode(failed));
     }
   }
 
@@ -526,112 +397,188 @@ class ApiService {
     return 's-$uid-$pid-$ts-$rand';
   }
 
-  Future<List<dynamic>> getSessions() async {
-    final response = await http.get(
-      Uri.parse('$baseUrl/sessions/'),
-      headers: _jsonHeaders(),
-    );
-    _ensureSuccess(response, message: 'Error al obtener sesiones');
-    return _decode<List<dynamic>>(response);
-  }
-
-  Future<Map<String, dynamic>> getLatestResultsForPatient(int patientId) async {
-    final sessions = await getSessions();
-    final list = sessions.cast<Map<String, dynamic>>();
-    List<Map<String, dynamic>> filtered = list;
-    if (list.isNotEmpty && list.first.containsKey('patient_id')) {
-      filtered = list.where((s) => s['patient_id'] == patientId).toList();
-    }
-    if (filtered.isEmpty) {
-      return {
-        'title': 'Resultados',
-        'score': 70,
-        'details': {'General': 70},
-      };
-    }
-    filtered.sort((a, b) {
-      final ad = a['date']?.toString();
-      final bd = b['date']?.toString();
-      if (ad != null && bd != null) {
-        return ad.compareTo(bd);
-      }
-      final ai = (a['id'] ?? 0) as int;
-      final bi = (b['id'] ?? 0) as int;
-      return ai.compareTo(bi);
-    });
-    final latest = filtered.last;
-    return _parseSessionToResult(latest);
-  }
-
-  Map<String, dynamic> _parseSessionToResult(Map<String, dynamic> s) {
-    final notes = (s['notes'] ?? '').toString();
-    if (notes.trimLeft().startsWith('{')) {
-      try {
-        final decoded = jsonDecode(notes);
-        if (decoded is Map<String, dynamic>) {
-          final title = decoded['title'];
-          final score = decoded['score'];
-          final details = decoded['details'];
-          if (title is String && score is num && details is Map) {
-            return {
-              'title': title,
-              'score': score,
-              'details': details.cast<String, dynamic>(),
-            };
-          }
-        }
-      } catch (_) {}
-    }
+  Future<List<Session>> getSessions() async {
     try {
-      if (notes.startsWith('reaction')) {
-        final avgMatch = RegExp(r'average=(\d+)ms').firstMatch(notes);
-        final avg = avgMatch != null ? int.parse(avgMatch.group(1)!) : 300;
-        final att = (100 - (avg / 4)).clamp(20, 100).toInt();
-        return {
-          'title': 'Resultados - Atención',
-          'score': att,
-          'details': {'Atención': att, 'Funciones Ejecutivas': 65},
-        };
+      final response = await _dio.get('/sessions/');
+      final list = response.data as List;
+      final sessions = list
+          .map((e) => Session.fromJson(e as Map<String, dynamic>))
+          .toList();
+
+      if (_localDb != null) {
+        unawaited(_localDb.saveSessions(list.cast<Map<String, dynamic>>()));
+        unawaited(_localDb.setLastSync('sessions', DateTime.now()));
       }
-      if (notes.startsWith('visual_memory')) {
-        final scoreMatch = RegExp(r'score=(\d+)').firstMatch(notes);
-        final mem = scoreMatch != null ? int.parse(scoreMatch.group(1)!) : 70;
-        return {
-          'title': 'Resultados - Memoria Visual',
-          'score': mem,
-          'details': {'Memoria': mem, 'Atención': 70},
-        };
+
+      return sessions;
+    } on dio.DioException catch (e) {
+      if (_localDb != null) {
+        final cached = await _localDb.getSessions();
+        if (cached.isNotEmpty) {
+          return cached.map((e) => Session.fromJson(e)).toList();
+        }
       }
-      if (notes.startsWith('fluency')) {
-        final countMatch = RegExp(r'count=(\d+)').firstMatch(notes);
-        final count = countMatch != null ? int.parse(countMatch.group(1)!) : 10;
-        final lang = (count * 5).clamp(30, 100);
-        return {
-          'title': 'Resultados - Lenguaje',
-          'score': lang,
-          'details': {'Lenguaje': lang, 'Memoria': 72},
-        };
-      }
-      if (notes.startsWith('stroop')) {
-        final scoreMatch = RegExp(r'score=(\d+)').firstMatch(notes);
-        final avgMatch = RegExp(r'avg=(\d+)ms').firstMatch(notes);
-        final raw = scoreMatch != null ? int.parse(scoreMatch.group(1)!) : 30;
-        final avg = avgMatch != null ? int.parse(avgMatch.group(1)!) : 400;
-        final exec = (raw * 2).clamp(20, 100);
-        final att = (100 - (avg / 4)).clamp(20, 100).toInt();
-        return {
-          'title': 'Resultados - Funciones Ejecutivas',
-          'score': exec,
-          'details': {'Funciones Ejecutivas': exec, 'Atención': att},
-        };
-      }
-    } catch (_) {
-      // Fallback below
+      throw Exception('Error al obtener sesiones: ${e.message}');
     }
-    return {
-      'title': 'Resultados',
-      'score': 70,
-      'details': {'General': 70},
-    };
+  }
+
+  Future<List<User>> getUsers() async {
+    try {
+      final response = await _dio.get('/users/');
+      final list = response.data as List;
+      final users = list
+          .map((e) => User.fromJson(e as Map<String, dynamic>))
+          .toList();
+
+      if (_localDb != null) {
+        unawaited(_localDb.saveUsers(list.cast<Map<String, dynamic>>()));
+        unawaited(_localDb.setLastSync('users', DateTime.now()));
+      }
+
+      return users;
+    } on dio.DioException catch (e) {
+      if (_localDb != null) {
+        final cached = await _localDb.getUsers();
+        if (cached.isNotEmpty) {
+          return cached.map((e) => User.fromJson(e)).toList();
+        }
+      }
+      throw Exception('Error al obtener usuarios: ${e.message}');
+    }
+  }
+
+  Future<List<dynamic>> getLatestResultsForPatient(int patientId) async {
+    try {
+      final response = await _dio.get(
+        '/sessions/results/latest',
+        queryParameters: {'patient_id': patientId.toString()},
+      );
+      return response.data as List<dynamic>;
+    } on dio.DioException catch (e) {
+      throw Exception('Error al obtener resultados: ${e.message}');
+    }
+  }
+
+  Future<void> submitGameResults({
+    required int patientId,
+    required String gameName,
+    required Map<String, dynamic> results,
+    int? sessionId,
+  }) async {
+    if (patientId <= 0) throw Exception('ID de paciente inválido');
+    if (gameName.trim().isEmpty) {
+      throw Exception('El nombre del juego es requerido');
+    }
+    if (results.isEmpty) {
+      throw Exception('Los resultados no pueden estar vacíos');
+    }
+
+    try {
+      await _dio.post(
+        '/sessions/results',
+        data: {
+          'patient_id': patientId,
+          'game_name': gameName,
+          'results': results,
+          'session_id': sessionId,
+        },
+      );
+    } on dio.DioException catch (e) {
+      await _savePendingSession({
+        'patient_id': patientId,
+        'game_name': gameName,
+        'results': results,
+        'session_id': sessionId,
+        'timestamp': DateTime.now().toIso8601String(),
+      });
+      throw Exception(
+        'Error al enviar resultados (guardado localmente): ${e.message}',
+      );
+    }
+  }
+
+  Future<void> _savePendingSession(Map<String, dynamic> sessionData) async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(_prefsPendingSessionsKey);
+    final List<dynamic> list = raw == null ? [] : (jsonDecode(raw) as List);
+    list.add(sessionData);
+    await prefs.setString(_prefsPendingSessionsKey, jsonEncode(list));
+  }
+
+  Future<Map<String, dynamic>> updateUserAvailability(
+    int userId,
+    bool isAvailable,
+  ) async {
+    try {
+      final response = await _dio.put(
+        '/users/$userId/availability',
+        queryParameters: {'is_available': isAvailable.toString()},
+      );
+      return response.data;
+    } on dio.DioException catch (e) {
+      throw Exception('Error al actualizar disponibilidad: ${e.message}');
+    }
+  }
+
+  Future<User> updateUser(int userId, Map<String, dynamic> userData) async {
+    try {
+      final response = await _dio.put('/users/$userId', data: userData);
+      return User.fromJson(response.data);
+    } on dio.DioException catch (e) {
+      throw Exception('Error al editar usuario: ${e.message}');
+    }
+  }
+
+  Future<Map<String, dynamic>> adminCreateUser({
+    required String username,
+    required String password,
+    required String role,
+  }) async {
+    try {
+      final response = await _dio.post(
+        '/users/',
+        data: {'username': username, 'password': password, 'role': role},
+      );
+      return response.data;
+    } on dio.DioException catch (e) {
+      throw Exception('Error al crear usuario: ${e.message}');
+    }
+  }
+
+  Future<Map<String, dynamic>> resetPassword(
+    String username,
+    String newPassword,
+  ) async {
+    try {
+      final response = await _dio.post(
+        '/users/reset',
+        data: {
+          'username': username,
+          'password': newPassword,
+          'role': _currentRole ?? 'doctor',
+        },
+      );
+      return response.data;
+    } on dio.DioException catch (e) {
+      throw Exception('Error al restablecer contraseña: ${e.message}');
+    }
+  }
+
+  Future<Map<String, dynamic>> register({
+    required String username,
+    required String password,
+    String role = 'doctor',
+  }) async {
+    try {
+      final response = await _dio.post(
+        '/users/',
+        data: {'username': username, 'password': password, 'role': role},
+      );
+      _currentUsername = username;
+      _currentRole = response.data['role']?.toString() ?? role;
+      return response.data;
+    } on dio.DioException catch (e) {
+      throw Exception('Error al registrar usuario: ${e.message}');
+    }
   }
 }

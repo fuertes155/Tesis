@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../core/theme/app_theme.dart';
 
 class DashboardCard extends StatelessWidget {
   final IconData icon;
@@ -21,28 +22,30 @@ class DashboardCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final primaryColor = const Color(0xFF1A237E);
+    final cs = theme.colorScheme;
+    final s = context.spacing;
+    final r = context.radii;
 
-    final cardColor = isPrimary ? primaryColor : Colors.white;
-    final borderColor = isPrimary ? primaryColor : const Color(0xFFE2E8F0);
-    final shadowBase = isPrimary ? primaryColor : const Color(0xFF0F172A);
+    final cardColor = isPrimary ? cs.primary : theme.cardColor;
+    final borderColor = isPrimary ? cs.primary : cs.outlineVariant;
+    final shadowColor = isPrimary ? cs.primary : Colors.black;
 
     return Material(
       color: Colors.transparent,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: r.radiusXl,
         child: Container(
-          padding: const EdgeInsets.all(24),
+          padding: EdgeInsets.all(s.xl),
           decoration: BoxDecoration(
             color: cardColor,
-            borderRadius: BorderRadius.circular(24),
-            border: Border.all(color: borderColor, width: 1),
+            borderRadius: r.radiusXl,
+            border: Border.all(color: borderColor, width: 1.5),
             boxShadow: [
               BoxShadow(
-                color: shadowBase.withValues(alpha: 0.08),
-                blurRadius: 16,
-                offset: const Offset(0, 6),
+                color: shadowColor.withValues(alpha: isPrimary ? 0.15 : 0.04),
+                blurRadius: 32,
+                offset: const Offset(0, 12),
               ),
             ],
           ),
@@ -52,17 +55,22 @@ class DashboardCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Container(
-                    padding: const EdgeInsets.all(12),
+                    padding: EdgeInsets.all(s.md),
                     decoration: BoxDecoration(
                       color: (isPrimary ? Colors.white : color).withValues(
-                        alpha: 0.15,
+                        alpha: isPrimary ? 0.2 : 0.1,
                       ),
-                      borderRadius: BorderRadius.circular(14),
+                      borderRadius: r.radiusMd,
+                      border: Border.all(
+                        color: (isPrimary ? Colors.white : color).withValues(
+                          alpha: 0.1,
+                        ),
+                      ),
                     ),
                     child: Icon(
                       icon,
-                      size: 28,
-                      color: isPrimary ? Colors.white : color,
+                      size: 32,
+                      color: isPrimary ? cs.onPrimary : color,
                     ),
                   ),
                   const Spacer(),
@@ -70,36 +78,37 @@ class DashboardCard extends StatelessWidget {
                     title,
                     style: theme.textTheme.titleLarge?.copyWith(
                       fontWeight: FontWeight.w800,
-                      color: isPrimary ? Colors.white : const Color(0xFF1E293B),
-                      letterSpacing: -0.5,
+                      color: isPrimary ? cs.onPrimary : cs.onSurface,
+                      letterSpacing: -0.8,
                     ),
                   ),
-                  const SizedBox(height: 6),
+                  SizedBox(height: s.xs),
                   Text(
                     subtitle,
                     style: theme.textTheme.bodyMedium?.copyWith(
                       color: isPrimary
-                          ? Colors.white.withValues(alpha: 0.7)
-                          : const Color(0xFF64748B),
+                          ? cs.onPrimary.withValues(alpha: 0.82)
+                          : cs.onSurfaceVariant,
+                      height: 1.4,
                     ),
                   ),
                 ],
               ),
               Positioned(
-                right: 0,
-                bottom: 0,
+                right: -4,
+                bottom: -4,
                 child: Container(
-                  padding: const EdgeInsets.all(8),
+                  padding: EdgeInsets.all(s.sm - 2),
                   decoration: BoxDecoration(
-                    color: (isPrimary ? Colors.white : color).withValues(
-                      alpha: 0.12,
+                    color: (isPrimary ? Colors.white : cs.primary).withValues(
+                      alpha: isPrimary ? 0.15 : 0.05,
                     ),
                     shape: BoxShape.circle,
                   ),
                   child: Icon(
-                    Icons.arrow_forward_rounded,
-                    size: 16,
-                    color: isPrimary ? Colors.white : color,
+                    Icons.chevron_right_rounded,
+                    size: 20,
+                    color: isPrimary ? cs.onPrimary : cs.primary,
                   ),
                 ),
               ),

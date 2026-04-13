@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'dart:convert';
+import 'package:get_it/get_it.dart';
 import '../../services/api_service.dart';
 
 class GameResults {
@@ -10,7 +11,7 @@ class GameResults {
     required String notes,
     DateTime? date,
   }) async {
-    final api = ApiService();
+    final api = GetIt.I<ApiService>();
     final pid = patientId ?? api.currentPatientId;
     final d = date ?? DateTime.now();
     final isoDate =
@@ -50,7 +51,7 @@ class GameResults {
   }
 
   static void navigateToResultsFromApi(BuildContext context, {int? patientId}) {
-    final api = ApiService();
+    final api = GetIt.I<ApiService>();
     final pid = patientId ?? api.currentPatientId;
     final future = api.getLatestResultsForPatient(pid);
     context.go('/results', extra: {'dataFuture': future});

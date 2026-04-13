@@ -1,7 +1,7 @@
 part of 'patients_screen.dart';
 
 class PatientsScreenState extends State<PatientsScreen> {
-  final ApiService _api = ApiService();
+  final ApiService _api = GetIt.I<ApiService>();
   List<dynamic> _patients = [];
   bool _isLoading = true;
   String _searchQuery = '';
@@ -10,7 +10,7 @@ class PatientsScreenState extends State<PatientsScreen> {
   @override
   void initState() {
     super.initState();
-    final api = ApiService();
+    final api = GetIt.I<ApiService>();
     if (api.currentRole == 'user') {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted) return;
@@ -20,7 +20,7 @@ class PatientsScreenState extends State<PatientsScreen> {
       _fetchPatients();
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted) return;
-        final n = ApiService().takeNotice();
+        final n = api.takeNotice();
         if (n == 'no_perms_history') {
           setState(() {
             _noticeBanner =
@@ -38,34 +38,36 @@ class PatientsScreenState extends State<PatientsScreen> {
   }
 
   Future<void> _fetchPatients() async {
-    if (!mounted) {
-      return;
-    }
     setState(() => _isLoading = true);
-
     try {
-      final results = await _api.getPatients();
+      final api = GetIt.I<ApiService>();
+      final list = await api.getPatients();
       setState(() {
-        _patients = results;
+        _patients = list;
         _isLoading = false;
       });
-    } catch (e) {
-      setState(() {
-        _isLoading = false;
-      });
+
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
-        );
+        final n = api.takeNotice();
+        if (n == 'patient_created') {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Paciente registrado con éxito')),
+          );
+        }
       }
+    } catch (e) {
+      setState(() => _isLoading = false);
     }
   }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final primaryColor = const Color(0xFF1A237E);
-    final role = ApiService().currentRole;
+    final cs = theme.colorScheme;
+    final r = context.radii;
+    final spacing = context.spacing;
+    final sem = context.sem;
+    final role = GetIt.I<ApiService>().currentRole;
     final canDelete = role == 'gestor';
     final filteredPatients = _patients
         .where(
@@ -76,23 +78,23 @@ class PatientsScreenState extends State<PatientsScreen> {
         .toList();
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
+      backgroundColor: cs.surface,
       body: CustomScrollView(
         slivers: [
           SliverAppBar(
             pinned: true,
             expandedHeight: 120,
-            backgroundColor: Colors.white,
-            surfaceTintColor: Colors.white,
+            backgroundColor: cs.surfaceContainerLowest,
+            surfaceTintColor: cs.surfaceContainerLowest,
             elevation: 0,
             centerTitle: false,
             flexibleSpace: FlexibleSpaceBar(
-              titlePadding: const EdgeInsets.only(left: 24, bottom: 16),
+              titlePadding: EdgeInsets.only(left: spacing.lg, bottom: spacing.md),
               title: Text(
                 'Gestión de Pacientes',
                 style: theme.textTheme.headlineSmall?.copyWith(
                   fontWeight: FontWeight.w900,
-                  color: const Color(0xFF1E293B),
+                  color: cs.onSurface,
                   letterSpacing: -0.5,
                 ),
               ),
@@ -100,7 +102,7 @@ class PatientsScreenState extends State<PatientsScreen> {
             actions: [
               if (role == 'gestor')
                 Padding(
-                  padding: const EdgeInsets.only(right: 16),
+                  padding: EdgeInsets.only(right: spacing.md),
                   child: IconButton.filled(
                     onPressed: () async {
                       final result = await context.push('/create_patient');
@@ -108,8 +110,8 @@ class PatientsScreenState extends State<PatientsScreen> {
                       if (result == true) await _fetchPatients();
                     },
                     style: IconButton.styleFrom(
-                      backgroundColor: primaryColor,
-                      foregroundColor: Colors.white,
+                      backgroundColor: cs.primary,
+                      foregroundColor: cs.onPrimary,
                     ),
                     icon: const Icon(Icons.add_rounded),
                     tooltip: 'Nuevo Paciente',
@@ -122,34 +124,34 @@ class PatientsScreenState extends State<PatientsScreen> {
               children: [
                 if (_noticeBanner != null)
                   Padding(
-                    padding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
+                    padding: EdgeInsets.fromLTRB(spacing.lg, spacing.lg, spacing.lg, 0),
                     child: Container(
-                      padding: const EdgeInsets.all(16),
+                      padding: EdgeInsets.all(spacing.md),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFF0F9FF),
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: const Color(0xFFBAE6FD)),
+                        color: sem.info.withValues(alpha: 0.1),
+                        borderRadius: r.radiusMd,
+                        border: Border.all(color: sem.info.withValues(alpha: 0.2)),
                       ),
                       child: Row(
                         children: [
-                          const Icon(
+                          Icon(
                             Icons.info_outline_rounded,
-                            color: Color(0xFF0284C7),
+                            color: sem.info,
                           ),
-                          const SizedBox(width: 16),
+                          SizedBox(width: spacing.md),
                           Expanded(
                             child: Text(
                               _noticeBanner!,
-                              style: const TextStyle(
-                                color: Color(0xFF075985),
+                              style: TextStyle(
+                                color: sem.info,
                                 fontWeight: FontWeight.w500,
                               ),
                             ),
                           ),
                           IconButton(
-                            icon: const Icon(
+                            icon: Icon(
                               Icons.close_rounded,
-                              color: Color(0xFF0284C7),
+                              color: sem.info,
                             ),
                             onPressed: () =>
                                 setState(() => _noticeBanner = null),
@@ -159,27 +161,27 @@ class PatientsScreenState extends State<PatientsScreen> {
                     ),
                   ),
                 Padding(
-                  padding: const EdgeInsets.all(24),
+                  padding: EdgeInsets.all(spacing.lg),
                   child: TextFormField(
                     onChanged: (v) => setState(() => _searchQuery = v),
                     decoration: InputDecoration(
                       hintText: 'Buscar por nombre...',
-                      hintStyle: const TextStyle(color: Color(0xFF94A3B8)),
-                      prefixIcon: const Icon(
+                      hintStyle: TextStyle(color: cs.onSurfaceVariant),
+                      prefixIcon: Icon(
                         Icons.search_rounded,
-                        color: Color(0xFF64748B),
+                        color: cs.onSurfaceVariant,
                       ),
                       filled: true,
-                      fillColor: Colors.white,
+                      fillColor: cs.surfaceContainerLowest,
                       enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(14),
-                        borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+                        borderRadius: r.radiusSm,
+                        borderSide: BorderSide(color: cs.outlineVariant),
                       ),
                       focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(14),
-                        borderSide: BorderSide(color: primaryColor, width: 2),
+                        borderRadius: r.radiusSm,
+                        borderSide: BorderSide(color: cs.primary, width: 2),
                       ),
-                      contentPadding: const EdgeInsets.symmetric(vertical: 16),
+                      contentPadding: EdgeInsets.symmetric(vertical: spacing.md),
                     ),
                   ),
                 ),
@@ -199,13 +201,13 @@ class PatientsScreenState extends State<PatientsScreen> {
                     Icon(
                       Icons.person_off_outlined,
                       size: 64,
-                      color: const Color(0xFFCBD5E1),
+                      color: cs.outline,
                     ),
-                    const SizedBox(height: 16),
+                    SizedBox(height: spacing.md),
                     Text(
                       'No se encontraron pacientes',
                       style: theme.textTheme.titleMedium?.copyWith(
-                        color: const Color(0xFF64748B),
+                        color: cs.onSurfaceVariant,
                         fontWeight: FontWeight.w600,
                       ),
                     ),
@@ -215,7 +217,7 @@ class PatientsScreenState extends State<PatientsScreen> {
             )
           else
             SliverPadding(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
+              padding: EdgeInsets.symmetric(horizontal: spacing.lg),
               sliver: SliverList(
                 delegate: SliverChildBuilderDelegate((context, index) {
                   final patient = filteredPatients[index];
@@ -223,38 +225,38 @@ class PatientsScreenState extends State<PatientsScreen> {
                   final id = patient['id']?.toString() ?? '?';
                   final age = patient['age']?.toString() ?? '?';
                   return Padding(
-                    padding: const EdgeInsets.only(bottom: 12),
+                    padding: EdgeInsets.only(bottom: spacing.sm),
                     child: Container(
                       decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: const Color(0xFFE2E8F0)),
+                        color: cs.surfaceContainerLowest,
+                        borderRadius: r.radiusMd,
+                        border: Border.all(color: cs.outlineVariant),
                       ),
                       child: ListTile(
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 20,
-                          vertical: 8,
+                        contentPadding: EdgeInsets.symmetric(
+                          horizontal: spacing.lg,
+                          vertical: spacing.xs,
                         ),
                         leading: CircleAvatar(
-                          backgroundColor: primaryColor.withValues(alpha: 0.1),
+                          backgroundColor: cs.primary.withValues(alpha: 0.1),
                           child: Text(
                             name.isNotEmpty ? name[0].toUpperCase() : '?',
                             style: TextStyle(
-                              color: primaryColor,
+                              color: cs.primary,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
                         ),
                         title: Text(
                           name,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontWeight: FontWeight.w700,
-                            color: Color(0xFF1E293B),
+                            color: cs.onSurface,
                           ),
                         ),
                         subtitle: Text(
                           'ID: $id • $age años',
-                          style: const TextStyle(color: Color(0xFF64748B)),
+                          style: TextStyle(color: cs.onSurfaceVariant),
                         ),
                         trailing: Row(
                           mainAxisSize: MainAxisSize.min,
@@ -276,9 +278,9 @@ class PatientsScreenState extends State<PatientsScreen> {
                             ),
                             if (canDelete)
                               IconButton(
-                                icon: const Icon(
+                                icon: Icon(
                                   Icons.delete_outline_rounded,
-                                  color: Color(0xFFEF4444),
+                                  color: sem.danger,
                                 ),
                                 onPressed: () async {
                                   int? count;

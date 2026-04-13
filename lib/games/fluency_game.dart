@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'common/game_results.dart';
 import 'common/game_intro.dart';
@@ -84,6 +85,7 @@ class _FluencyGameState extends State<FluencyGame> {
   }
 
   void _incrementCount() {
+    HapticFeedback.selectionClick();
     setState(() {
       _wordCount++;
     });
@@ -91,6 +93,7 @@ class _FluencyGameState extends State<FluencyGame> {
 
   void _decrementCount() {
     if (_wordCount > 0) {
+      HapticFeedback.selectionClick();
       setState(() {
         _wordCount--;
       });

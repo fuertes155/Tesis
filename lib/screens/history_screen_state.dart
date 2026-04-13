@@ -1,7 +1,7 @@
 part of 'history_screen.dart';
 
 class HistoryScreenState extends State<HistoryScreen> {
-  final _api = ApiService();
+  final _api = GetIt.I<ApiService>();
   List<Map<String, dynamic>> _sessions = [];
   bool _loading = true;
   String _query = '';
@@ -39,59 +39,68 @@ class HistoryScreenState extends State<HistoryScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final primaryColor = const Color(0xFF1A237E);
+    final cs = theme.colorScheme;
+    final spacing = context.spacing;
+    final r = context.radii;
+    final sem = context.sem;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
+      backgroundColor: cs.surface,
       body: CustomScrollView(
         slivers: [
           SliverAppBar(
             pinned: true,
             expandedHeight: 120,
-            backgroundColor: Colors.white,
-            surfaceTintColor: Colors.white,
+            backgroundColor: cs.surfaceContainerLowest,
+            surfaceTintColor: cs.surfaceContainerLowest,
             elevation: 0,
             centerTitle: false,
             flexibleSpace: FlexibleSpaceBar(
-              titlePadding: const EdgeInsets.only(left: 24, bottom: 16),
+              titlePadding: EdgeInsets.only(left: spacing.lg, bottom: spacing.md),
               title: Text(
                 'Historial de Sesiones',
                 style: theme.textTheme.headlineSmall?.copyWith(
                   fontWeight: FontWeight.w900,
-                  color: const Color(0xFF1E293B),
+                  color: cs.onSurface,
                   letterSpacing: -0.5,
                 ),
               ),
             ),
             actions: [
               IconButton(
-                icon: const Icon(Icons.refresh_rounded, color: Color(0xFF64748B)),
+                icon: Icon(
+                  Icons.refresh_rounded,
+                  color: cs.onSurfaceVariant,
+                ),
                 onPressed: _fetch,
                 tooltip: 'Actualizar',
               ),
-              const SizedBox(width: 16),
+              SizedBox(width: spacing.md),
             ],
           ),
           SliverToBoxAdapter(
             child: Padding(
-              padding: const EdgeInsets.all(24),
+              padding: EdgeInsets.all(spacing.lg),
               child: TextFormField(
                 onChanged: (v) => setState(() => _query = v),
                 decoration: InputDecoration(
                   hintText: 'Buscar por notas o ID...',
-                  hintStyle: const TextStyle(color: Color(0xFF94A3B8)),
-                  prefixIcon: const Icon(Icons.search_rounded, color: Color(0xFF64748B)),
+                  hintStyle: TextStyle(color: cs.onSurfaceVariant),
+                  prefixIcon: Icon(
+                    Icons.search_rounded,
+                    color: cs.onSurfaceVariant,
+                  ),
                   filled: true,
-                  fillColor: Colors.white,
+                  fillColor: cs.surfaceContainerLowest,
                   enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(14),
-                    borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+                    borderRadius: r.radiusSm,
+                    borderSide: BorderSide(color: cs.outlineVariant),
                   ),
                   focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(14),
-                    borderSide: BorderSide(color: primaryColor, width: 2),
+                    borderRadius: r.radiusSm,
+                    borderSide: BorderSide(color: cs.primary, width: 2),
                   ),
-                  contentPadding: const EdgeInsets.symmetric(vertical: 16),
+                  contentPadding: EdgeInsets.symmetric(vertical: spacing.md),
                 ),
               ),
             ),
@@ -106,12 +115,16 @@ class HistoryScreenState extends State<HistoryScreen> {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(Icons.history_toggle_off_rounded, size: 64, color: const Color(0xFFCBD5E1)),
-                    const SizedBox(height: 16),
+                    Icon(
+                      Icons.history_toggle_off_rounded,
+                      size: 64,
+                      color: cs.outline,
+                    ),
+                    SizedBox(height: spacing.md),
                     Text(
                       'No hay sesiones registradas',
                       style: theme.textTheme.titleMedium?.copyWith(
-                        color: const Color(0xFF64748B),
+                        color: cs.onSurfaceVariant,
                         fontWeight: FontWeight.w600,
                       ),
                     ),
@@ -121,106 +134,128 @@ class HistoryScreenState extends State<HistoryScreen> {
             )
           else
             SliverPadding(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
+              padding: EdgeInsets.symmetric(horizontal: spacing.lg),
               sliver: SliverList(
-                delegate: SliverChildBuilderDelegate(
-                  (context, index) {
-                    final s = _filtered[index];
-                    final sessionNumber = s['id'] ?? (index + 1);
-                    final date = s['date']?.toString() ?? '';
-                    final isCompleted = (s['status'] ?? '') == 'completed';
+                delegate: SliverChildBuilderDelegate((context, index) {
+                  final s = _filtered[index];
+                  final sessionNumber = s['id'] ?? (index + 1);
+                  final date = s['date']?.toString() ?? '';
+                  final isCompleted = (s['status'] ?? '') == 'completed';
 
-                    final statusColor = isCompleted ? const Color(0xFF10B981) : const Color(0xFFF59E0B);
-                    final statusLabel = isCompleted ? 'Completada' : 'En Progreso';
+                  final statusColor = isCompleted
+                      ? sem.success
+                      : sem.warning;
+                  final statusLabel = isCompleted
+                      ? 'Completada'
+                      : 'En Progreso';
 
-                    return Padding(
-                      padding: const EdgeInsets.only(bottom: 12),
-                      child: Container(
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(color: const Color(0xFFE2E8F0)),
+                  return Padding(
+                    padding: EdgeInsets.only(bottom: spacing.sm),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: cs.surfaceContainerLowest,
+                        borderRadius: r.radiusMd,
+                        border: Border.all(color: cs.outlineVariant),
+                      ),
+                      child: InkWell(
+                        borderRadius: r.radiusMd,
+                        onTap: () => context.push(
+                          '/results',
+                          extra: {'dataFuture': Future.value(_toResultData(s))},
                         ),
-                        child: InkWell(
-                          borderRadius: BorderRadius.circular(16),
-                          onTap: () => context.push(
-                            '/results',
-                            extra: {'dataFuture': Future.value(_toResultData(s))},
-                          ),
-                          child: Padding(
-                            padding: const EdgeInsets.all(20),
-                            child: Row(
-                              children: [
-                                Container(
-                                  padding: const EdgeInsets.all(12),
-                                  decoration: BoxDecoration(
-                                    color: primaryColor.withValues(alpha: 0.05),
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  child: Icon(Icons.assignment_outlined, color: primaryColor),
+                        child: Padding(
+                          padding: EdgeInsets.all(spacing.lg - 4), // ~20
+                          child: Row(
+                            children: [
+                              Container(
+                                padding: EdgeInsets.all(spacing.sm),
+                                decoration: BoxDecoration(
+                                  color: cs.primary.withValues(alpha: 0.05),
+                                  borderRadius: r.radiusSm,
                                 ),
-                                const SizedBox(width: 16),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Row(
-                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                        children: [
-                                          Text(
-                                            'Sesión #$sessionNumber',
-                                            style: const TextStyle(
-                                              fontWeight: FontWeight.w800,
-                                              color: Color(0xFF1E293B),
-                                              fontSize: 16,
-                                            ),
-                                          ),
-                                          Container(
-                                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                                            decoration: BoxDecoration(
-                                              color: statusColor.withValues(alpha: 0.1),
-                                              borderRadius: BorderRadius.circular(20),
-                                            ),
-                                            child: Text(
-                                              statusLabel.toUpperCase(),
-                                              style: TextStyle(
-                                                fontSize: 10,
-                                                fontWeight: FontWeight.w800,
-                                                color: statusColor,
-                                                letterSpacing: 0.5,
-                                              ),
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                      const SizedBox(height: 4),
-                                      Text(
-                                        date,
-                                        style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 13),
-                                      ),
-                                      if ((s['notes'] ?? '').toString().isNotEmpty) ...[
-                                        const SizedBox(height: 12),
+                                child: Icon(
+                                  Icons.assignment_outlined,
+                                  color: cs.primary,
+                                ),
+                              ),
+                              SizedBox(width: spacing.md),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.spaceBetween,
+                                      children: [
                                         Text(
-                                          s['notes'],
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
-                                          style: const TextStyle(color: Color(0xFF64748B), fontSize: 14),
+                                          'Sesión #$sessionNumber',
+                                          style: TextStyle(
+                                            fontWeight: FontWeight.w800,
+                                            color: cs.onSurface,
+                                            fontSize: 16,
+                                          ),
+                                        ),
+                                        Container(
+                                          padding: EdgeInsets.symmetric(
+                                            horizontal: spacing.sm - 2, // ~10
+                                            vertical: spacing.xs - 4, // ~4
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: statusColor.withValues(
+                                              alpha: 0.1,
+                                            ),
+                                            borderRadius: r.radiusLg,
+                                          ),
+                                          child: Text(
+                                            statusLabel.toUpperCase(),
+                                            style: TextStyle(
+                                              fontSize: 10,
+                                              fontWeight: FontWeight.w800,
+                                              color: statusColor,
+                                              letterSpacing: 0.5,
+                                            ),
+                                          ),
                                         ),
                                       ],
+                                    ),
+                                    SizedBox(height: spacing.xs - 4), // ~4
+                                    Text(
+                                      date,
+                                      style: TextStyle(
+                                        color: cs.onSurfaceVariant,
+                                        fontSize: 13,
+                                      ),
+                                    ),
+                                    if ((s['notes'] ?? '')
+                                        .toString()
+                                        .isNotEmpty) ...[
+                                      SizedBox(height: spacing.sm),
+                                      Text(
+                                        s['notes'],
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: TextStyle(
+                                          color: cs.onSurfaceVariant,
+                                          fontSize: 14,
+                                        ),
+                                      ),
                                     ],
-                                  ),
+                                  ],
                                 ),
-                                const SizedBox(width: 8),
-                                const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: Color(0xFFCBD5E1)),
-                              ],
-                            ),
+                              ),
+                              SizedBox(width: spacing.xs),
+                              Icon(
+                                Icons.arrow_forward_ios_rounded,
+                                size: 14,
+                                color: cs.outline,
+                              ),
+                            ],
                           ),
                         ),
                       ),
-                    ).animate().fadeIn(delay: (index * 50).ms).slideX(begin: 0.1);
-                  },
-                  childCount: _filtered.length,
-                ),
+                    ),
+                  ).animate().fadeIn(delay: (index * 50).ms).slideX(begin: 0.1);
+                }, childCount: _filtered.length),
               ),
             ),
         ],

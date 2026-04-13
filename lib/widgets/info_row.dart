@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../core/theme/app_theme.dart';
 
 class InfoRow extends StatelessWidget {
   final IconData icon;
@@ -14,39 +15,41 @@ class InfoRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+    final s = context.spacing;
+    final r = context.radii;
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
+      padding: EdgeInsets.symmetric(vertical: s.xs),
       child: Row(
         children: [
           Container(
-            padding: const EdgeInsets.all(8),
+            padding: EdgeInsets.all(s.xs),
             decoration: BoxDecoration(
-              color: const Color(0xFFF1F5F9),
-              borderRadius: BorderRadius.circular(8),
+              color: cs.surfaceContainerHighest,
+              borderRadius: r.radiusSm,
             ),
-            child: Icon(icon, size: 18, color: const Color(0xFF64748B)),
+            child: Icon(icon, size: 18, color: cs.onSurfaceVariant),
           ),
-          const SizedBox(width: 16),
+          SizedBox(width: s.md),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   label.toUpperCase(),
-                  style: const TextStyle(
-                    fontSize: 11,
+                  style: theme.textTheme.labelSmall?.copyWith(
                     fontWeight: FontWeight.w800,
-                    color: Color(0xFF94A3B8),
+                    color: cs.onSurfaceVariant,
                     letterSpacing: 1.0,
                   ),
                 ),
                 const SizedBox(height: 2),
                 Text(
                   value,
-                  style: const TextStyle(
+                  style: theme.textTheme.bodyMedium?.copyWith(
                     fontWeight: FontWeight.w700,
-                    fontSize: 15,
-                    color: Color(0xFF1E293B),
+                    color: cs.onSurface,
                   ),
                 ),
               ],

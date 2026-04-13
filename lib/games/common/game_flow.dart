@@ -1,92 +1,63 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:get_it/get_it.dart';
 import 'package:go_router/go_router.dart';
-
 import '../../services/api_service.dart';
 import 'game_results.dart';
 
-class GameFlowScreen extends StatefulWidget {
+class GameFlow extends StatefulWidget {
   final List<String> gameRoutes;
 
-  const GameFlowScreen({super.key, required this.gameRoutes});
+  const GameFlow({super.key, required this.gameRoutes});
 
   @override
-  State<GameFlowScreen> createState() => _GameFlowScreenState();
+  State<GameFlow> createState() => _GameFlowState();
 }
 
-class _GameFlowScreenState extends State<GameFlowScreen> {
-  bool _running = false;
-  String? _error;
+class _GameFlowState extends State<GameFlow> {
+  int _currentIndex = 0;
   int? _age;
-  Map<String, dynamic>? _lastResult;
 
   @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    if (_running) return;
-    _running = true;
-    WidgetsBinding.instance.addPostFrameCallback((_) => _run());
+  void initState() {
+    super.initState();
+    _loadPatientInfo();
+    _startNext();
   }
 
-  Future<void> _run() async {
-    final routes = widget.gameRoutes;
-    if (routes.isEmpty) {
-      if (!mounted) return;
-      context.go('/home');
-      return;
-    }
-
+  Future<void> _loadPatientInfo() async {
     try {
-      final api = ApiService();
+      final api = GetIt.I<ApiService>();
       final pid = api.currentPatientId;
       final patient = await api.getPatient(pid);
-      final a = patient['age'];
-      _age = a is int ? a : int.tryParse('$a');
+      _age = patient.age;
     } catch (e) {
-      _error = 'No se pudo cargar la edad del paciente';
+      _age = 30;
     }
+    if (mounted) setState(() {});
+  }
 
-    for (int i = 0; i < routes.length; i++) {
-      if (!mounted) return;
-      final result = await context.push<Object?>(
-        routes[i],
-        extra: {
-          'flow': true,
-          'index': i,
-          'total': routes.length,
-          if (_age != null) 'age': _age,
-        },
-      );
-
-      if (!mounted) return;
-      if (result is Map<String, dynamic>) {
-        final aborted = result['aborted'] == true;
-        if (aborted) {
-          context.go('/home');
-          return;
-        }
-        final r = result['result'];
-        if (r is Map) {
-          _lastResult = r.cast<String, dynamic>();
-        }
-      }
-    }
-
-    if (!mounted) return;
-    if (_lastResult != null) {
-      GameResults.navigateToResults(
-        context,
-        title: _lastResult?['title']?.toString() ?? 'Resultados',
-        score: (_lastResult?['score'] as num?)?.toInt() ?? 70,
-        details:
-            (_lastResult?['details'] as Map?)?.cast<String, dynamic>() ??
-            const {},
-      );
+  void _startNext() {
+    if (_currentIndex >= widget.gameRoutes.length) {
+      _complete();
       return;
     }
-    GameResults.navigateToResultsFromApi(
-      context,
-      patientId: ApiService().currentPatientId,
+
+    Timer(const Duration(milliseconds: 1500), () {
+      if (!mounted) return;
+      final route = widget.gameRoutes[_currentIndex];
+      _currentIndex++;
+      context.push(route).then((_) => _startNext());
+    });
+  }
+
+  Future<void> _complete() async {
+    await GameResults.sendSession(
+      status: 'completed',
+      notes: 'Batería de pruebas finalizada.',
     );
+    if (!mounted) return;
+    context.go('/home');
   }
 
   @override
@@ -96,18 +67,9 @@ class _GameFlowScreenState extends State<GameFlowScreen> {
         ? 'Iniciando prueba...'
         : 'Iniciando protocolo (${widget.gameRoutes.length} pruebas)...';
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
+      backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
-        backgroundColor: Colors.white,
-        surfaceTintColor: Colors.white,
-        elevation: 0,
-        title: const Text(
-          'Evaluación Cognitiva',
-          style: TextStyle(
-            fontWeight: FontWeight.w800,
-            color: Color(0xFF1E293B),
-          ),
-        ),
+        title: const Text('Evaluación Cognitiva'),
         actions: [
           TextButton(
             onPressed: () => context.go('/home'),
@@ -135,17 +97,14 @@ class _GameFlowScreenState extends State<GameFlowScreen> {
                   textAlign: TextAlign.center,
                   style: theme.textTheme.titleLarge?.copyWith(
                     fontWeight: FontWeight.w900,
-                    color: const Color(0xFF1E293B),
                   ),
                 ),
-                if (_error != null) ...[
-                  const SizedBox(height: 12),
+                if (_age != null) ...[
+                  const SizedBox(height: 8),
                   Text(
-                    _error!,
-                    textAlign: TextAlign.center,
+                    'Paciente: $_age años',
                     style: theme.textTheme.bodyMedium?.copyWith(
-                      color: theme.colorScheme.error,
-                      fontWeight: FontWeight.w700,
+                      color: theme.colorScheme.secondary,
                     ),
                   ),
                 ],

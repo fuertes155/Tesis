@@ -77,3 +77,22 @@ def assign_doctor(
     db.commit()
     db.refresh(db_patient)
     return db_patient
+
+@router.put("/{patient_id}", response_model=schemas.Patient)
+def update_patient(
+    patient_id: int,
+    payload: schemas.PatientUpdate,
+    db: Session = Depends(get_db),
+    _user: models.User = Depends(require_roles("doctor", "gestor")),
+):
+    patient = db.query(models.Patient).filter(models.Patient.id == patient_id).first()
+    if patient is None:
+        raise HTTPException(status_code=404, detail="Patient not found")
+
+    data = payload.model_dump(exclude_unset=True)
+    for k, v in data.items():
+        setattr(patient, k, v)
+
+    db.commit()
+    db.refresh(patient)
+    return patient
