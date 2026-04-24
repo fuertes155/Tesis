@@ -25,7 +25,7 @@ class PatientUpdate(BaseModel):
 
 class Patient(PatientBase):
     id: int
-    registration_date: datetime
+    registration_date: Optional[datetime] = None
 
     class Config:
         from_attributes = True

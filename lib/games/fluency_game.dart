@@ -8,7 +8,12 @@ import 'common/game_intro.dart';
 import 'common/game_scoring.dart';
 import '../widgets/animated_dialog.dart';
 
-class FluencyGame extends StatefulWidget {
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:speech_to_text/speech_to_text.dart';
+import 'package:flutter_animate/flutter_animate.dart';
+import '../providers/api_providers.dart';
+
+class FluencyGame extends ConsumerStatefulWidget {
   final bool flowMode;
   final int? flowIndex;
   final int? flowTotal;
@@ -23,10 +28,10 @@ class FluencyGame extends StatefulWidget {
   });
 
   @override
-  State<FluencyGame> createState() => _FluencyGameState();
+  ConsumerState<FluencyGame> createState() => _FluencyGameState();
 }
 
-class _FluencyGameState extends State<FluencyGame> {
+class _FluencyGameState extends ConsumerState<FluencyGame> {
   static const int gameDuration = 60; // seconds
   int _timeLeft = gameDuration;
   int _wordCount = 0;
@@ -36,7 +41,23 @@ class _FluencyGameState extends State<FluencyGame> {
   Timer? _timer;
   bool _isPaused = false;
   bool _showIntro = true;
+  bool _isFocusMode = false;
+  final SpeechToText _speechToText = SpeechToText();
+  bool _speechEnabled = false;
+  bool _isListening = false;
+  String _lastWords = '';
 
+  @override
+  void initState() {
+    super.initState();
+    _initSpeech();
+  }
+
+  /// This has to happen only once per app
+  void _initSpeech() async {
+    _speechEnabled = await _speechToText.initialize();
+    setState(() {});
+  }
   final List<String> _letters = ['F', 'A', 'S', 'M', 'R', 'P'];
   final List<String> _categories = [
     'Animales',
@@ -45,6 +66,56 @@ class _FluencyGameState extends State<FluencyGame> {
     'Profesiones',
   ];
 
+  void _startListening() async {
+    if (!_speechEnabled) return;
+    await _speechToText.listen(
+      onResult: _onSpeechResult,
+      listenFor: const Duration(seconds: 60),
+      pauseFor: const Duration(seconds: 4),
+      localeId: 'es_ES',
+      listenOptions: SpeechListenOptions(
+        partialResults: true,
+        cancelOnError: true,
+        listenMode: ListenMode.dictation,
+      ),
+    );
+    setState(() {
+      _isListening = true;
+    });
+  }
+
+  void _stopListening() async {
+    await _speechToText.stop();
+    setState(() {
+      _isListening = false;
+    });
+  }
+
+  final Set<String> _countedWords = {};
+
+  void _onSpeechResult(result) {
+    if (result.finalResult || result.recognizedWords.isNotEmpty) {
+      final text = result.recognizedWords.toLowerCase();
+      final words = text.split(RegExp(r'\s+')).where((w) => w.length > 1).toList();
+      
+      int newCount = 0;
+      for (final w in words) {
+        if (!_countedWords.contains(w)) {
+          _countedWords.add(w);
+          newCount++;
+        }
+      }
+      
+      if (newCount > 0) {
+        HapticFeedback.heavyImpact();
+        setState(() {
+          _wordCount += newCount;
+          _lastWords = result.recognizedWords;
+        });
+      }
+    }
+  }
+
   @override
   void dispose() {
     _timer?.cancel();
@@ -52,6 +123,8 @@ class _FluencyGameState extends State<FluencyGame> {
   }
 
   void _startGame(bool isCategory) {
+    _countedWords.clear();
+    _lastWords = '';
     setState(() {
       _currentPrompt = isCategory
           ? _categories[Random().nextInt(_categories.length)]
@@ -62,6 +135,10 @@ class _FluencyGameState extends State<FluencyGame> {
       _isFinished = false;
       _isPaused = false;
     });
+
+    if (_speechEnabled) {
+      _startListening();
+    }
 
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
       if (_timeLeft > 0 && !_isPaused) {
@@ -76,6 +153,9 @@ class _FluencyGameState extends State<FluencyGame> {
 
   void _endGame() {
     _timer?.cancel();
+    if (_isListening) {
+      _stopListening();
+    }
     setState(() {
       _isPlaying = false;
       _isFinished = true;
@@ -85,7 +165,11 @@ class _FluencyGameState extends State<FluencyGame> {
   }
 
   void _incrementCount() {
-    HapticFeedback.selectionClick();
+    if (_isFocusMode) {
+      HapticFeedback.heavyImpact();
+    } else {
+      HapticFeedback.selectionClick();
+    }
     setState(() {
       _wordCount++;
     });
@@ -93,7 +177,11 @@ class _FluencyGameState extends State<FluencyGame> {
 
   void _decrementCount() {
     if (_wordCount > 0) {
-      HapticFeedback.selectionClick();
+      if (_isFocusMode) {
+        HapticFeedback.vibrate();
+      } else {
+        HapticFeedback.selectionClick();
+      }
       setState(() {
         _wordCount--;
       });
@@ -112,7 +200,9 @@ class _FluencyGameState extends State<FluencyGame> {
       'duration_s': gameDuration - _timeLeft,
       'paused': _isPaused,
     };
+    final api = ref.read(apiServiceProvider).value!;
     final future = GameResults.sendGameResult(
+      api: api,
       title: 'Resultados - Lenguaje',
       score: score,
       details: details,
@@ -223,14 +313,21 @@ class _FluencyGameState extends State<FluencyGame> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(
-          widget.flowMode &&
-                  widget.flowIndex != null &&
-                  widget.flowTotal != null
-              ? 'Fluidez Verbal (${widget.flowIndex! + 1}/${widget.flowTotal})'
-              : 'Fluidez Verbal',
-        ),
+        title: _isFocusMode
+            ? const Text('Modo Enfoque')
+            : Text(
+                widget.flowMode &&
+                        widget.flowIndex != null &&
+                        widget.flowTotal != null
+                    ? 'Fluidez Verbal (${widget.flowIndex! + 1}/${widget.flowTotal})'
+                    : 'Fluidez Verbal',
+              ),
         actions: [
+          IconButton(
+            icon: Icon(_isFocusMode ? Icons.visibility_outlined : Icons.visibility_off_outlined),
+            onPressed: () => setState(() => _isFocusMode = !_isFocusMode),
+            tooltip: _isFocusMode ? 'Desactivar Enfoque' : 'Activar Enfoque',
+          ),
           if (_isPlaying)
             IconButton(
               icon: Icon(_isPaused ? Icons.play_arrow : Icons.pause),
@@ -250,12 +347,14 @@ class _FluencyGameState extends State<FluencyGame> {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               if (!_isPlaying && !_isFinished) ...[
-                const Icon(
-                  Icons.record_voice_over_outlined,
-                  size: 80,
-                  color: Colors.blue,
-                ),
-                const SizedBox(height: 32),
+                if (!_isFocusMode) ...[
+                  const Icon(
+                    Icons.record_voice_over_outlined,
+                    size: 80,
+                    color: Colors.blue,
+                  ),
+                  const SizedBox(height: 32),
+                ],
                 Text(
                   'Selecciona el tipo de prueba',
                   style: theme.textTheme.headlineSmall,
@@ -267,7 +366,7 @@ class _FluencyGameState extends State<FluencyGame> {
                     Expanded(
                       child: _GameModeCard(
                         title: 'Fonológica',
-                        subtitle: 'Palabras con una letra',
+                        subtitle: _isFocusMode ? '' : 'Palabras con una letra',
                         icon: Icons.abc,
                         onTap: () => _startGame(false),
                       ),
@@ -276,7 +375,7 @@ class _FluencyGameState extends State<FluencyGame> {
                     Expanded(
                       child: _GameModeCard(
                         title: 'Semántica',
-                        subtitle: 'Palabras de una categoría',
+                        subtitle: _isFocusMode ? '' : 'Palabras de una categoría',
                         icon: Icons.category_outlined,
                         onTap: () => _startGame(true),
                       ),
@@ -295,22 +394,34 @@ class _FluencyGameState extends State<FluencyGame> {
                 Stack(
                   alignment: Alignment.center,
                   children: [
-                    SizedBox(
-                      width: 150,
-                      height: 150,
-                      child: CircularProgressIndicator(
-                        value: _timeLeft / gameDuration,
-                        strokeWidth: 12,
-                        backgroundColor: Colors.grey[200],
-                        valueColor: AlwaysStoppedAnimation<Color>(
-                          _timeLeft > 10 ? Colors.green : Colors.red,
+                    if (!_isFocusMode)
+                      SizedBox(
+                        width: 150,
+                        height: 150,
+                        child: CircularProgressIndicator(
+                          value: _timeLeft / gameDuration,
+                          strokeWidth: 12,
+                          backgroundColor: Colors.grey[200],
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            _isListening ? Colors.blue : (_timeLeft > 10 ? Colors.green : Colors.red),
+                          ),
                         ),
                       ),
-                    ),
+                    if (_isListening && !_isFocusMode)
+                      const SizedBox(
+                        width: 170,
+                        height: 170,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor: AlwaysStoppedAnimation<Color>(Colors.blue),
+                        ),
+                      ).animate(onPlay: (c) => c.repeat()).scale(begin: const Offset(1, 1), end: const Offset(1.1, 1.1)),
                     Text(
                       '$_timeLeft',
                       style: theme.textTheme.displayLarge?.copyWith(
-                        fontWeight: FontWeight.bold,
+                        fontWeight: FontWeight.w900,
+                        fontSize: _isFocusMode ? 120 : 80,
+                        color: _isListening ? Colors.blue : null,
                       ),
                     ),
                     if (_isPaused)
@@ -326,9 +437,26 @@ class _FluencyGameState extends State<FluencyGame> {
                       ),
                   ],
                 ),
-                const SizedBox(height: 48),
-                Text('Conteo de Palabras', style: theme.textTheme.titleMedium),
-                const SizedBox(height: 16),
+                if (_lastWords.isNotEmpty && !_isFocusMode) ...[
+                  const SizedBox(height: 16),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: Colors.blue.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      'Última palabra: $_lastWords',
+                      style: const TextStyle(color: Colors.blue, fontWeight: FontWeight.w500),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                ],
+                const SizedBox(height: 40),
+                if (!_isFocusMode) ...[
+                  Text('Conteo de Palabras', style: theme.textTheme.titleMedium),
+                  const SizedBox(height: 16),
+                ],
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
@@ -337,8 +465,9 @@ class _FluencyGameState extends State<FluencyGame> {
                       onPressed: _isPlaying && !_isPaused
                           ? _decrementCount
                           : null,
-                      backgroundColor: Colors.red[100],
-                      elevation: 0,
+                      backgroundColor: _isFocusMode ? Colors.transparent : Colors.red[100],
+                      elevation: _isFocusMode ? 0 : 4,
+                      shape: _isFocusMode ? const CircleBorder(side: BorderSide(color: Colors.red, width: 1)) : null,
                       child: const Icon(Icons.remove, color: Colors.red),
                     ),
                     const SizedBox(width: 32),
@@ -346,6 +475,7 @@ class _FluencyGameState extends State<FluencyGame> {
                       '$_wordCount',
                       style: theme.textTheme.displayMedium?.copyWith(
                         fontWeight: FontWeight.bold,
+                        fontSize: _isFocusMode ? 100 : 72,
                       ),
                     ),
                     const SizedBox(width: 32),
@@ -354,14 +484,15 @@ class _FluencyGameState extends State<FluencyGame> {
                       onPressed: _isPlaying && !_isPaused
                           ? _incrementCount
                           : null,
-                      backgroundColor: Colors.green[100],
-                      elevation: 0,
+                      backgroundColor: _isFocusMode ? Colors.transparent : Colors.green[100],
+                      elevation: _isFocusMode ? 0 : 4,
+                      shape: _isFocusMode ? const CircleBorder(side: BorderSide(color: Colors.green, width: 1)) : null,
                       child: const Icon(Icons.add, color: Colors.green),
                     ),
                   ],
                 ),
                 const Spacer(),
-                if (_isPlaying)
+                if (_isPlaying && !_isFocusMode)
                   SizedBox(
                     width: double.infinity,
                     child: OutlinedButton(

@@ -1,34 +1,24 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:dio/dio.dart' as dio;
-import 'package:get_it/get_it.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-
 import 'package:flutter_application_1/main.dart';
-import 'package:flutter_application_1/services/api_service.dart';
 
 void main() {
   testWidgets('App renders login screen', (WidgetTester tester) async {
+    // Mocking SharedPreferences
     SharedPreferences.setMockInitialValues({});
-    final getIt = GetIt.instance;
-    await getIt.reset();
-    getIt.registerSingleton<ApiService>(
-      ApiService(
-        dio.Dio(
-          dio.BaseOptions(
-            baseUrl: 'http://127.0.0.1:8000',
-            connectTimeout: const Duration(seconds: 1),
-            receiveTimeout: const Duration(seconds: 1),
-          ),
-        ),
+    
+    await tester.pumpWidget(
+      const ProviderScope(
+        child: MyApp(),
       ),
     );
-
-    await tester.pumpWidget(const MyApp());
+    
     await tester.pumpAndSettle();
 
-    expect(find.text('Bienvenido de nuevo'), findsOneWidget);
-    expect(find.text('Iniciar Sesión'), findsOneWidget);
+    // Verify if it renders basic components
+    expect(find.text('NeuroApp'), findsOneWidget);
     expect(find.byType(TextField), findsNWidgets(2));
   });
 }

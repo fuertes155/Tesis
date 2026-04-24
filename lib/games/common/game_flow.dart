@@ -1,20 +1,20 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:get_it/get_it.dart';
 import 'package:go_router/go_router.dart';
-import '../../services/api_service.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../providers/api_providers.dart';
 import 'game_results.dart';
 
-class GameFlow extends StatefulWidget {
+class GameFlow extends ConsumerStatefulWidget {
   final List<String> gameRoutes;
 
   const GameFlow({super.key, required this.gameRoutes});
 
   @override
-  State<GameFlow> createState() => _GameFlowState();
+  ConsumerState<GameFlow> createState() => _GameFlowState();
 }
 
-class _GameFlowState extends State<GameFlow> {
+class _GameFlowState extends ConsumerState<GameFlow> {
   int _currentIndex = 0;
   int? _age;
 
@@ -27,7 +27,7 @@ class _GameFlowState extends State<GameFlow> {
 
   Future<void> _loadPatientInfo() async {
     try {
-      final api = GetIt.I<ApiService>();
+      final api = await ref.read(apiServiceProvider.future);
       final pid = api.currentPatientId;
       final patient = await api.getPatient(pid);
       _age = patient.age;
@@ -52,7 +52,9 @@ class _GameFlowState extends State<GameFlow> {
   }
 
   Future<void> _complete() async {
+    final api = await ref.read(apiServiceProvider.future);
     await GameResults.sendSession(
+      api: api,
       status: 'completed',
       notes: 'Batería de pruebas finalizada.',
     );

@@ -1,6 +1,6 @@
 part of 'users_admin_screen.dart';
 
-class UsersAdminScreenState extends State<UsersAdminScreen> {
+class UsersAdminScreenState extends ConsumerState<UsersAdminScreen> {
   List<Map<String, dynamic>> _users = [];
   List<Map<String, dynamic>> _patients = [];
   bool _isLoading = true;
@@ -17,7 +17,7 @@ class UsersAdminScreenState extends State<UsersAdminScreen> {
   Future<void> _fetchData() async {
     setState(() => _isLoading = true);
     try {
-      final api = GetIt.I<ApiService>();
+      final api = await ref.read(apiServiceProvider.future);
       final results = await Future.wait([api.getUsers(), api.getPatients()]);
       final users = results[0] as List<User>;
       final patients = results[1] as List<Patient>;
@@ -41,7 +41,7 @@ class UsersAdminScreenState extends State<UsersAdminScreen> {
 
   Future<void> _toggleAvailability(int userId, bool currentStatus) async {
     try {
-      final api = GetIt.I<ApiService>();
+      final api = await ref.read(apiServiceProvider.future);
       await api.updateUserAvailability(userId, !currentStatus);
       await _fetchData();
     } catch (e) {
@@ -87,7 +87,7 @@ class UsersAdminScreenState extends State<UsersAdminScreen> {
 
     if (doctorId != null) {
       try {
-        final api = GetIt.I<ApiService>();
+        final api = await ref.read(apiServiceProvider.future);
         await api.assignDoctorToPatient(patientId, doctorId);
         await _fetchData();
       } catch (e) {
@@ -103,8 +103,10 @@ class UsersAdminScreenState extends State<UsersAdminScreen> {
   Future<void> _showCreateUserDialog() async {
     final emailController = TextEditingController();
     final passController = TextEditingController();
+    final nameController = TextEditingController();
     String selectedRole = 'doctor';
-    final api = GetIt.I<ApiService>();
+    final api = await ref.read(apiServiceProvider.future);
+    if (!mounted) return;
 
     final result = await showDialog<bool>(
       context: context,
@@ -137,6 +139,15 @@ class UsersAdminScreenState extends State<UsersAdminScreen> {
                     decoration: InputDecoration(
                       labelText: 'Contraseña',
                       prefixIcon: const Icon(Icons.lock_outline_rounded),
+                      border: OutlineInputBorder(borderRadius: r.radiusSm),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: nameController,
+                    decoration: InputDecoration(
+                      labelText: 'Nombre Completo',
+                      prefixIcon: const Icon(Icons.person_outline_rounded),
                       border: OutlineInputBorder(borderRadius: r.radiusSm),
                     ),
                   ),
@@ -227,6 +238,9 @@ class UsersAdminScreenState extends State<UsersAdminScreen> {
                       username: emailController.text,
                       password: passController.text,
                       role: selectedRole,
+                      fullName: nameController.text.trim().isEmpty
+                          ? null
+                          : nameController.text,
                     );
                     if (ctx.mounted) {
                       Navigator.pop(ctx, true);
@@ -327,7 +341,7 @@ class UsersAdminScreenState extends State<UsersAdminScreen> {
           IconButton(
             icon: const Icon(Icons.logout_rounded),
             onPressed: () async {
-              final api = GetIt.I<ApiService>();
+              final api = await ref.read(apiServiceProvider.future);
               await api.logout();
               if (!context.mounted) return;
               context.go('/');
@@ -415,24 +429,10 @@ class UsersAdminScreenState extends State<UsersAdminScreen> {
                                       SizedBox(
                                         width: cardWidth,
                                         height: 84,
-                                        child: FilledButton.icon(
+                                        child: PremiumButton(
                                           onPressed: _showCreateUserDialog,
-                                          icon: const Icon(
-                                            Icons.person_add_alt_1_rounded,
-                                            size: 20,
-                                          ),
-                                          label: const Text('Nuevo Usuario'),
-                                          style: FilledButton.styleFrom(
-                                            backgroundColor: cs.primary,
-                                            foregroundColor: cs.onPrimary,
-                                            shape: RoundedRectangleBorder(
-                                              borderRadius: r.radiusLg,
-                                            ),
-                                            textStyle: const TextStyle(
-                                              fontWeight: FontWeight.w800,
-                                              fontSize: 16,
-                                            ),
-                                          ),
+                                          icon: Icons.person_add_alt_1_rounded,
+                                          label: 'Nuevo Usuario',
                                         ),
                                       ),
                                     ],
@@ -559,10 +559,10 @@ class UsersAdminScreenState extends State<UsersAdminScreen> {
 
                               SizedBox(height: s.x2l + s.sm),
 
-                              _buildSectionHeader(
-                                'Administradores del Sistema',
-                                Icons.admin_panel_settings_outlined,
-                              ),
+                                _buildSectionHeader(
+                                  'Administradores del Sistema',
+                                  Icons.admin_panel_settings_outlined,
+                                ),
                               SizedBox(height: s.md + s.xs),
                               _buildProfessionalTable(
                                 _users
@@ -614,22 +614,10 @@ class UsersAdminScreenState extends State<UsersAdminScreen> {
   }) {
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
-    final r = context.radii;
     return Container(
-      decoration: BoxDecoration(
-        color: theme.cardColor,
-        borderRadius: r.radiusSm,
-        border: Border.all(color: cs.outlineVariant),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.03),
-            blurRadius: 30,
-            offset: const Offset(0, 10),
-          ),
-        ],
-      ),
+      decoration: AppDecorations.premiumCard(context, radius: 16),
       child: ClipRRect(
-        borderRadius: r.radiusSm,
+        borderRadius: BorderRadius.circular(16),
         child: LayoutBuilder(
           builder: (context, constraints) {
             final available =
@@ -722,10 +710,11 @@ class UsersAdminScreenState extends State<UsersAdminScreen> {
         : (item['name'] ?? 'Sin nombre');
     final id = item['id'].toString();
     final email = isStaff ? item['username'] : (item['phone'] ?? 'N/A');
-    final dateStr = item['registration_date'] != null
-        ? DateFormat(
-            'dd MMM yyyy',
-          ).format(DateTime.parse(item['registration_date']))
+    final rawDate = item['registration_date'] ?? item['created_at'];
+    final dateStr = rawDate != null
+        ? DateFormat('dd MMM yyyy').format(
+            rawDate is DateTime ? rawDate : DateTime.parse(rawDate.toString()),
+          )
         : '---';
 
     String statusText;
@@ -913,24 +902,10 @@ class UsersAdminScreenState extends State<UsersAdminScreen> {
             width: 140,
             child: UnconstrainedBox(
               alignment: Alignment.centerLeft,
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 14,
-                  vertical: 8,
-                ),
-                decoration: BoxDecoration(
-                  color: statusColor.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: Text(
-                  statusText,
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w900,
-                    color: statusColor,
-                    letterSpacing: 0.5,
-                  ),
-                ),
+              child: StatusBadge(
+                label: statusText,
+                color: statusColor,
+                small: true,
               ),
             ),
           ),
@@ -987,7 +962,7 @@ class UsersAdminScreenState extends State<UsersAdminScreen> {
   }
 
   Future<void> _editItem(dynamic item, String tableType) async {
-    final api = GetIt.I<ApiService>();
+    final api = await ref.read(apiServiceProvider.future);
 
     if (tableType == 'patient') {
       final nameCtrl = TextEditingController(
@@ -1003,6 +978,7 @@ class UsersAdminScreenState extends State<UsersAdminScreen> {
         text: (item['diagnosis'] ?? '').toString(),
       );
 
+      if (!mounted) return;
       final res = await showDialog<bool>(
         context: context,
         builder: (ctx) {
@@ -1015,6 +991,7 @@ class UsersAdminScreenState extends State<UsersAdminScreen> {
                 children: [
                   TextField(
                     controller: nameCtrl,
+                    textCapitalization: TextCapitalization.words,
                     decoration: const InputDecoration(labelText: 'Nombre'),
                   ),
                   const SizedBox(height: 12),
@@ -1031,6 +1008,7 @@ class UsersAdminScreenState extends State<UsersAdminScreen> {
                   const SizedBox(height: 12),
                   TextField(
                     controller: diagnosisCtrl,
+                    textCapitalization: TextCapitalization.sentences,
                     decoration: const InputDecoration(labelText: 'Diagnóstico'),
                   ),
                 ],
@@ -1070,6 +1048,8 @@ class UsersAdminScreenState extends State<UsersAdminScreen> {
             ? null
             : diagnosisCtrl.text.trim(),
       });
+      ref.invalidate(patientsProvider);
+      ref.invalidate(sessionsProvider);
       await _fetchData();
       return;
     }
@@ -1080,6 +1060,7 @@ class UsersAdminScreenState extends State<UsersAdminScreen> {
     bool isActive = (item['is_active'] ?? true) == true;
     bool isAvailable = (item['is_available'] ?? true) == true;
 
+    if (!mounted) return;
     final res = await showDialog<bool>(
       context: context,
       builder: (ctx) {
@@ -1098,6 +1079,7 @@ class UsersAdminScreenState extends State<UsersAdminScreen> {
                   children: [
                     TextField(
                       controller: usernameCtrl,
+                      textCapitalization: TextCapitalization.words,
                       decoration: const InputDecoration(
                         labelText: 'Correo/Usuario',
                       ),
@@ -1153,27 +1135,27 @@ class UsersAdminScreenState extends State<UsersAdminScreen> {
     if (tableType == 'doctor') payload['is_available'] = isAvailable;
 
     await api.updateUser(userId, payload);
+    
+    // Si el usuario editado es el mismo que está logueado, refrescar su perfil global
+    if (userId == api.currentUserId) {
+      await api.getMe();
+    }
+    
+    // Invalidar proveedores para que otras pantallas (Home, etc) se enteren del cambio
+    ref.invalidate(patientsProvider);
+    ref.invalidate(sessionsProvider);
+    ref.invalidate(currentUserProvider);
+    
     await _fetchData();
   }
 
   Widget _buildEmptyState() {
-    return Padding(
-      padding: const EdgeInsets.all(60),
-      child: Center(
-        child: Column(
-          children: [
-            Icon(Icons.folder_open_rounded, size: 64, color: Colors.grey[200]),
-            const SizedBox(height: 20),
-            Text(
-              'No se encontraron registros',
-              style: TextStyle(
-                color: Colors.grey[400],
-                fontWeight: FontWeight.w700,
-                fontSize: 16,
-              ),
-            ),
-          ],
-        ),
+    return const Padding(
+      padding: EdgeInsets.all(80),
+      child: EmptyStateView(
+        iconData: Icons.search_off_rounded,
+        title: 'Sin Resultados',
+        description: 'No existen registros para esta lista o la búsqueda actual no produjo coincidencias.',
       ),
     );
   }
@@ -1198,6 +1180,7 @@ class UsersAdminScreenState extends State<UsersAdminScreen> {
       'diagnosis': p.diagnosis,
       'doctor_id': p.doctorId,
       'created_at': p.createdAt,
+      'registration_date': p.createdAt, // For consistency in table
     };
   }
 }

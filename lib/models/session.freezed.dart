@@ -24,13 +24,13 @@ mixin _$Session {
   int get id => throw _privateConstructorUsedError;
   @JsonKey(name: 'patient_id')
   int get patientId => throw _privateConstructorUsedError;
-  String get date => throw _privateConstructorUsedError;
+  DateTime get date => throw _privateConstructorUsedError;
   String get status => throw _privateConstructorUsedError;
   String get notes => throw _privateConstructorUsedError;
   @JsonKey(name: 'external_id')
   String? get externalId => throw _privateConstructorUsedError;
   @JsonKey(name: 'created_at')
-  String? get createdAt => throw _privateConstructorUsedError;
+  DateTime? get createdAt => throw _privateConstructorUsedError;
 
   /// Serializes this Session to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
@@ -49,11 +49,11 @@ abstract class $SessionCopyWith<$Res> {
   $Res call({
     int id,
     @JsonKey(name: 'patient_id') int patientId,
-    String date,
+    DateTime date,
     String status,
     String notes,
     @JsonKey(name: 'external_id') String? externalId,
-    @JsonKey(name: 'created_at') String? createdAt,
+    @JsonKey(name: 'created_at') DateTime? createdAt,
   });
 }
 
@@ -93,7 +93,7 @@ class _$SessionCopyWithImpl<$Res, $Val extends Session>
             date: null == date
                 ? _value.date
                 : date // ignore: cast_nullable_to_non_nullable
-                      as String,
+                      as DateTime,
             status: null == status
                 ? _value.status
                 : status // ignore: cast_nullable_to_non_nullable
@@ -109,7 +109,7 @@ class _$SessionCopyWithImpl<$Res, $Val extends Session>
             createdAt: freezed == createdAt
                 ? _value.createdAt
                 : createdAt // ignore: cast_nullable_to_non_nullable
-                      as String?,
+                      as DateTime?,
           )
           as $Val,
     );
@@ -127,11 +127,11 @@ abstract class _$$SessionImplCopyWith<$Res> implements $SessionCopyWith<$Res> {
   $Res call({
     int id,
     @JsonKey(name: 'patient_id') int patientId,
-    String date,
+    DateTime date,
     String status,
     String notes,
     @JsonKey(name: 'external_id') String? externalId,
-    @JsonKey(name: 'created_at') String? createdAt,
+    @JsonKey(name: 'created_at') DateTime? createdAt,
   });
 }
 
@@ -170,7 +170,7 @@ class __$$SessionImplCopyWithImpl<$Res>
         date: null == date
             ? _value.date
             : date // ignore: cast_nullable_to_non_nullable
-                  as String,
+                  as DateTime,
         status: null == status
             ? _value.status
             : status // ignore: cast_nullable_to_non_nullable
@@ -186,7 +186,7 @@ class __$$SessionImplCopyWithImpl<$Res>
         createdAt: freezed == createdAt
             ? _value.createdAt
             : createdAt // ignore: cast_nullable_to_non_nullable
-                  as String?,
+                  as DateTime?,
       ),
     );
   }
@@ -214,7 +214,7 @@ class _$SessionImpl implements _Session {
   @JsonKey(name: 'patient_id')
   final int patientId;
   @override
-  final String date;
+  final DateTime date;
   @override
   final String status;
   @override
@@ -224,7 +224,7 @@ class _$SessionImpl implements _Session {
   final String? externalId;
   @override
   @JsonKey(name: 'created_at')
-  final String? createdAt;
+  final DateTime? createdAt;
 
   @override
   String toString() {
@@ -279,11 +279,11 @@ abstract class _Session implements Session {
   const factory _Session({
     required final int id,
     @JsonKey(name: 'patient_id') required final int patientId,
-    required final String date,
+    required final DateTime date,
     required final String status,
     required final String notes,
     @JsonKey(name: 'external_id') final String? externalId,
-    @JsonKey(name: 'created_at') final String? createdAt,
+    @JsonKey(name: 'created_at') final DateTime? createdAt,
   }) = _$SessionImpl;
 
   factory _Session.fromJson(Map<String, dynamic> json) = _$SessionImpl.fromJson;
@@ -294,7 +294,7 @@ abstract class _Session implements Session {
   @JsonKey(name: 'patient_id')
   int get patientId;
   @override
-  String get date;
+  DateTime get date;
   @override
   String get status;
   @override
@@ -304,7 +304,7 @@ abstract class _Session implements Session {
   String? get externalId;
   @override
   @JsonKey(name: 'created_at')
-  String? get createdAt;
+  DateTime? get createdAt;
 
   /// Create a copy of Session
   /// with the given fields replaced by the non-null parameter values.

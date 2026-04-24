@@ -31,9 +31,9 @@ mixin _$User {
   @JsonKey(name: 'is_available')
   bool get isAvailable => throw _privateConstructorUsedError;
   @JsonKey(name: 'registration_date')
-  String? get registrationDate => throw _privateConstructorUsedError;
+  DateTime? get registrationDate => throw _privateConstructorUsedError;
   @JsonKey(name: 'created_at')
-  String? get createdAt => throw _privateConstructorUsedError;
+  DateTime? get createdAt => throw _privateConstructorUsedError;
 
   /// Serializes this User to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
@@ -56,8 +56,8 @@ abstract class $UserCopyWith<$Res> {
     @JsonKey(name: 'full_name') String? fullName,
     @JsonKey(name: 'is_active') bool isActive,
     @JsonKey(name: 'is_available') bool isAvailable,
-    @JsonKey(name: 'registration_date') String? registrationDate,
-    @JsonKey(name: 'created_at') String? createdAt,
+    @JsonKey(name: 'registration_date') DateTime? registrationDate,
+    @JsonKey(name: 'created_at') DateTime? createdAt,
   });
 }
 
@@ -114,11 +114,11 @@ class _$UserCopyWithImpl<$Res, $Val extends User>
             registrationDate: freezed == registrationDate
                 ? _value.registrationDate
                 : registrationDate // ignore: cast_nullable_to_non_nullable
-                      as String?,
+                      as DateTime?,
             createdAt: freezed == createdAt
                 ? _value.createdAt
                 : createdAt // ignore: cast_nullable_to_non_nullable
-                      as String?,
+                      as DateTime?,
           )
           as $Val,
     );
@@ -140,8 +140,8 @@ abstract class _$$UserImplCopyWith<$Res> implements $UserCopyWith<$Res> {
     @JsonKey(name: 'full_name') String? fullName,
     @JsonKey(name: 'is_active') bool isActive,
     @JsonKey(name: 'is_available') bool isAvailable,
-    @JsonKey(name: 'registration_date') String? registrationDate,
-    @JsonKey(name: 'created_at') String? createdAt,
+    @JsonKey(name: 'registration_date') DateTime? registrationDate,
+    @JsonKey(name: 'created_at') DateTime? createdAt,
   });
 }
 
@@ -195,11 +195,11 @@ class __$$UserImplCopyWithImpl<$Res>
         registrationDate: freezed == registrationDate
             ? _value.registrationDate
             : registrationDate // ignore: cast_nullable_to_non_nullable
-                  as String?,
+                  as DateTime?,
         createdAt: freezed == createdAt
             ? _value.createdAt
             : createdAt // ignore: cast_nullable_to_non_nullable
-                  as String?,
+                  as DateTime?,
       ),
     );
   }
@@ -239,10 +239,10 @@ class _$UserImpl implements _User {
   final bool isAvailable;
   @override
   @JsonKey(name: 'registration_date')
-  final String? registrationDate;
+  final DateTime? registrationDate;
   @override
   @JsonKey(name: 'created_at')
-  final String? createdAt;
+  final DateTime? createdAt;
 
   @override
   String toString() {
@@ -306,8 +306,8 @@ abstract class _User implements User {
     @JsonKey(name: 'full_name') final String? fullName,
     @JsonKey(name: 'is_active') final bool isActive,
     @JsonKey(name: 'is_available') final bool isAvailable,
-    @JsonKey(name: 'registration_date') final String? registrationDate,
-    @JsonKey(name: 'created_at') final String? createdAt,
+    @JsonKey(name: 'registration_date') final DateTime? registrationDate,
+    @JsonKey(name: 'created_at') final DateTime? createdAt,
   }) = _$UserImpl;
 
   factory _User.fromJson(Map<String, dynamic> json) = _$UserImpl.fromJson;
@@ -329,10 +329,10 @@ abstract class _User implements User {
   bool get isAvailable;
   @override
   @JsonKey(name: 'registration_date')
-  String? get registrationDate;
+  DateTime? get registrationDate;
   @override
   @JsonKey(name: 'created_at')
-  String? get createdAt;
+  DateTime? get createdAt;
 
   /// Create a copy of User
   /// with the given fields replaced by the non-null parameter values.

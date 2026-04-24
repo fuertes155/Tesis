@@ -1,18 +1,12 @@
-import os
 from datetime import datetime, timedelta, timezone
 
 from fastapi import HTTPException, status
 from jose import JWTError, jwt
 from passlib.context import CryptContext
 
+from app.core.config import settings
+
 _pwd_context = CryptContext(schemes=["pbkdf2_sha256"], deprecated="auto")
-
-_ALGORITHM = "HS256"
-_DEFAULT_EXPIRE_MINUTES = 60 * 24
-
-
-def _secret_key() -> str:
-    return os.environ.get("NEUROAPP_SECRET_KEY") or "dev-secret-change-me"
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
@@ -25,19 +19,19 @@ def get_password_hash(password: str) -> str:
 
 def create_access_token(subject: str, role: str, expires_delta: timedelta | None = None) -> str:
     now = datetime.now(timezone.utc)
-    expire = now + (expires_delta or timedelta(minutes=_DEFAULT_EXPIRE_MINUTES))
+    expire = now + (expires_delta or timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES))
     payload = {
         "sub": subject,
         "role": role,
         "iat": int(now.timestamp()),
         "exp": int(expire.timestamp()),
     }
-    return jwt.encode(payload, _secret_key(), algorithm=_ALGORITHM)
+    return jwt.encode(payload, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
 
 
 def decode_access_token(token: str) -> dict:
     try:
-        return jwt.decode(token, _secret_key(), algorithms=[_ALGORITHM])
+        return jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
     except JWTError as e:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,

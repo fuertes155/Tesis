@@ -3,20 +3,10 @@ import 'dart:convert';
 import 'dart:math';
 import 'package:dio/dio.dart' as dio;
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:riverpod_annotation/riverpod_annotation.dart';
-import 'package:get_it/get_it.dart';
 import '../models/patient.dart';
 import '../models/session.dart';
 import '../models/user.dart';
 import '../core/database/local_database_service.dart';
-
-part 'api_service.g.dart';
-
-@riverpod
-ApiService apiService(Ref ref) {
-  return GetIt.I<ApiService>();
-}
 
 class ApiService {
   final dio.Dio _dio;
@@ -24,7 +14,7 @@ class ApiService {
 
   static final String baseUrl = const String.fromEnvironment(
     'API_BASE_URL',
-    defaultValue: 'http://127.0.0.1:8000',
+    defaultValue: 'http://localhost:8000/api/v1',
   );
   static const _prefsTokenKey = 'api_token';
   static const _prefsUsernameKey = 'api_username';
@@ -38,6 +28,7 @@ class ApiService {
   String? _token;
   String? _currentUsername;
   String? _currentRole;
+  String? _currentPatientName;
   int? _currentUserId;
   int _currentPatientId = 1;
   int? _homeDaysFilter;
@@ -58,7 +49,7 @@ class ApiService {
     _initialized = true;
 
     if (_token != null) {
-      unawaited(flushPendingSessions());
+      // unawaited(flushPendingSessions()); // Deprecated in favor of SyncService
     }
   }
 
@@ -100,6 +91,11 @@ class ApiService {
   void setCurrentRole(String role) {
     _currentRole = role;
     unawaited(_persist());
+  }
+
+  String? get currentPatientName => _currentPatientName;
+  void setCurrentPatientName(String name) {
+    _currentPatientName = name;
   }
 
   int? get currentUserId => _currentUserId;
@@ -219,7 +215,7 @@ class ApiService {
     }
   }
 
-  Future<Patient> createPatient(Map<String, dynamic> patientData) async {
+  Future<Patient> createPatient(Map<String, dynamic> patientData, {bool skipOffline = false}) async {
     if (patientData['name'] == null || patientData['name'].toString().isEmpty) {
       throw Exception('El nombre del paciente es requerido');
     }
@@ -231,23 +227,36 @@ class ApiService {
       final response = await _dio.post('/patients/', data: patientData);
       return Patient.fromJson(response.data);
     } on dio.DioException catch (e) {
+      if (!skipOffline && _localDb != null) {
+        await _localDb.addPendingAction('CREATE', 'patients', patientData);
+        // Return a mock patient or throw a specific 'queued' exception
+        return Patient.fromJson({...patientData, 'id': -1}); 
+      }
       throw Exception('Error al crear paciente: ${e.message}');
     }
   }
 
-  Future<void> deletePatient(int patientId) async {
+  Future<void> deletePatient(int patientId, {bool skipOffline = false}) async {
     try {
       await _dio.delete('/patients/$patientId');
     } on dio.DioException catch (e) {
+      if (!skipOffline && _localDb != null) {
+        await _localDb.addPendingAction('DELETE', 'patients', {'id': patientId});
+        return;
+      }
       throw Exception('Error al eliminar paciente: ${e.message}');
     }
   }
 
-  Future<Patient> updatePatient(int patientId, Map<String, dynamic> patientData) async {
+  Future<Patient> updatePatient(int patientId, Map<String, dynamic> patientData, {bool skipOffline = false}) async {
     try {
       final response = await _dio.put('/patients/$patientId', data: patientData);
       return Patient.fromJson(response.data);
     } on dio.DioException catch (e) {
+      if (!skipOffline && _localDb != null) {
+        await _localDb.addPendingAction('UPDATE', 'patients', {...patientData, 'id': patientId});
+        return Patient.fromJson({...patientData, 'id': patientId});
+      }
       throw Exception('Error al editar paciente: ${e.message}');
     }
   }
@@ -319,13 +328,13 @@ class ApiService {
     required String notes,
     DateTime? date,
     String? externalId,
+    bool skipOffline = false,
   }) async {
-    if (patientId <= 0) throw Exception('ID de paciente inválido');
+    if (patientId <= 0 && !skipOffline) throw Exception('ID de paciente inválido');
     if (status.trim().isEmpty) throw Exception('El estado es requerido');
 
     final d = date ?? DateTime.now();
-    final isoDate =
-        '${d.year.toString().padLeft(4, '0')}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
+    final isoDate = d.toIso8601String();
     final ext = externalId ?? _generateExternalId();
 
     final data = {
@@ -340,6 +349,10 @@ class ApiService {
       final response = await _dio.post('/sessions/', data: data);
       return Session.fromJson(response.data);
     } on dio.DioException catch (e) {
+      if (!skipOffline && _localDb != null) {
+        await _localDb.addPendingAction('CREATE', 'sessions', data);
+        return Session.fromJson({...data, 'id': -1});
+      }
       throw Exception('Error al crear sesión: ${e.message}');
     }
   }
@@ -464,8 +477,9 @@ class ApiService {
     required String gameName,
     required Map<String, dynamic> results,
     int? sessionId,
+    bool skipOffline = false,
   }) async {
-    if (patientId <= 0) throw Exception('ID de paciente inválido');
+    if (patientId <= 0 && !skipOffline) throw Exception('ID de paciente inválido');
     if (gameName.trim().isEmpty) {
       throw Exception('El nombre del juego es requerido');
     }
@@ -473,37 +487,31 @@ class ApiService {
       throw Exception('Los resultados no pueden estar vacíos');
     }
 
+    // Extract score from results; the rest goes into details/metrics
+    final int score = results['score'] is int
+        ? results['score']
+        : int.tryParse(results['score']?.toString() ?? '0') ?? 0;
+
+    final data = {
+      'patient_id': patientId,
+      'game_name': gameName,
+      'score': score,
+      'details': results['details'],
+      'metrics': results['metrics'],
+      if (sessionId != null) 'session_id': sessionId,
+    };
+
     try {
-      await _dio.post(
-        '/sessions/results',
-        data: {
-          'patient_id': patientId,
-          'game_name': gameName,
-          'results': results,
-          'session_id': sessionId,
-        },
-      );
+      await _dio.post('/sessions/results', data: data);
     } on dio.DioException catch (e) {
-      await _savePendingSession({
-        'patient_id': patientId,
-        'game_name': gameName,
-        'results': results,
-        'session_id': sessionId,
-        'timestamp': DateTime.now().toIso8601String(),
-      });
-      throw Exception(
-        'Error al enviar resultados (guardado localmente): ${e.message}',
-      );
+      if (!skipOffline && _localDb != null) {
+        await _localDb.addPendingAction('CREATE', 'results', data);
+        return;
+      }
+      throw Exception('Error al enviar resultados: ${e.message}');
     }
   }
 
-  Future<void> _savePendingSession(Map<String, dynamic> sessionData) async {
-    final prefs = await SharedPreferences.getInstance();
-    final raw = prefs.getString(_prefsPendingSessionsKey);
-    final List<dynamic> list = raw == null ? [] : (jsonDecode(raw) as List);
-    list.add(sessionData);
-    await prefs.setString(_prefsPendingSessionsKey, jsonEncode(list));
-  }
 
   Future<Map<String, dynamic>> updateUserAvailability(
     int userId,
@@ -533,11 +541,17 @@ class ApiService {
     required String username,
     required String password,
     required String role,
+    String? fullName,
   }) async {
     try {
       final response = await _dio.post(
-        '/users/',
-        data: {'username': username, 'password': password, 'role': role},
+        '/users/register',
+        data: {
+          'username': username,
+          'password': password,
+          'role': role,
+          'full_name': fullName,
+        },
       );
       return response.data;
     } on dio.DioException catch (e) {
@@ -547,8 +561,9 @@ class ApiService {
 
   Future<Map<String, dynamic>> resetPassword(
     String username,
-    String newPassword,
-  ) async {
+    String newPassword, {
+    String? fullName,
+  }) async {
     try {
       final response = await _dio.post(
         '/users/reset',
@@ -556,6 +571,7 @@ class ApiService {
           'username': username,
           'password': newPassword,
           'role': _currentRole ?? 'doctor',
+          'full_name': fullName,
         },
       );
       return response.data;
@@ -568,15 +584,34 @@ class ApiService {
     required String username,
     required String password,
     String role = 'doctor',
+    String? fullName,
   }) async {
     try {
       final response = await _dio.post(
-        '/users/',
-        data: {'username': username, 'password': password, 'role': role},
+        '/users/auth/register',
+        data: {
+          'username': username,
+          'password': password,
+          'role': role,
+          'full_name': fullName,
+        },
       );
+
+      final authMap = response.data;
+      final token = authMap['access_token']?.toString();
+      if (token != null && token.isNotEmpty) {
+        _token = token;
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString(_prefsTokenKey, token);
+      }
+
       _currentUsername = username;
-      _currentRole = response.data['role']?.toString() ?? role;
-      return response.data;
+      _currentRole = authMap['user']?['role']?.toString() ?? role;
+      _currentUserId = authMap['user']?['id'] is int
+          ? authMap['user']['id']
+          : int.tryParse(authMap['user']?['id']?.toString() ?? '');
+      await _persist();
+      return authMap;
     } on dio.DioException catch (e) {
       throw Exception('Error al registrar usuario: ${e.message}');
     }

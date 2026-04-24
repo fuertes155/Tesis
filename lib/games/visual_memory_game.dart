@@ -9,7 +9,10 @@ import 'common/game_intro.dart';
 import 'common/game_scoring.dart';
 import '../widgets/animated_dialog.dart';
 
-class VisualMemoryGame extends StatefulWidget {
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../providers/api_providers.dart';
+
+class VisualMemoryGame extends ConsumerStatefulWidget {
   final bool flowMode;
   final int? flowIndex;
   final int? flowTotal;
@@ -24,10 +27,10 @@ class VisualMemoryGame extends StatefulWidget {
   });
 
   @override
-  State<VisualMemoryGame> createState() => _VisualMemoryGameState();
+  ConsumerState<VisualMemoryGame> createState() => _VisualMemoryGameState();
 }
 
-class _VisualMemoryGameState extends State<VisualMemoryGame> {
+class _VisualMemoryGameState extends ConsumerState<VisualMemoryGame> {
   static const int gridSize = 4;
   static const int totalCells = gridSize * gridSize;
 
@@ -189,7 +192,9 @@ class _VisualMemoryGameState extends State<VisualMemoryGame> {
       'avg_selection_ms': avgSelection,
       'selections': _selectionTimesMs.length,
     };
+    final api = ref.read(apiServiceProvider).value!;
     final future = GameResults.sendGameResult(
+      api: api,
       title: 'Resultados - Memoria Visual',
       score: score,
       details: details,

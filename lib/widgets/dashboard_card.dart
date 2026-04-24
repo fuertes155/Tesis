@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../core/theme/app_theme.dart';
 
-class DashboardCard extends StatelessWidget {
+/// Tarjeta del dashboard de accesos rápidos — versión premium.
+class DashboardCard extends StatefulWidget {
   final IconData icon;
   final String title;
   final String subtitle;
@@ -17,7 +19,38 @@ class DashboardCard extends StatelessWidget {
     required this.onTap,
     required this.color,
     this.isPrimary = false,
+    this.heroTag,
   });
+
+  final String? heroTag;
+
+  @override
+  State<DashboardCard> createState() => _DashboardCardState();
+}
+
+class _DashboardCardState extends State<DashboardCard>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _ctrl;
+  late Animation<double> _scale;
+  bool _hovered = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 130),
+    );
+    _scale = Tween<double>(begin: 1.0, end: 0.975).animate(
+      CurvedAnimation(parent: _ctrl, curve: Curves.easeInOut),
+    );
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -25,94 +58,178 @@ class DashboardCard extends StatelessWidget {
     final cs = theme.colorScheme;
     final s = context.spacing;
     final r = context.radii;
+    final glass = context.glass;
 
-    final cardColor = isPrimary ? cs.primary : theme.cardColor;
-    final borderColor = isPrimary ? cs.primary : cs.outlineVariant;
-    final shadowColor = isPrimary ? cs.primary : Colors.black;
-
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: r.radiusXl,
-        child: Container(
-          padding: EdgeInsets.all(s.xl),
-          decoration: BoxDecoration(
-            color: cardColor,
+    // Dos variantes: primaria (gradiente azul) y normal (glass)
+    final decoration = widget.isPrimary
+        ? BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [cs.primary, cs.tertiary],
+            ),
             borderRadius: r.radiusXl,
-            border: Border.all(color: borderColor, width: 1.5),
             boxShadow: [
               BoxShadow(
-                color: shadowColor.withValues(alpha: isPrimary ? 0.15 : 0.04),
-                blurRadius: 32,
-                offset: const Offset(0, 12),
+                color: cs.primary.withValues(alpha: _hovered ? 0.45 : 0.28),
+                blurRadius: _hovered ? 32 : 20,
+                spreadRadius: -4,
+                offset: Offset(0, _hovered ? 12 : 8),
               ),
             ],
-          ),
-          child: Stack(
-            children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Container(
-                    padding: EdgeInsets.all(s.md),
-                    decoration: BoxDecoration(
-                      color: (isPrimary ? Colors.white : color).withValues(
-                        alpha: isPrimary ? 0.2 : 0.1,
-                      ),
-                      borderRadius: r.radiusMd,
-                      border: Border.all(
-                        color: (isPrimary ? Colors.white : color).withValues(
-                          alpha: 0.1,
+          )
+        : BoxDecoration(
+            gradient: glass.cardGradient,
+            borderRadius: r.radiusXl,
+            border: Border.all(
+              color: _hovered
+                  ? widget.color.withValues(alpha: 0.35)
+                  : glass.borderColor,
+              width: 1.5,
+            ),
+            boxShadow: [
+              if (_hovered)
+                BoxShadow(
+                  color: widget.color.withValues(alpha: 0.12),
+                  blurRadius: 20,
+                  spreadRadius: -2,
+                  offset: const Offset(0, 6),
+                ),
+              ...context.premiumShadows,
+            ],
+          );
+
+    return MouseRegion(
+      onEnter: (_) => setState(() => _hovered = true),
+      onExit: (_) => setState(() => _hovered = false),
+      child: GestureDetector(
+        onTapDown: (_) => _ctrl.forward(),
+        onTapUp: (_) => _ctrl.reverse(),
+        onTapCancel: () => _ctrl.reverse(),
+        onTap: () {
+          HapticFeedback.lightImpact();
+          widget.onTap();
+        },
+        child: AnimatedBuilder(
+          animation: _scale,
+          builder: (_, child) =>
+              Transform.scale(scale: _scale.value, child: child),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            padding: EdgeInsets.all(s.md),
+            decoration: decoration,
+            child: Stack(
+              clipBehavior: Clip.none,
+              children: [
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Ícono premium con Hero opcional
+                    Builder(builder: (ctx) {
+                      final iconContainer = Container(
+                        padding: EdgeInsets.all(s.md),
+                        decoration: BoxDecoration(
+                          gradient: widget.isPrimary
+                              ? LinearGradient(
+                                  colors: [
+                                    Colors.white.withValues(alpha: 0.25),
+                                    Colors.white.withValues(alpha: 0.10),
+                                  ],
+                                )
+                              : LinearGradient(
+                                  colors: [
+                                    widget.color.withValues(alpha: 0.18),
+                                    widget.color.withValues(alpha: 0.06),
+                                  ],
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                ),
+                          borderRadius: r.radiusMd,
+                          border: Border.all(
+                            color: widget.isPrimary
+                                ? Colors.white.withValues(alpha: 0.20)
+                                : widget.color.withValues(alpha: 0.15),
+                          ),
+                          boxShadow: widget.isPrimary
+                              ? [
+                                  BoxShadow(
+                                    color: Colors.white.withValues(alpha: 0.15),
+                                    blurRadius: 10,
+                                  )
+                                ]
+                              : [],
                         ),
+                        child: Icon(
+                          widget.icon,
+                          size: 28,
+                          color: widget.isPrimary ? Colors.white : widget.color,
+                        ),
+                      );
+                      if (widget.heroTag != null) {
+                        return Hero(
+                          tag: widget.heroTag!,
+                          flightShuttleBuilder: (flightCtx, animation, direction, fromCtx, toCtx) {
+                            return Material(color: Colors.transparent, child: toCtx.widget);
+                          },
+                          child: iconContainer,
+                        );
+                      }
+                      return iconContainer;
+                    }),
+
+                    SizedBox(height: s.md),
+
+                    // Título
+                    Text(
+                      widget.title,
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w900,
+                        color: widget.isPrimary ? Colors.white : cs.onSurface,
+                        letterSpacing: -0.5,
                       ),
+                    ),
+                    SizedBox(height: s.xs - 2),
+
+                    // Subtítulo
+                    Text(
+                      widget.subtitle,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: widget.isPrimary
+                            ? Colors.white.withValues(alpha: 0.80)
+                            : cs.onSurfaceVariant,
+                        height: 1.3,
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
+
+                // Chevron decorativo
+                Positioned(
+                  right: -4,
+                  bottom: -4,
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: (widget.isPrimary ? Colors.white : widget.color)
+                          .withValues(
+                        alpha: widget.isPrimary
+                            ? (_hovered ? 0.25 : 0.15)
+                            : (_hovered ? 0.15 : 0.06),
+                      ),
+                      shape: BoxShape.circle,
                     ),
                     child: Icon(
-                      icon,
-                      size: 32,
-                      color: isPrimary ? cs.onPrimary : color,
+                      Icons.arrow_forward_rounded,
+                      size: 16,
+                      color: widget.isPrimary ? Colors.white : widget.color,
                     ),
-                  ),
-                  const Spacer(),
-                  Text(
-                    title,
-                    style: theme.textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.w800,
-                      color: isPrimary ? cs.onPrimary : cs.onSurface,
-                      letterSpacing: -0.8,
-                    ),
-                  ),
-                  SizedBox(height: s.xs),
-                  Text(
-                    subtitle,
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      color: isPrimary
-                          ? cs.onPrimary.withValues(alpha: 0.82)
-                          : cs.onSurfaceVariant,
-                      height: 1.4,
-                    ),
-                  ),
-                ],
-              ),
-              Positioned(
-                right: -4,
-                bottom: -4,
-                child: Container(
-                  padding: EdgeInsets.all(s.sm - 2),
-                  decoration: BoxDecoration(
-                    color: (isPrimary ? Colors.white : cs.primary).withValues(
-                      alpha: isPrimary ? 0.15 : 0.05,
-                    ),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(
-                    Icons.chevron_right_rounded,
-                    size: 20,
-                    color: isPrimary ? cs.onPrimary : cs.primary,
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),

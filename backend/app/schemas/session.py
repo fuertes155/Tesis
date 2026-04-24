@@ -12,6 +12,11 @@ class SessionBase(BaseModel):
 class SessionCreate(SessionBase):
     pass
 
+class SessionUpdate(BaseModel):
+    date: Optional[date] = None
+    status: Optional[str] = None
+    notes: Optional[str] = None
+
 class Session(SessionBase):
     id: int
 

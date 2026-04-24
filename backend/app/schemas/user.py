@@ -5,6 +5,7 @@ from datetime import datetime
 class UserBase(BaseModel):
     username: str
     role: str = "doctor"
+    full_name: Optional[str] = None
 
     @field_validator("username")
     @classmethod
@@ -27,6 +28,7 @@ class User(UserBase):
     id: int
     is_active: bool = True
     is_available: bool = True
+    full_name: Optional[str] = None
     registration_date: Optional[datetime] = None
 
     class Config:
@@ -34,6 +36,7 @@ class User(UserBase):
 
 class UserUpdate(BaseModel):
     username: Optional[str] = None
+    full_name: Optional[str] = None
     is_active: Optional[bool] = None
     is_available: Optional[bool] = None
 

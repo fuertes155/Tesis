@@ -9,12 +9,12 @@ class Patient with _$Patient {
     required int id,
     required String name,
     required int age,
-    @JsonKey(name: 'birth_date') String? birthDate,
+    @JsonKey(name: 'birth_date') DateTime? birthDate,
     @JsonKey(name: 'document_id') String? documentId,
     String? phone,
     String? diagnosis,
     @JsonKey(name: 'doctor_id') int? doctorId,
-    @JsonKey(name: 'created_at') String? createdAt,
+    @JsonKey(name: 'created_at') DateTime? createdAt,
   }) = _Patient;
 
   factory Patient.fromJson(Map<String, dynamic> json) =>

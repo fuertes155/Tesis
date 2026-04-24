@@ -1,395 +1,436 @@
 part of 'doctor_panel_screen.dart';
 
-class DoctorPanelScreenState extends State<DoctorPanelScreen> {
-  final _api = GetIt.I<ApiService>();
-  bool _loading = true;
+class DoctorPanelScreenState extends ConsumerState<DoctorPanelScreen> {
+  // Field _api removed, will use ref.read(apiServiceProvider.future)
   String _query = '';
-  User? _me;
-  List<Patient> _patients = [];
 
   @override
   void initState() {
     super.initState();
-    _fetch();
+    // No necesitamos fetch manual, Riverpod se encarga
   }
 
   Future<void> _fetch() async {
-    setState(() => _loading = true);
-    try {
-      final me = await _api.getMe();
-      final patients = await _api.getPatients();
-      if (!mounted) return;
-      setState(() {
-        _me = me;
-        _patients = patients;
-        _loading = false;
-      });
-    } catch (e) {
-      if (!mounted) return;
-      setState(() => _loading = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error al cargar panel: $e'),
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
-    }
+    ref.invalidate(currentUserProvider);
+    ref.invalidate(patientsProvider);
   }
 
   Future<void> _toggleAvailability() async {
-    final me = _me;
-    if (me == null) return;
+    final meAsync = ref.read(currentUserProvider);
+    if (!meAsync.hasValue) return;
+    final me = meAsync.value!;
     try {
-      await _api.updateUserAvailability(me.id, !me.isAvailable);
-      await _fetch();
+      final api = await ref.read(apiServiceProvider.future);
+      await api.updateUserAvailability(me.id, !me.isAvailable);
+      ref.invalidate(currentUserProvider);
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error al actualizar disponibilidad: $e'),
-          behavior: SnackBarBehavior.floating,
-        ),
+        SnackBar(content: Text('Error al actualizar disponibilidad: $e')),
       );
     }
   }
 
   Future<void> _openLatestResults(int patientId) async {
-    final future = _api.getLatestResultsForPatient(patientId);
+    final api = await ref.read(apiServiceProvider.future);
+    final future = api.getLatestResultsForPatient(patientId);
     if (!mounted) return;
-    context.go('/results', extra: {'dataFuture': future});
+    context.push('/results', extra: {'dataFuture': future});
   }
 
   @override
   Widget build(BuildContext context) {
+    final meAsync = ref.watch(currentUserProvider);
+    final patientsAsync = ref.watch(assignedPatientsProvider);
+    
+    return meAsync.when(
+      loading: () => _buildScaffold(context, isLoading: true, me: null, assigned: []),
+      error: (e, _) => _buildScaffold(context, isLoading: false, me: null, assigned: []),
+      data: (User me) => patientsAsync.when(
+        loading: () => _buildScaffold(context, isLoading: true, me: me, assigned: []),
+        error: (e, _) => _buildScaffold(context, isLoading: false, me: me, assigned: []),
+        data: (List<Patient> patients) {
+          final filtered = patients.where((p) {
+            final matchesName = SearchUtils.matches(p.name, _query);
+            final matchesDiagnosis = SearchUtils.matches(p.diagnosis ?? '', _query);
+            return matchesName || matchesDiagnosis;
+          }).toList();
+          return _buildScaffold(context, isLoading: false, me: me, assigned: filtered, totalAssigned: patients.length);
+        },
+      ),
+    );
+  }
+
+  Widget _buildScaffold(BuildContext context, {required bool isLoading, required User? me, required List<Patient> assigned, int totalAssigned = 0}) {
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
     final spacing = context.spacing;
-    final r = context.radii;
     final sem = context.sem;
-    final me = _me;
-    final int? myId = _api.currentUserId ?? me?.id;
+    final glass = context.glass;
+    
     final bool isAvailable = me?.isAvailable ?? true;
-    final username = me?.username ?? _api.currentUsername ?? 'Doctor';
-
-    final assigned = myId == null
-        ? <Patient>[]
-        : _patients.where((p) {
-            return p.doctorId == myId;
-          }).toList();
-
-    final filtered = assigned.where((p) {
-      final q = _query.trim().toLowerCase();
-      if (q.isEmpty) return true;
-      final name = p.name.toLowerCase();
-      final diag = (p.diagnosis ?? '').toLowerCase();
-      return name.contains(q) || diag.contains(q);
-    }).toList();
+    final username = me?.username ?? ref.watch(apiServiceProvider).value?.currentUsername ?? 'Doctor';
 
     return Scaffold(
       backgroundColor: cs.surface,
-      appBar: AppBar(
-        title: const Text('Panel Médico'),
-        backgroundColor: cs.surfaceContainerLowest,
-        surfaceTintColor: cs.surfaceContainerLowest,
-        elevation: 0,
-        actions: [
-          IconButton(
-            tooltip: 'Actualizar',
-            onPressed: _fetch,
-            icon: Icon(Icons.refresh_rounded, color: cs.onSurfaceVariant),
+      body: CustomScrollView(
+        physics: const BouncingScrollPhysics(),
+        slivers: [
+          // ── SliverAppBar premium ───────────────────────────────────────────
+          SliverAppBar(
+            expandedHeight: 200,
+            pinned: true,
+            backgroundColor: Colors.transparent,
+            surfaceTintColor: Colors.transparent,
+            elevation: 0,
+            iconTheme: const IconThemeData(color: Colors.white),
+            actions: [
+              IconButton(
+                tooltip: 'Actualizar',
+                onPressed: _fetch,
+                icon: const Icon(Icons.refresh_rounded, color: Colors.white),
+              ),
+              IconButton(
+                tooltip: 'Cerrar Sesión',
+                onPressed: () => context.go('/'),
+                icon: const Icon(Icons.logout_rounded, color: Colors.white),
+              ),
+              SizedBox(width: spacing.sm),
+            ],
+            flexibleSpace: FlexibleSpaceBar(
+              background: _DoctorPanelHero(
+                username: username,
+                isAvailable: isAvailable,
+                sem: sem,
+                glass: glass,
+                onToggle: _toggleAvailability,
+              ),
+            ),
           ),
-          SizedBox(width: spacing.sm),
+
+          // ── Cuerpo ─────────────────────────────────────────────────────────
+          SliverToBoxAdapter(
+            child: isLoading
+                ? Padding(
+                    padding: EdgeInsets.all(spacing.lg),
+                    child: Column(
+                      children: [
+                        _ShimmerDoctorKpi(),
+                        SizedBox(height: spacing.lg),
+                        ...List.generate(
+                          3,
+                          (i) => Padding(
+                            padding: EdgeInsets.only(bottom: spacing.md),
+                            child: _ShimmerPatientCard(),
+                          ),
+                        ),
+                      ],
+                    ),
+                  )
+                : Padding(
+                    padding: EdgeInsets.all(spacing.lg),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // KPI Row
+                        _KpiRow(
+                          assigned: totalAssigned,
+                          isAvailable: isAvailable,
+                          sem: sem,
+                        ).animate().fadeIn(duration: 220.ms).slideY(begin: 0.08),
+                        SizedBox(height: spacing.lg),
+
+                        // Header sección pacientes
+                        _SectionHeader(
+                          icon: Icons.people_alt_outlined,
+                          label: 'MIS PACIENTES',
+                          badge: '${assigned.length}',
+                        ).animate().fadeIn(delay: 100.ms),
+                        SizedBox(height: spacing.md),
+
+                        // Búsqueda
+                        TextField(
+                          decoration: AppDecorations.glassInput(
+                            label: 'Buscar paciente',
+                            hint: 'Buscar por nombre o diagnóstico...',
+                            prefixIcon: Icons.search_rounded,
+                          ),
+                          onChanged: (v) => setState(() => _query = v),
+                        ).animate().fadeIn(delay: 150.ms),
+                        SizedBox(height: spacing.lg),
+
+                        // Lista de pacientes
+                        if (assigned.isEmpty)
+                          _EmptyPatientsCard()
+                              .animate()
+                              .fadeIn(duration: 200.ms)
+                        else
+                          ...assigned.asMap().entries.map((entry) {
+                            final idx = entry.key;
+                            final p = entry.value;
+                            return Padding(
+                              padding: EdgeInsets.only(bottom: spacing.md),
+                              child: _PatientRowCard(
+                                patient: p,
+                                onStartSession: () => context.push(
+                                  '/new_session',
+                                  extra: {'patientId': p.id},
+                                ),
+                                onViewLatestResults: () =>
+                                    _openLatestResults(p.id),
+                              )
+                                  .animate()
+                                  .fadeIn(
+                                    duration: 220.ms,
+                                    delay: Duration(milliseconds: idx * 60),
+                                  )
+                                  .slideY(begin: 0.06, end: 0),
+                            );
+                          }),
+                        SizedBox(height: spacing.xl),
+                      ],
+                    ),
+                  ),
+          ),
         ],
       ),
-      body: _loading
-          ? const Center(child: CircularProgressIndicator())
-          : LayoutBuilder(
-              builder: (context, constraints) {
-                final w = constraints.maxWidth;
-                final horizontal = w < 640 ? spacing.lg : spacing.xl;
-                return ListView(
-                  padding: EdgeInsets.symmetric(
-                    horizontal: horizontal,
-                    vertical: spacing.xl,
-                  ),
-                  children: [
-                    PageContainer(
-                      padding: EdgeInsets.zero,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          _HeaderCard(
-                                username: username,
-                                isAvailable: isAvailable,
-                                onToggleAvailability: _toggleAvailability,
-                              )
-                              .animate()
-                              .fadeIn(duration: 220.ms)
-                              .moveY(begin: 6, end: 0),
-                          SizedBox(height: spacing.md),
-                          Wrap(
-                            spacing: spacing.md,
-                            runSpacing: spacing.md,
-                            children: [
-                              SizedBox(
-                                width: w < 640 ? double.infinity : null,
-                                child: _KpiCard(
-                                  title: 'Pacientes asignados',
-                                  value: '${assigned.length}',
-                                  icon: Icons.people_alt_outlined,
-                                  color: cs.primary,
-                                ),
-                              ),
-                              SizedBox(
-                                width: w < 640 ? double.infinity : null,
-                                child: _KpiCard(
-                                  title: 'Disponibilidad',
-                                  value: isAvailable
-                                      ? 'Disponible'
-                                      : 'No disponible',
-                                  icon: isAvailable
-                                      ? Icons.check_circle_outline
-                                      : Icons.do_not_disturb_on_outlined,
-                                  color: isAvailable
-                                      ? sem.success
-                                      : sem.danger,
-                                ),
-                              ),
-                            ],
-                          ).animate().fadeIn(duration: 220.ms, delay: 50.ms),
-                          SizedBox(height: spacing.x2l),
-                          Text(
-                            'Mis Pacientes',
-                            style: theme.textTheme.titleLarge?.copyWith(
-                              fontWeight: FontWeight.w900,
-                              color: cs.onSurface,
-                            ),
-                          ),
-                          SizedBox(height: spacing.sm),
-                          TextField(
-                            decoration: InputDecoration(
-                              hintText: 'Buscar por nombre o diagnóstico...',
-                              hintStyle: TextStyle(color: cs.onSurfaceVariant),
-                              prefixIcon: Icon(Icons.search_rounded, color: cs.onSurfaceVariant),
-                              filled: true,
-                              fillColor: cs.surfaceContainerLowest,
-                              enabledBorder: OutlineInputBorder(
-                                borderRadius: r.radiusSm,
-                                borderSide: BorderSide(color: cs.outlineVariant),
-                              ),
-                              focusedBorder: OutlineInputBorder(
-                                borderRadius: r.radiusSm,
-                                borderSide: BorderSide(color: cs.primary, width: 2),
-                              ),
-                            ),
-                            onChanged: (v) => setState(() => _query = v),
-                          ),
-                          SizedBox(height: spacing.lg),
-                          if (filtered.isEmpty)
-                            _EmptyPatientsCard().animate().fadeIn(
-                              duration: 200.ms,
-                            )
-                          else
-                            ...filtered.map((p) {
-                              final int patientId = p.id;
-                              return _PatientRowCard(
-                                    patient: p,
-                                    onStartSession: () => context.push(
-                                      '/new_session',
-                                      extra: {'patientId': patientId},
-                                    ),
-                                    onViewLatestResults: () =>
-                                        _openLatestResults(patientId),
-                                  )
-                                  .animate()
-                                  .fadeIn(duration: 220.ms)
-                                  .moveY(begin: 6, end: 0);
-                            }),
-                        ],
-                      ),
-                    ),
-                  ],
-                );
-              },
-            ),
     );
   }
 }
 
-class _HeaderCard extends StatelessWidget {
-  final String username;
-  final bool isAvailable;
-  final VoidCallback onToggleAvailability;
+// ── Hero del panel del doctor ─────────────────────────────────────────────────
 
-  const _HeaderCard({
+class _DoctorPanelHero extends StatelessWidget {
+  const _DoctorPanelHero({
     required this.username,
     required this.isAvailable,
-    required this.onToggleAvailability,
+    required this.sem,
+    required this.glass,
+    required this.onToggle,
   });
+  final String username;
+  final bool isAvailable;
+  final AppSemanticColors sem;
+  final AppGlass glass;
+  final VoidCallback onToggle;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final cs = theme.colorScheme;
-    final r = context.radii;
     final spacing = context.spacing;
-    final sem = context.sem;
-    
+
     return Container(
-      decoration: BoxDecoration(
-        color: cs.surfaceContainerLowest,
-        borderRadius: r.radiusLg,
-        border: Border.all(color: cs.outlineVariant),
-      ),
-      child: Padding(
-        padding: EdgeInsets.all(spacing.lg),
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            final isNarrow = constraints.maxWidth < 520;
-            final status = Column(
-              crossAxisAlignment: isNarrow
-                  ? CrossAxisAlignment.start
-                  : CrossAxisAlignment.end,
-              children: [
-                Text(
-                  isAvailable ? 'Disponible' : 'No disponible',
-                  style: theme.textTheme.labelLarge?.copyWith(
-                    fontWeight: FontWeight.w900,
-                    color: isAvailable
-                        ? sem.success
-                        : sem.danger,
-                  ),
-                ),
-                SizedBox(height: spacing.xs),
-                Switch(
-                  value: isAvailable,
-                  onChanged: (_) => onToggleAvailability(),
-                  activeColor: sem.success,
-                ),
-              ],
-            );
-
-            final info = Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  username,
-                  style: theme.textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.w900,
-                    color: cs.onSurface,
-                  ),
-                  overflow: TextOverflow.ellipsis,
-                ),
-                SizedBox(height: spacing.xs - 4),
-                Text(
-                  'Rol: Doctor',
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    color: cs.onSurfaceVariant,
-                  ),
-                ),
-              ],
-            );
-
-            if (isNarrow) {
-              return Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+      decoration: BoxDecoration(gradient: glass.headerGradient),
+      child: SafeArea(
+        child: Padding(
+          padding: EdgeInsets.fromLTRB(
+            spacing.lg,
+            spacing.x2l,
+            spacing.lg,
+            spacing.lg,
+          ),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.end,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
                 children: [
-                  Row(
-                    children: [
-                      CircleAvatar(
-                        radius: 24,
-                        backgroundColor: cs.primary.withValues(
-                          alpha: 0.12,
-                        ),
-                        child: Icon(
-                          Icons.medical_services_outlined,
-                          color: cs.primary,
-                        ),
-                      ),
-                      SizedBox(width: spacing.md),
-                      Expanded(child: info),
-                    ],
-                  ),
-                  SizedBox(height: spacing.md),
-                  status,
-                ],
-              );
-            }
+                  // Avatar con pulso de disponibilidad
+                  _AvailabilityPulse(isAvailable: isAvailable, sem: sem),
+                  SizedBox(width: spacing.lg),
 
-            return Row(
-              children: [
-                CircleAvatar(
-                  radius: 24,
-                  backgroundColor: cs.primary.withValues(
-                    alpha: 0.12,
+                  // Nombre y rol
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          username,
+                          style: theme.textTheme.headlineSmall?.copyWith(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w900,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          'Panel Médico',
+                          style: TextStyle(
+                            color: Colors.white.withValues(alpha: 0.70),
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                  child: Icon(
-                    Icons.medical_services_outlined,
-                    color: theme.colorScheme.primary,
+
+                  // Toggle de disponibilidad
+                  _CompactAvailabilityToggle(
+                    isAvailable: isAvailable,
+                    onToggle: onToggle,
+                    sem: sem,
                   ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(child: info),
-                status,
-              ],
-            );
-          },
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
 }
 
-class _KpiCard extends StatelessWidget {
-  final String title;
-  final String value;
-  final IconData icon;
-  final Color color;
+// ── Sección header reutilizable ───────────────────────────────────────────────
 
-  const _KpiCard({
-    required this.title,
-    required this.value,
-    required this.icon,
-    required this.color,
+class _SectionHeader extends StatelessWidget {
+  const _SectionHeader({required this.icon, required this.label, this.badge});
+  final IconData icon;
+  final String label;
+  final String? badge;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final theme = Theme.of(context);
+    return Row(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(6),
+          decoration: BoxDecoration(
+            color: cs.primary.withValues(alpha: 0.10),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Icon(icon, size: 16, color: cs.primary),
+        ),
+        const SizedBox(width: 10),
+        Text(
+          label,
+          style: theme.textTheme.labelSmall?.copyWith(
+            color: cs.onSurfaceVariant,
+            fontWeight: FontWeight.w800,
+            letterSpacing: 1.5,
+          ),
+        ),
+        const Spacer(),
+        if (badge != null)
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            decoration: BoxDecoration(
+              color: cs.primary.withValues(alpha: 0.10),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: cs.primary.withValues(alpha: 0.20)),
+            ),
+            child: Text(
+              badge!,
+              style: TextStyle(
+                color: cs.primary,
+                fontWeight: FontWeight.w800,
+                fontSize: 12,
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+// ── Pulso de disponibilidad ───────────────────────────────────────────────────
+
+class _AvailabilityPulse extends StatelessWidget {
+  final bool isAvailable;
+  final AppSemanticColors sem;
+  const _AvailabilityPulse({required this.isAvailable, required this.sem});
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      alignment: Alignment.center,
+      children: [
+        if (isAvailable)
+          Container(
+            width: 72,
+            height: 72,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: sem.success.withValues(alpha: 0.18),
+            ),
+          ).animate(onPlay: (c) => c.repeat()).scale(
+                begin: const Offset(1, 1),
+                end: const Offset(1.35, 1.35),
+                duration: 1400.ms,
+                curve: Curves.easeOut,
+              ).then().scale(
+                begin: const Offset(1.35, 1.35),
+                end: const Offset(1, 1),
+                duration: 1400.ms,
+              ),
+        Container(
+          width: 56,
+          height: 56,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: Colors.white.withValues(alpha: 0.15),
+            border: Border.all(
+              color: Colors.white.withValues(alpha: 0.20),
+              width: 1.5,
+            ),
+          ),
+          child: const Icon(
+            Icons.medical_services_outlined,
+            color: Colors.white,
+            size: 26,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+// ── Toggle compacto ───────────────────────────────────────────────────────────
+
+class _CompactAvailabilityToggle extends StatelessWidget {
+  final bool isAvailable;
+  final VoidCallback onToggle;
+  final AppSemanticColors sem;
+  const _CompactAvailabilityToggle({
+    required this.isAvailable,
+    required this.onToggle,
+    required this.sem,
   });
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
+    final color = isAvailable ? sem.success : sem.danger;
+    return GestureDetector(
+      onTap: onToggle,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 300),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.18),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: color.withValues(alpha: 0.30), width: 1.5),
+        ),
         child: Row(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            Container(
-              width: 44,
-              height: 44,
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 300),
+              width: 8,
+              height: 8,
               decoration: BoxDecoration(
-                color: color.withValues(alpha: 0.12),
-                borderRadius: BorderRadius.circular(14),
+                shape: BoxShape.circle,
+                color: color,
               ),
-              child: Icon(icon, color: color),
             ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: theme.textTheme.labelMedium?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    value,
-                    style: theme.textTheme.headlineSmall?.copyWith(
-                      fontWeight: FontWeight.w900,
-                    ),
-                  ),
-                ],
+            const SizedBox(width: 6),
+            Text(
+              isAvailable ? 'Disponible' : 'Ocupado',
+              style: TextStyle(
+                color: color,
+                fontWeight: FontWeight.w800,
+                fontSize: 12,
               ),
             ),
           ],
@@ -398,6 +439,122 @@ class _KpiCard extends StatelessWidget {
     );
   }
 }
+
+// ── Fila de KPIs ─────────────────────────────────────────────────────────────
+
+class _KpiRow extends StatelessWidget {
+  final int assigned;
+  final bool isAvailable;
+  final AppSemanticColors sem;
+  const _KpiRow({
+    required this.assigned,
+    required this.isAvailable,
+    required this.sem,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final theme = Theme.of(context);
+    final spacing = context.spacing;
+
+    return Row(
+      children: [
+        // KPI: Pacientes
+        Expanded(
+          child: Container(
+            padding: EdgeInsets.all(spacing.lg),
+            decoration: AppDecorations.premiumCard(context, radius: 16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        cs.primary.withValues(alpha: 0.15),
+                        cs.primary.withValues(alpha: 0.05),
+                      ],
+                    ),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child:
+                      Icon(Icons.people_alt_outlined, color: cs.primary, size: 22),
+                ),
+                SizedBox(height: spacing.md),
+                Text(
+                  '$assigned',
+                  style: theme.textTheme.headlineMedium?.copyWith(
+                    fontWeight: FontWeight.w900,
+                    color: cs.onSurface,
+                  ),
+                ),
+                Text(
+                  'Pacientes asignados',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: cs.onSurfaceVariant,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+
+        SizedBox(width: spacing.md),
+
+        // KPI: Disponibilidad
+        Expanded(
+          child: Container(
+            padding: EdgeInsets.all(spacing.lg),
+            decoration: AppDecorations.premiumCard(context, radius: 16).copyWith(
+              border: Border.all(
+                color: (isAvailable ? sem.success : sem.danger).withValues(alpha: 0.30),
+                width: 1.5,
+              ),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: (isAvailable ? sem.success : sem.danger)
+                        .withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(
+                    isAvailable
+                        ? Icons.check_circle_outline
+                        : Icons.do_not_disturb_on_outlined,
+                    color: isAvailable ? sem.success : sem.danger,
+                    size: 22,
+                  ),
+                ),
+                SizedBox(height: spacing.md),
+                Text(
+                  isAvailable ? 'Disponible' : 'No disponible',
+                  style: theme.textTheme.headlineSmall?.copyWith(
+                    fontWeight: FontWeight.w900,
+                    color: isAvailable ? sem.success : sem.danger,
+                  ),
+                ),
+                Text(
+                  'Estado actual',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: cs.onSurfaceVariant,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+// ── Patient Row Card ──────────────────────────────────────────────────────────
 
 class _PatientRowCard extends StatelessWidget {
   final Patient patient;
@@ -413,213 +570,237 @@ class _PatientRowCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+    final r = context.radii;
+    final spacing = context.spacing;
     final name = patient.name;
     final age = patient.age;
     final diagnosis = patient.diagnosis;
+    final initials = name
+        .trim()
+        .split(' ')
+        .take(2)
+        .map((w) => w.isNotEmpty ? w[0] : '')
+        .join()
+        .toUpperCase();
 
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            final isNarrow = constraints.maxWidth < 520;
-            return isNarrow
-                ? Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
+    return Container(
+      decoration: AppDecorations.premiumCard(context, radius: 16),
+      child: ClipRRect(
+        borderRadius: r.radiusLg,
+        child: IntrinsicHeight(
+          child: Row(
+            children: [
+              // Accent bar premium con gradiente
+              Container(
+                width: 4,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [cs.primary, cs.tertiary],
+                  ),
+                ),
+              ),
+
+              Expanded(
+                child: Padding(
+                  padding: EdgeInsets.all(spacing.lg),
+                  child: LayoutBuilder(
+                    builder: (context, constraints) {
+                      final isNarrow = constraints.maxWidth < 480;
+
+                      final info = Row(
                         children: [
-                          Container(
-                            width: 44,
-                            height: 44,
-                            decoration: BoxDecoration(
-                              color: theme.colorScheme.secondary.withValues(
-                                alpha: 0.12,
-                              ),
-                              borderRadius: BorderRadius.circular(14),
-                            ),
-                            child: Icon(
-                              Icons.person_outline_rounded,
-                              color: theme.colorScheme.secondary,
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Text(
-                              name,
-                              style: theme.textTheme.titleMedium?.copyWith(
-                                fontWeight: FontWeight.w900,
-                              ),
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 10),
-                      Wrap(
-                        spacing: 10,
-                        runSpacing: 6,
-                        children: [
-                          _Tag(
-                            text: '$age años',
-                            color: theme.colorScheme.primary,
-                          ),
-                          if (diagnosis != null && diagnosis.trim().isNotEmpty)
-                            _Tag(
-                              text: diagnosis,
-                              color: theme.colorScheme.tertiary,
-                            ),
-                        ],
-                      ),
-                      const SizedBox(height: 12),
-                      Wrap(
-                        spacing: 12,
-                        runSpacing: 12,
-                        children: [
-                          SizedBox(
-                            height: 40,
-                            child: FilledButton(
-                              onPressed: onStartSession,
-                              child: const Text('Iniciar'),
-                            ),
-                          ),
-                          SizedBox(
-                            height: 40,
-                            child: OutlinedButton(
-                              onPressed: onViewLatestResults,
-                              child: const Text('Resultados'),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  )
-                : Row(
-                    children: [
-                      Container(
-                        width: 44,
-                        height: 44,
-                        decoration: BoxDecoration(
-                          color: theme.colorScheme.secondary.withValues(
-                            alpha: 0.12,
-                          ),
-                          borderRadius: BorderRadius.circular(14),
-                        ),
-                        child: Icon(
-                          Icons.person_outline_rounded,
-                          color: theme.colorScheme.secondary,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              name,
-                              style: theme.textTheme.titleMedium?.copyWith(
-                                fontWeight: FontWeight.w900,
-                              ),
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                            const SizedBox(height: 4),
-                            Wrap(
-                              spacing: 10,
-                              runSpacing: 6,
-                              children: [
-                                _Tag(
-                                  text: '$age años',
-                                  color: theme.colorScheme.primary,
+                          // Avatar con gradiente
+                          Hero(
+                            tag: 'avatar_patient_${patient.id}',
+                            child: Container(
+                              width: 48,
+                              height: 48,
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  colors: [
+                                    cs.primary.withValues(alpha: 0.20),
+                                    cs.tertiary.withValues(alpha: 0.15),
+                                  ],
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
                                 ),
-                                if (diagnosis != null &&
-                                    diagnosis.trim().isNotEmpty)
-                                  _Tag(
-                                    text: diagnosis,
-                                    color: theme.colorScheme.tertiary,
+                                borderRadius: BorderRadius.circular(14),
+                                border: Border.all(
+                                  color: cs.primary.withValues(alpha: 0.20),
+                                ),
+                              ),
+                              child: Center(
+                                child: Text(
+                                  initials,
+                                  style: TextStyle(
+                                    color: cs.primary,
+                                    fontWeight: FontWeight.w900,
+                                    fontSize: 16,
+                                    letterSpacing: 0.5,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                          SizedBox(width: spacing.md),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Hero(
+                                  tag: 'name_patient_${patient.id}',
+                                  child: Material(
+                                    color: Colors.transparent,
+                                    child: Text(
+                                      name,
+                                      style: theme.textTheme.titleMedium?.copyWith(
+                                        fontWeight: FontWeight.w900,
+                                      ),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                ),
+                                SizedBox(height: spacing.xs - 4),
+                                  Wrap(
+                                    spacing: 6,
+                                    runSpacing: 4,
+                                    children: [
+                                      StatusBadge(
+                                        label: '$age años', 
+                                        color: cs.primary, 
+                                        small: true
+                                      ),
+                                      if (diagnosis != null &&
+                                          diagnosis.trim().isNotEmpty)
+                                        StatusBadge(
+                                          label: diagnosis,
+                                          color: cs.tertiary,
+                                          small: true,
+                                        ),
+                                    ],
                                   ),
                               ],
                             ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Column(
+                          ),
+                        ],
+                      );
+
+                      final actions = Wrap(
+                        spacing: spacing.sm,
+                        runSpacing: spacing.sm,
                         children: [
                           SizedBox(
-                            height: 40,
-                            child: FilledButton(
-                              onPressed: onStartSession,
-                              child: const Text('Iniciar'),
+                            height: 44,
+                            child: PremiumButton(
+                              onPressed: onStartSession ?? () {},
+                              icon: Icons.play_arrow_rounded,
+                              label: 'Iniciar',
                             ),
                           ),
-                          const SizedBox(height: 8),
                           SizedBox(
-                            height: 40,
-                            child: OutlinedButton(
+                            height: 44,
+                            child: OutlinedButton.icon(
                               onPressed: onViewLatestResults,
-                              child: const Text('Resultados'),
+                              icon: const Icon(Icons.analytics_outlined, size: 18),
+                              label: const Text('Resultados'),
+                              style: OutlinedButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(horizontal: 16),
+                              ),
                             ),
                           ),
                         ],
-                      ),
-                    ],
-                  );
-          },
+                      );
+
+                      if (isNarrow) {
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            info,
+                            SizedBox(height: spacing.md),
+                            actions,
+                          ],
+                        );
+                      }
+                      return Row(
+                        children: [
+                          Expanded(child: info),
+                          SizedBox(width: spacing.md),
+                          actions,
+                        ],
+                      );
+                    },
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
 }
 
-class _Tag extends StatelessWidget {
-  final String text;
-  final Color color;
-
-  const _Tag({required this.text, required this.color});
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.10),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: color.withValues(alpha: 0.18)),
-      ),
-      child: Text(
-        text,
-        style: theme.textTheme.labelSmall?.copyWith(
-          color: color,
-          fontWeight: FontWeight.w800,
-        ),
-        overflow: TextOverflow.ellipsis,
-      ),
-    );
-  }
-}
+// ── Empty state ───────────────────────────────────────────────────────────────
 
 class _EmptyPatientsCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Row(
-          children: [
-            Icon(Icons.inbox_outlined, color: theme.colorScheme.outline),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                'No tienes pacientes asignados todavía.',
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  color: theme.colorScheme.onSurfaceVariant,
-                ),
-              ),
+    return const Padding(
+      padding: EdgeInsets.symmetric(vertical: 40),
+      child: EmptyStateView(
+        iconData: Icons.inbox_outlined,
+        title: 'Sin pacientes asignados',
+        description: 'Cuando se te asignen pacientes, aparecerán aquí.',
+      ),
+    );
+  }
+}
+
+// ── Shimmer widgets ───────────────────────────────────────────────────────────
+
+class _ShimmerDoctorKpi extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    final spacing = context.spacing;
+    final r = context.radii;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final shimmerColor = isDark ? const Color(0xFF0F1F38) : const Color(0xFFE2EFF8);
+
+    return Row(
+      children: List.generate(2, (i) {
+        return Expanded(
+          child: Container(
+            height: 110,
+            margin: EdgeInsets.only(
+              left: i == 0 ? 0 : spacing.md / 2,
+              right: i == 1 ? 0 : spacing.md / 2,
             ),
-          ],
-        ),
+            decoration: BoxDecoration(
+              color: shimmerColor,
+              borderRadius: r.radiusLg,
+            ),
+          ),
+        );
+      }),
+    );
+  }
+}
+
+class _ShimmerPatientCard extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    final r = context.radii;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final shimmerColor = isDark ? const Color(0xFF0F1F38) : const Color(0xFFE2EFF8);
+
+    return Container(
+      height: 100,
+      decoration: BoxDecoration(
+        color: shimmerColor,
+        borderRadius: r.radiusLg,
       ),
     );
   }

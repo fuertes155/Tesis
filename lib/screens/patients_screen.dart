@@ -1,13 +1,19 @@
 import 'package:flutter/material.dart';
-import 'package:get_it/get_it.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../providers/data_providers.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_animate/flutter_animate.dart';
-import '../services/api_service.dart';
+import '../models/patient.dart';
+import '../core/theme/app_theme.dart';
+import '../widgets/empty_state_view.dart';
+import '../widgets/skeleton_loader.dart';
+import '../core/utils/search_utils.dart';
+import '../providers/api_providers.dart';
 part 'patients_screen_state.dart';
 
-class PatientsScreen extends StatefulWidget {
+class PatientsScreen extends ConsumerStatefulWidget {
   const PatientsScreen({super.key});
 
   @override
-  State<PatientsScreen> createState() => PatientsScreenState();
+  ConsumerState<PatientsScreen> createState() => PatientsScreenState();
 }

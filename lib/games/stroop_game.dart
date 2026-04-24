@@ -8,7 +8,10 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'common/game_intro.dart';
 import 'common/game_scoring.dart';
 
-class StroopGame extends StatefulWidget {
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../providers/api_providers.dart';
+
+class StroopGame extends ConsumerStatefulWidget {
   final bool flowMode;
   final int? flowIndex;
   final int? flowTotal;
@@ -23,10 +26,10 @@ class StroopGame extends StatefulWidget {
   });
 
   @override
-  State<StroopGame> createState() => _StroopGameState();
+  ConsumerState<StroopGame> createState() => _StroopGameState();
 }
 
-class _StroopGameState extends State<StroopGame> {
+class _StroopGameState extends ConsumerState<StroopGame> {
   static const int totalRounds = 20;
   int _currentRound = 0;
   int _score = 0;
@@ -116,6 +119,7 @@ class _StroopGameState extends State<StroopGame> {
     });
 
     // Visual feedback flash
+    ScaffoldMessenger.of(context).clearSnackBars();
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         duration: const Duration(milliseconds: 300),
@@ -182,7 +186,9 @@ class _StroopGameState extends State<StroopGame> {
       'avg_ms': avgReaction,
       'raw_score': _score,
     };
+    final api = ref.read(apiServiceProvider).requireValue;
     final future = GameResults.sendGameResult(
+      api: api,
       title: 'Resultados - Funciones Ejecutivas',
       score: global,
       details: details,

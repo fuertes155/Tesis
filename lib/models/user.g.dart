@@ -13,8 +13,12 @@ _$UserImpl _$$UserImplFromJson(Map<String, dynamic> json) => _$UserImpl(
   fullName: json['full_name'] as String?,
   isActive: json['is_active'] as bool? ?? true,
   isAvailable: json['is_available'] as bool? ?? true,
-  registrationDate: json['registration_date'] as String?,
-  createdAt: json['created_at'] as String?,
+  registrationDate: json['registration_date'] == null
+      ? null
+      : DateTime.parse(json['registration_date'] as String),
+  createdAt: json['created_at'] == null
+      ? null
+      : DateTime.parse(json['created_at'] as String),
 );
 
 Map<String, dynamic> _$$UserImplToJson(_$UserImpl instance) =>
@@ -25,6 +29,6 @@ Map<String, dynamic> _$$UserImplToJson(_$UserImpl instance) =>
       'full_name': instance.fullName,
       'is_active': instance.isActive,
       'is_available': instance.isAvailable,
-      'registration_date': instance.registrationDate,
-      'created_at': instance.createdAt,
+      'registration_date': instance.registrationDate?.toIso8601String(),
+      'created_at': instance.createdAt?.toIso8601String(),
     };

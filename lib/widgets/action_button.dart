@@ -16,17 +16,18 @@ class ActionButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
     return Material(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(20),
+      color: cs.surfaceContainerLowest,
+      borderRadius: BorderRadius.circular(8),
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(8),
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 12),
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: Colors.grey.withValues(alpha: 0.1)),
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: cs.outlineVariant),
           ),
           child: Column(
             children: [
@@ -34,7 +35,7 @@ class ActionButton extends StatelessWidget {
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
                   color: color.withValues(alpha: 0.1),
-                  shape: BoxShape.circle,
+                  borderRadius: BorderRadius.circular(8),
                 ),
                 child: Icon(icon, color: color, size: 28),
               ),
@@ -43,8 +44,9 @@ class ActionButton extends StatelessWidget {
                 label,
                 textAlign: TextAlign.center,
                 style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  color: Colors.grey[800],
+                  fontWeight: FontWeight.w600,
+                  fontSize: 14,
+                  color: cs.onSurface,
                   height: 1.2,
                 ),
               ),

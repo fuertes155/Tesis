@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter/services.dart';
 import '../services/api_service.dart';
 import '../providers/data_providers.dart';
 import '../models/session.dart';
@@ -13,6 +14,10 @@ import '../widgets/activity_filters.dart';
 import '../widgets/home_kpi_section.dart';
 import '../widgets/home_dashboard_grid.dart';
 import '../widgets/home_recent_activity_section.dart';
+import '../core/theme/app_theme.dart';
+import '../core/theme/app_decorations.dart';
+import '../providers/api_providers.dart';
+import '../providers/theme_provider.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -22,7 +27,7 @@ class HomeScreen extends ConsumerStatefulWidget {
 }
 
 class HomeScreenState extends ConsumerState<HomeScreen> {
-  late ApiService _api;
+  ApiService? _api;
   bool _loading = true;
   int _patientsCount = 0;
   int _sessionsToday = 0;
@@ -44,16 +49,24 @@ class HomeScreenState extends ConsumerState<HomeScreen> {
   @override
   void initState() {
     super.initState();
-    _api = ref.read(apiServiceProvider);
-    final savedDays = _api.homeDaysFilter;
-    final savedStatus = _api.homeStatusFilter;
-    final savedQuery = _api.homeSearchQuery;
-    final savedSort = _api.homeSortMode;
+    _initAsync();
+  }
+
+  Future<void> _initAsync() async {
+    final api = await ref.read(apiServiceProvider.future);
+    if (!mounted) return;
+    setState(() => _api = api);
+    
+    final savedDays = api.homeDaysFilter;
+    final savedStatus = api.homeStatusFilter;
+    final savedQuery = api.homeSearchQuery;
+    final savedSort = api.homeSortMode;
     if (savedDays != null) _daysFilter = savedDays;
     if (savedStatus != null) _statusFilter = savedStatus;
     if (savedQuery != null) _searchQuery = savedQuery;
     if (savedSort != null) _sortMode = savedSort;
-    _loadPrefs().then((_) => _fetch());
+    await _loadPrefs();
+    await _fetch();
   }
 
   Future<void> _fetch() async {
@@ -91,9 +104,8 @@ class HomeScreenState extends ConsumerState<HomeScreen> {
       final pending14 = List<int>.filled(14, 0);
       for (final s in sList) {
         final status = s.status.toLowerCase();
-        final dateStr = s.date;
-        final d = DateTime.tryParse(dateStr);
-        if (d != null) {
+        final d = s.date;
+        if (true) { // d is already DateTime
           final dd = DateTime(d.year, d.month, d.day);
           for (var i = 0; i < buckets30.length; i++) {
             if (dd == buckets30[i]) {
@@ -158,7 +170,15 @@ class HomeScreenState extends ConsumerState<HomeScreen> {
         _allSessions = sortedSessions;
         _loading = false;
       });
-    } catch (_) {
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error al cargar datos: $e'),
+            backgroundColor: context.sem.danger,
+          ),
+        );
+      }
       setState(() => _loading = false);
     }
   }
@@ -176,8 +196,9 @@ class HomeScreenState extends ConsumerState<HomeScreen> {
       if (q != null) _searchQuery = q;
       if (o != null) _sortMode = o;
     });
-    _api.setHomeFilters(days: _daysFilter, status: _statusFilter);
-    _api.setHomeSearchAndSort(query: _searchQuery, sortMode: _sortMode);
+    if (_api == null) return;
+    _api!.setHomeFilters(days: _daysFilter, status: _statusFilter);
+    _api!.setHomeSearchAndSort(query: _searchQuery, sortMode: _sortMode);
   }
 
   Future<void> _persistFilters() async {
@@ -198,13 +219,14 @@ class HomeScreenState extends ConsumerState<HomeScreen> {
 
     return Scaffold(
       backgroundColor: cs.surface,
-      body: CustomScrollView(
-        slivers: [
-          SliverAppBar(
-            pinned: true,
-            expandedHeight: 120,
-            backgroundColor: cs.surfaceContainerLowest,
-            surfaceTintColor: cs.surfaceContainerLowest,
+      body: AppDecorations.meshBackground(
+        child: CustomScrollView(
+          slivers: [
+            SliverAppBar(
+              pinned: true,
+              expandedHeight: 120,
+              backgroundColor: Colors.transparent,
+              surfaceTintColor: Colors.transparent,
             elevation: 0,
             flexibleSpace: FlexibleSpaceBar(
               centerTitle: false,
@@ -212,13 +234,27 @@ class HomeScreenState extends ConsumerState<HomeScreen> {
               title: const HomeHeader(),
             ),
             actions: [
-              if (_api.currentRole != 'user')
+              IconButton(
+                icon: Icon(
+                  Icons.person_outline_rounded,
+                  color: cs.onSurfaceVariant,
+                ),
+                onPressed: () {
+                  HapticFeedback.lightImpact();
+                  context.push('/profile');
+                },
+                tooltip: 'Mi Perfil',
+              ),
+              if (_api?.currentRole != 'user')
                 IconButton(
                   icon: Icon(
                     Icons.refresh_rounded,
                     color: cs.onSurfaceVariant,
                   ),
-                  onPressed: _fetch,
+                  onPressed: () {
+                    HapticFeedback.mediumImpact();
+                    _fetch();
+                  },
                   tooltip: 'Actualizar',
                 ),
               IconButton(
@@ -226,7 +262,10 @@ class HomeScreenState extends ConsumerState<HomeScreen> {
                   Icons.logout_rounded,
                   color: cs.onSurfaceVariant,
                 ),
-                onPressed: () => context.go('/'),
+                onPressed: () {
+                  HapticFeedback.lightImpact();
+                  context.go('/');
+                },
                 tooltip: 'Cerrar Sesión',
               ),
               SizedBox(width: spacing.md),
@@ -242,22 +281,80 @@ class HomeScreenState extends ConsumerState<HomeScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        'Hola, ${_api.currentUsername ?? 'Doctor'}',
-                        style: theme.textTheme.headlineMedium?.copyWith(
-                          fontWeight: FontWeight.w900,
-                          color: cs.onSurface,
-                          letterSpacing: -1,
-                        ),
-                      ).animate().fadeIn().slideX(begin: -0.1),
-                      SizedBox(height: spacing.xs),
-                      Text(
-                        'Bienvenido de nuevo al panel de gestión.',
-                        style: theme.textTheme.bodyLarge?.copyWith(
-                          color: cs.onSurfaceVariant,
-                        ),
-                      ).animate().fadeIn(delay: 100.ms).slideX(begin: -0.1),
-                      SizedBox(height: spacing.x2l),
+                      // Saludo dinámico
+                      Builder(builder: (context) {
+                        final hour = DateTime.now().hour;
+                        final greeting = hour < 12
+                            ? 'Buenos días'
+                            : hour < 18
+                                ? 'Buenas tardes'
+                                : 'Buenas noches';
+                        final now = DateTime.now();
+                        final months = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+                        final dateStr = '${now.day} de ${months[now.month - 1]}, ${now.year}';
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Text(
+                                  '$greeting, ',
+                                  style: theme.textTheme.headlineMedium?.copyWith(
+                                    fontWeight: FontWeight.w400,
+                                    color: cs.onSurfaceVariant,
+                                    letterSpacing: -0.5,
+                                  ),
+                                ),
+                                Consumer(
+                                  builder: (context, ref, child) {
+                                    final profile = ref.watch(currentUserProvider);
+                                    return profile.when(
+                                      data: (u) => Text(
+                                        u.username,
+                                        style: theme.textTheme.headlineMedium?.copyWith(
+                                          fontWeight: FontWeight.w900,
+                                          color: cs.onSurface,
+                                          letterSpacing: -1,
+                                        ),
+                                      ),
+                                      loading: () => Text(
+                                        '---',
+                                        style: theme.textTheme.headlineMedium,
+                                      ),
+                                      error: (_, __) => Text(
+                                        _api?.currentUsername ?? 'Doctor',
+                                        style: theme.textTheme.headlineMedium?.copyWith(
+                                          fontWeight: FontWeight.w900,
+                                          color: cs.onSurface,
+                                          letterSpacing: -1,
+                                        ),
+                                      ),
+                                    );
+                                  },
+                                ),
+                                Text(
+                                  ' 👋',
+                                  style: theme.textTheme.headlineMedium,
+                                ),
+                              ],
+                            ),
+                            SizedBox(height: spacing.xs),
+                            Row(
+                              children: [
+                                Icon(Icons.calendar_today_outlined, size: 14, color: cs.onSurfaceVariant),
+                                const SizedBox(width: 6),
+                                Text(
+                                  dateStr,
+                                  style: theme.textTheme.bodyMedium?.copyWith(
+                                    color: cs.onSurfaceVariant,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        );
+                      }).animate().fadeIn().slideX(begin: -0.08),
+                      SizedBox(height: spacing.xl),
                       HomeKpiSection(
                         loading: _loading,
                         patientsCount: _patientsCount,
@@ -267,7 +364,7 @@ class HomeScreenState extends ConsumerState<HomeScreen> {
                         pendingWeekDeltaPct: _pendingWeekDeltaPct,
                         counts30: _counts30,
                       ),
-                      SizedBox(height: spacing.x2l),
+                      SizedBox(height: spacing.xl),
                       Row(
                         children: [
                           Icon(
@@ -318,7 +415,7 @@ class HomeScreenState extends ConsumerState<HomeScreen> {
                               sortMode: _sortMode,
                               onDaysChanged: (v) {
                                 setState(() => _daysFilter = v);
-                                _api.setHomeFilters(
+                                _api?.setHomeFilters(
                                   days: _daysFilter,
                                   status: _statusFilter,
                                 );
@@ -326,7 +423,7 @@ class HomeScreenState extends ConsumerState<HomeScreen> {
                               },
                               onStatusChanged: (v) {
                                 setState(() => _statusFilter = v);
-                                _api.setHomeFilters(
+                                _api?.setHomeFilters(
                                   days: _daysFilter,
                                   status: _statusFilter,
                                 );
@@ -334,7 +431,7 @@ class HomeScreenState extends ConsumerState<HomeScreen> {
                               },
                               onSearchChanged: (v) {
                                 setState(() => _searchQuery = v);
-                                _api.setHomeSearchAndSort(
+                                _api?.setHomeSearchAndSort(
                                   query: _searchQuery,
                                   sortMode: _sortMode,
                                 );
@@ -342,7 +439,7 @@ class HomeScreenState extends ConsumerState<HomeScreen> {
                               },
                               onSortSelected: (v) {
                                 setState(() => _sortMode = v);
-                                _api.setHomeSearchAndSort(
+                                _api?.setHomeSearchAndSort(
                                   query: _searchQuery,
                                   sortMode: _sortMode,
                                 );
@@ -357,79 +454,96 @@ class HomeScreenState extends ConsumerState<HomeScreen> {
                           duration: 220.ms,
                         )
                       else
-                        Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Expanded(
-                              flex: 7,
-                              child: Container(
-                                padding: EdgeInsets.all(spacing.lg),
-                                decoration: BoxDecoration(
-                                  color: cs.surfaceContainerLowest,
-                                  borderRadius: r.radiusXl,
-                                  border: Border.all(
-                                    color: cs.outlineVariant,
+                        Builder(builder: (ctx) {
+                            final glass = ctx.glass;
+                            return Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Expanded(
+                                  flex: 7,
+                                  child: Container(
+                                    padding: EdgeInsets.all(spacing.lg),
+                                    decoration: BoxDecoration(
+                                      gradient: glass.cardGradient,
+                                      borderRadius: r.radiusXl,
+                                      border: Border.all(color: glass.borderColor, width: 1),
+                                      boxShadow: ctx.premiumShadows,
+                                    ),
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Row(
+                                          children: [
+                                            Container(
+                                              padding: const EdgeInsets.all(6),
+                                              decoration: BoxDecoration(
+                                                color: cs.primary.withValues(alpha: 0.10),
+                                                borderRadius: BorderRadius.circular(8),
+                                              ),
+                                              child: Icon(Icons.bar_chart_rounded, color: cs.primary, size: 16),
+                                            ),
+                                            SizedBox(width: spacing.sm),
+                                            Text(
+                                              'Sesiones por Día',
+                                              style: theme.textTheme.titleMedium?.copyWith(
+                                                fontWeight: FontWeight.w800,
+                                                color: cs.onSurface,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                        SizedBox(height: spacing.xl),
+                                        WeeklyChart(counts: _weeklyCounts),
+                                      ],
+                                    ),
                                   ),
                                 ),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      'Sesiones por Día',
-                                      style: theme.textTheme.titleMedium
-                                          ?.copyWith(
-                                            fontWeight: FontWeight.w800,
-                                            color: cs.onSurface,
-                                          ),
+                                SizedBox(width: spacing.lg),
+                                Expanded(
+                                  flex: 4,
+                                  child: Container(
+                                    padding: EdgeInsets.all(spacing.lg),
+                                    decoration: BoxDecoration(
+                                      gradient: glass.cardGradient,
+                                      borderRadius: r.radiusXl,
+                                      border: Border.all(color: glass.borderColor, width: 1),
+                                      boxShadow: ctx.premiumShadows,
                                     ),
-                                    SizedBox(height: spacing.xl),
-                                    WeeklyChart(counts: _weeklyCounts),
-                                  ],
-                                ),
-                              ),
-                            ),
-                            SizedBox(width: spacing.lg),
-                            Expanded(
-                              flex: 4,
-                              child: Container(
-                                padding: EdgeInsets.all(spacing.lg),
-                                decoration: BoxDecoration(
-                                  color: cs.surfaceContainerLowest,
-                                  borderRadius: r.radiusXl,
-                                  border: Border.all(
-                                    color: cs.outlineVariant,
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Row(
+                                          children: [
+                                            Container(
+                                              padding: const EdgeInsets.all(6),
+                                              decoration: BoxDecoration(
+                                                color: cs.tertiary.withValues(alpha: 0.10),
+                                                borderRadius: BorderRadius.circular(8),
+                                              ),
+                                              child: Icon(Icons.donut_small_rounded, color: cs.tertiary, size: 16),
+                                            ),
+                                            SizedBox(width: spacing.sm),
+                                            Text(
+                                              'Estado',
+                                              style: theme.textTheme.titleMedium?.copyWith(
+                                                fontWeight: FontWeight.w800,
+                                                color: cs.onSurface,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                        SizedBox(height: spacing.xl),
+                                        StatusChart(
+                                          completed: _statusCounts(_daysFilter)['completed'] ?? 0,
+                                          pending: _statusCounts(_daysFilter)['pending'] ?? 0,
+                                        ),
+                                      ],
+                                    ),
                                   ),
                                 ),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      'Distribución de Estado',
-                                      style: theme.textTheme.titleMedium
-                                          ?.copyWith(
-                                            fontWeight: FontWeight.w800,
-                                            color: cs.onSurface,
-                                          ),
-                                    ),
-                                    SizedBox(height: spacing.xl),
-                                    StatusChart(
-                                      completed:
-                                          _statusCounts(
-                                            _daysFilter,
-                                          )['completed'] ??
-                                          0,
-                                      pending:
-                                          _statusCounts(
-                                            _daysFilter,
-                                          )['pending'] ??
-                                          0,
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ],
-                        ).animate().fadeIn(delay: 400.ms),
+                              ],
+                            );
+                          }).animate().fadeIn(delay: 400.ms),
                       const SizedBox(height: 64),
                       Row(
                         children: [
@@ -472,8 +586,9 @@ class HomeScreenState extends ConsumerState<HomeScreen> {
           ),
         ],
       ),
-    );
-  }
+    ),
+  );
+}
 }
 
 extension _HomeScreenStateInternals on HomeScreenState {
@@ -491,9 +606,7 @@ extension on HomeScreenState {
       now.day,
     ).subtract(Duration(days: _daysFilter - 1));
     var list = _allSessions.where((s) {
-      final dateStr = s.date;
-      final d = DateTime.tryParse(dateStr);
-      if (d == null) return false;
+      final d = s.date;
       return d.isAfter(since) || d.isAtSameMomentAs(since);
     }).toList();
 
@@ -532,10 +645,8 @@ Map<String, int> _statusCountsHelper(List<Session> sessions, int days) {
   int completed = 0;
   int pending = 0;
   for (final s in sessions) {
-    final dateStr = s.date;
     final status = s.status.toLowerCase();
-    final d = DateTime.tryParse(dateStr);
-    if (d == null) continue;
+    final d = s.date;
     if (d.isBefore(DateTime(since.year, since.month, since.day))) continue;
     if (status == 'completed' || status == 'completada') {
       completed += 1;

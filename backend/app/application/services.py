@@ -1,7 +1,7 @@
 from sqlalchemy.orm import Session
-from ..infrastructure import models
-from ..domain import entities
-from ..core import security
+from app.infrastructure import models
+from app.domain import entities
+from app.core import security
 
 class UserService:
     @staticmethod

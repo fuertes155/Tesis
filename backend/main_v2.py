@@ -1,8 +1,8 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from .app.core.config import settings
-from .app.api.v1 import users, patients, sessions
-from .app.infrastructure.database import engine, Base
+from app.core.config import settings
+from app.api.v1 import users, patients, sessions
+from app.infrastructure.database import engine, Base
 
 # Create database tables
 Base.metadata.create_all(bind=engine)

@@ -100,7 +100,7 @@ class WeeklyChart extends StatelessWidget {
     for (var i = 6; i >= 0; i--) {
       final d = now.subtract(Duration(days: i));
       const names = ['L', 'M', 'X', 'J', 'V', 'S', 'D'];
-      labels.add(names[(d.weekday % 7)]);
+      labels.add(names[(d.weekday - 1)]);
     }
     return labels;
   }

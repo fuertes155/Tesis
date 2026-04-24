@@ -8,7 +8,10 @@ import 'common/game_intro.dart';
 import 'common/game_scoring.dart';
 import '../widgets/animated_dialog.dart';
 
-class ReactionGame extends StatefulWidget {
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../providers/api_providers.dart';
+
+class ReactionGame extends ConsumerStatefulWidget {
   final bool flowMode;
   final int? flowIndex;
   final int? flowTotal;
@@ -23,12 +26,12 @@ class ReactionGame extends StatefulWidget {
   });
 
   @override
-  State<ReactionGame> createState() => _ReactionGameState();
+  ConsumerState<ReactionGame> createState() => _ReactionGameState();
 }
 
 enum GameState { waiting, ready, tooEarly, result }
 
-class _ReactionGameState extends State<ReactionGame> {
+class _ReactionGameState extends ConsumerState<ReactionGame> {
   GameState _state = GameState.waiting;
   Color _backgroundColor = Colors.red;
   String _message = 'Esperar...';
@@ -137,7 +140,9 @@ class _ReactionGameState extends State<ReactionGame> {
       'attempts': _times.length,
       'too_early': _tooEarly,
     };
+    final api = ref.read(apiServiceProvider).value!;
     final future = GameResults.sendGameResult(
+      api: api,
       title: 'Resultados - Atención',
       score: score,
       details: details,

@@ -3,14 +3,18 @@ import 'package:go_router/go_router.dart';
 import '../widgets/domain_result_card.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import '../core/theme/app_theme.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../services/pdf_service.dart';
+import '../providers/api_providers.dart';
+import '../widgets/empty_state_view.dart';
 
-class ResultsScreen extends StatelessWidget {
+class ResultsScreen extends ConsumerWidget {
   final Map<String, dynamic>? data;
   final Future<Map<String, dynamic>>? dataFuture;
   const ResultsScreen({super.key, this.data, this.dataFuture});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
     final r = context.radii;
@@ -22,90 +26,12 @@ class ResultsScreen extends StatelessWidget {
         future: dataFuture,
         builder: (context, snapshot) {
           if (snapshot.connectionState != ConnectionState.done) {
-            return Scaffold(
-              backgroundColor: cs.surface,
-              appBar: AppBar(
-                backgroundColor: cs.surfaceContainerLowest,
-                surfaceTintColor: cs.surfaceContainerLowest,
-                elevation: 0,
-                title: Text(
-                  'Resultados',
-                  style: TextStyle(
-                    fontWeight: FontWeight.w800,
-                    color: cs.onSurface,
-                  ),
-                ),
-                centerTitle: false,
-              ),
-              body: SingleChildScrollView(
-                padding: EdgeInsets.all(spacing.lg),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _buildGlobalSkeleton(theme)
-                        .animate()
-                        .fadeIn(duration: 260.ms, curve: Curves.easeOut)
-                        .moveY(begin: 8, end: 0, duration: 260.ms),
-                    SizedBox(height: spacing.x2l),
-                    Row(
-                      children: [
-                        Icon(
-                          Icons.analytics_outlined,
-                          color: cs.primary,
-                          size: 20,
-                        ),
-                        SizedBox(width: spacing.sm),
-                        Text(
-                          'DETALLE POR DOMINIOS',
-                          style: theme.textTheme.labelSmall?.copyWith(
-                            color: cs.onSurfaceVariant,
-                            fontWeight: FontWeight.w800,
-                            letterSpacing: 1.5,
-                          ),
-                        ),
-                      ],
-                    ),
-                    SizedBox(height: spacing.lg),
-                    ..._buildSkeletonCards(theme, 4).asMap().entries.map(
-                      (e) => e.value
-                          .animate()
-                          .fadeIn(
-                            duration: 220.ms,
-                            delay: (60 * e.key).ms,
-                            curve: Curves.easeOut,
-                          )
-                          .moveY(
-                            begin: 6,
-                            end: 0,
-                            duration: 220.ms,
-                            delay: (60 * e.key).ms,
-                          ),
-                    ),
-                  ],
-                ),
-              ),
-            );
+            // ... (Skeleton UI)
+            return _buildSkeletonScaffold(context, theme, spacing, cs);
           }
           if (snapshot.hasError) {
-            return Scaffold(
-              backgroundColor: cs.surface,
-              appBar: AppBar(
-                backgroundColor: cs.surfaceContainerLowest,
-                title: const Text('Resultados'),
-                elevation: 0,
-              ),
-              body: Center(
-                child: Padding(
-                  padding: EdgeInsets.all(spacing.lg),
-                  child: Text(
-                    'Error al cargar resultados',
-                    style: theme.textTheme.titleMedium?.copyWith(
-                      color: sem.danger,
-                    ),
-                  ),
-                ),
-              ),
-            );
+            // ... (Error UI)
+            return _buildErrorScaffold(context, theme, spacing, cs, sem);
           }
           return ResultsScreen(data: snapshot.data);
         },
@@ -113,9 +39,10 @@ class ResultsScreen extends StatelessWidget {
     }
     
     final title = data?['title'] as String? ?? 'Resultados';
-    final globalScore = (data?['score'] as num?)?.toDouble();
-    final highGlobal = (globalScore ?? 75) >= 90;
+    final globalScore = (data?['score'] as num?)?.toDouble() ?? 0.0;
+    final highGlobal = globalScore >= 90;
     final details = data?['details'] as Map<String, dynamic>? ?? {};
+    final isHighScore = globalScore >= 90;
 
     return Scaffold(
       backgroundColor: cs.surface,
@@ -133,9 +60,21 @@ class ResultsScreen extends StatelessWidget {
         centerTitle: false,
         actions: [
           IconButton(
-            icon: Icon(Icons.share_outlined, color: cs.onSurfaceVariant),
-            onPressed: () {},
-            tooltip: 'Compartir Informe',
+            icon: Icon(Icons.picture_as_pdf_outlined, color: cs.primary),
+            onPressed: () async {
+              final api = ref.read(apiServiceProvider).value;
+              final pName = data?['patientName'] ?? api?.currentPatientName ?? 'Paciente';
+              final pId = data?['patientId']?.toString() ?? api?.currentPatientId.toString();
+              
+              await PdfService.generateResultsPdf(
+                patientName: pName,
+                patientId: pId,
+                title: title,
+                score: globalScore,
+                details: details,
+              );
+            },
+            tooltip: 'Exportar PDF',
           ),
           SizedBox(width: spacing.md),
         ],
@@ -150,7 +89,21 @@ class ResultsScreen extends StatelessWidget {
               decoration: BoxDecoration(
                 color: cs.surfaceContainerLowest,
                 borderRadius: r.radiusXl,
-                border: Border.all(color: cs.outlineVariant),
+                border: Border.all(
+                  color: isHighScore
+                      ? sem.success.withValues(alpha: 0.4)
+                      : cs.outlineVariant,
+                  width: isHighScore ? 2 : 1,
+                ),
+                boxShadow: isHighScore
+                    ? [
+                        BoxShadow(
+                          color: sem.success.withValues(alpha: 0.15),
+                          blurRadius: 24,
+                          spreadRadius: 2,
+                        )
+                      ]
+                    : null,
               ),
               child: Column(
                 children: [
@@ -158,11 +111,11 @@ class ResultsScreen extends StatelessWidget {
                     alignment: Alignment.center,
                     children: [
                       SizedBox(
-                        width: 120,
-                        height: 120,
+                        width: 140,
+                        height: 140,
                         child: CircularProgressIndicator(
-                          value: (globalScore ?? 75) / 100,
-                          strokeWidth: 12,
+                          value: globalScore / 100,
+                          strokeWidth: 14,
                           backgroundColor: cs.surfaceContainerHighest,
                           valueColor: AlwaysStoppedAnimation<Color>(
                             highGlobal ? sem.success : cs.primary,
@@ -173,15 +126,15 @@ class ResultsScreen extends StatelessWidget {
                       Column(
                         children: [
                           Text(
-                            '${(globalScore ?? 75).toInt()}',
+                            '${globalScore.toInt()}',
                             style: theme.textTheme.displayMedium?.copyWith(
                               fontWeight: FontWeight.w900,
-                              color: cs.onSurface,
+                              color: highGlobal ? sem.success : cs.onSurface,
                               letterSpacing: -2,
                             ),
                           ),
                           Text(
-                            'Puntos',
+                            'pts',
                             style: TextStyle(
                               color: cs.onSurfaceVariant,
                               fontWeight: FontWeight.w600,
@@ -191,25 +144,44 @@ class ResultsScreen extends StatelessWidget {
                         ],
                       ),
                     ],
-                  ),
-                  SizedBox(height: spacing.xl),
-                  Text(
-                    'PUNTUACIÓN GLOBAL',
-                    style: theme.textTheme.labelSmall?.copyWith(
-                      color: cs.onSurfaceVariant,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: 1.5,
+                  ).animate(onPlay: isHighScore ? (c) => c.repeat(reverse: true) : null)
+                    .shimmer(
+                      duration: 2000.ms,
+                      color: isHighScore
+                          ? sem.success.withValues(alpha: 0.15)
+                          : Colors.transparent,
                     ),
-                  ),
+                  SizedBox(height: spacing.xl),
+                  if (isHighScore)
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.emoji_events_rounded, color: sem.success, size: 20),
+                        const SizedBox(width: 6),
+                        Text(
+                          'RENDIMIENTO SOBRESALIENTE',
+                          style: theme.textTheme.labelSmall?.copyWith(
+                            color: sem.success,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: 1.5,
+                          ),
+                        ),
+                      ],
+                    )
+                  else
+                    Text(
+                      'PUNTUACIÓN GLOBAL',
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        color: cs.onSurfaceVariant,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 1.5,
+                      ),
+                    ),
                   SizedBox(height: spacing.sm),
                   Text(
-                    highGlobal
-                        ? 'Rendimiento Superior'
-                        : 'Rendimiento Estándar',
+                    highGlobal ? 'Rendimiento Superior' : 'Rendimiento Estándar',
                     style: TextStyle(
-                      color: highGlobal
-                          ? sem.success
-                          : cs.primary,
+                      color: highGlobal ? sem.success : cs.primary,
                       fontWeight: FontWeight.w800,
                       fontSize: 18,
                     ),
@@ -260,25 +232,93 @@ class ResultsScreen extends StatelessWidget {
             SizedBox(height: spacing.xl),
             SizedBox(
               width: double.infinity,
-              height: 54,
-              child: ElevatedButton(
+              height: 56,
+              child: FilledButton.icon(
                 onPressed: () => context.go('/home'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: cs.primary,
-                  foregroundColor: cs.onPrimary,
-                  elevation: 0,
+                icon: const Icon(Icons.home_rounded),
+                label: const Text('VOLVER AL PANEL PRINCIPAL'),
+                style: FilledButton.styleFrom(
                   shape: RoundedRectangleBorder(
-                    borderRadius: r.radiusSm,
+                    borderRadius: r.radiusMd,
                   ),
                   textStyle: const TextStyle(
                     fontWeight: FontWeight.w700,
                     fontSize: 16,
                   ),
                 ),
-                child: const Text('FINALIZAR Y VOLVER AL INICIO'),
               ),
             ).animate().fadeIn(delay: 800.ms),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSkeletonScaffold(BuildContext context, ThemeData theme, AppSpacing spacing, ColorScheme cs) {
+    return Scaffold(
+      backgroundColor: cs.surface,
+      appBar: AppBar(
+        backgroundColor: cs.surfaceContainerLowest,
+        surfaceTintColor: cs.surfaceContainerLowest,
+        elevation: 0,
+        title: Text(
+          'Cargando...',
+          style: TextStyle(fontWeight: FontWeight.w800, color: cs.onSurface),
+        ),
+        centerTitle: false,
+      ),
+      body: SingleChildScrollView(
+        padding: EdgeInsets.all(spacing.lg),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildGlobalSkeleton(theme)
+                .animate()
+                .fadeIn(duration: 260.ms, curve: Curves.easeOut)
+                .moveY(begin: 8, end: 0, duration: 260.ms),
+            SizedBox(height: spacing.x2l),
+            Row(
+              children: [
+                Icon(Icons.analytics_outlined, color: cs.primary, size: 20),
+                SizedBox(width: spacing.sm),
+                Text(
+                  'DETALLE POR DOMINIOS',
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    color: cs.onSurfaceVariant,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 1.5,
+                  ),
+                ),
+              ],
+            ),
+            SizedBox(height: spacing.lg),
+            ..._buildSkeletonCards(theme, 4).asMap().entries.map(
+                  (e) => e.value.animate().fadeIn(duration: 220.ms, delay: (60 * e.key).ms, curve: Curves.easeOut),
+                ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildErrorScaffold(BuildContext context, ThemeData theme, AppSpacing spacing, ColorScheme cs, AppSemanticColors sem) {
+    return Scaffold(
+      backgroundColor: cs.surface,
+      appBar: AppBar(
+        backgroundColor: cs.surfaceContainerLowest,
+        title: const Text('Error'),
+        elevation: 0,
+      ),
+      body: Center(
+        child: Padding(
+          padding: EdgeInsets.all(spacing.lg),
+          child: EmptyStateView(
+            title: 'Error al cargar',
+            description: 'No pudimos recuperar los resultados de esta sesión.',
+            iconData: Icons.error_outline_rounded,
+            buttonLabel: 'Reintentar',
+            onButtonPressed: () => context.go('/home'),
+          ),
         ),
       ),
     );

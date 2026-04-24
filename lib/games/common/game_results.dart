@@ -1,17 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'dart:convert';
-import 'package:get_it/get_it.dart';
 import '../../services/api_service.dart';
 
 class GameResults {
   static Future<void> sendSession({
+    required ApiService api,
     int? patientId,
     required String status,
     required String notes,
     DateTime? date,
   }) async {
-    final api = GetIt.I<ApiService>();
     final pid = patientId ?? api.currentPatientId;
     final d = date ?? DateTime.now();
     final isoDate =
@@ -50,14 +49,14 @@ class GameResults {
     );
   }
 
-  static void navigateToResultsFromApi(BuildContext context, {int? patientId}) {
-    final api = GetIt.I<ApiService>();
+  static void navigateToResultsFromApi(BuildContext context, {required ApiService api, int? patientId}) {
     final pid = patientId ?? api.currentPatientId;
     final future = api.getLatestResultsForPatient(pid);
     context.go('/results', extra: {'dataFuture': future});
   }
 
   static Future<void> sendGameResult({
+    required ApiService api,
     int? patientId,
     required String title,
     required int score,
@@ -67,6 +66,7 @@ class GameResults {
     int? age,
     DateTime? date,
   }) async {
+    final pid = patientId ?? api.currentPatientId;
     final payload = {
       'v': 1,
       'type': 'game_result',
@@ -79,11 +79,32 @@ class GameResults {
       'ts': DateTime.now().toIso8601String(),
     };
     final notes = jsonEncode(payload);
+
+    // 1. Create the session record
     await sendSession(
-      patientId: patientId,
+      api: api,
+      patientId: pid,
       status: 'completed',
       notes: notes,
       date: date,
     );
+
+    // 2. Also persist to the results table so data is queryable
+    try {
+      await api.submitGameResults(
+        patientId: pid,
+        gameName: gameKey,
+        results: {
+          'score': score,
+          'title': title,
+          'details': details,
+          'metrics': metrics,
+          if (age != null) 'age': age,
+        },
+      );
+    } catch (_) {
+      // If the results endpoint fails (e.g. offline), the session
+      // was already saved/enqueued above so we don't lose data.
+    }
   }
 }

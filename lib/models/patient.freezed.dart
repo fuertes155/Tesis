@@ -25,7 +25,7 @@ mixin _$Patient {
   String get name => throw _privateConstructorUsedError;
   int get age => throw _privateConstructorUsedError;
   @JsonKey(name: 'birth_date')
-  String? get birthDate => throw _privateConstructorUsedError;
+  DateTime? get birthDate => throw _privateConstructorUsedError;
   @JsonKey(name: 'document_id')
   String? get documentId => throw _privateConstructorUsedError;
   String? get phone => throw _privateConstructorUsedError;
@@ -33,7 +33,7 @@ mixin _$Patient {
   @JsonKey(name: 'doctor_id')
   int? get doctorId => throw _privateConstructorUsedError;
   @JsonKey(name: 'created_at')
-  String? get createdAt => throw _privateConstructorUsedError;
+  DateTime? get createdAt => throw _privateConstructorUsedError;
 
   /// Serializes this Patient to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
@@ -53,12 +53,12 @@ abstract class $PatientCopyWith<$Res> {
     int id,
     String name,
     int age,
-    @JsonKey(name: 'birth_date') String? birthDate,
+    @JsonKey(name: 'birth_date') DateTime? birthDate,
     @JsonKey(name: 'document_id') String? documentId,
     String? phone,
     String? diagnosis,
     @JsonKey(name: 'doctor_id') int? doctorId,
-    @JsonKey(name: 'created_at') String? createdAt,
+    @JsonKey(name: 'created_at') DateTime? createdAt,
   });
 }
 
@@ -104,7 +104,7 @@ class _$PatientCopyWithImpl<$Res, $Val extends Patient>
             birthDate: freezed == birthDate
                 ? _value.birthDate
                 : birthDate // ignore: cast_nullable_to_non_nullable
-                      as String?,
+                      as DateTime?,
             documentId: freezed == documentId
                 ? _value.documentId
                 : documentId // ignore: cast_nullable_to_non_nullable
@@ -124,7 +124,7 @@ class _$PatientCopyWithImpl<$Res, $Val extends Patient>
             createdAt: freezed == createdAt
                 ? _value.createdAt
                 : createdAt // ignore: cast_nullable_to_non_nullable
-                      as String?,
+                      as DateTime?,
           )
           as $Val,
     );
@@ -143,12 +143,12 @@ abstract class _$$PatientImplCopyWith<$Res> implements $PatientCopyWith<$Res> {
     int id,
     String name,
     int age,
-    @JsonKey(name: 'birth_date') String? birthDate,
+    @JsonKey(name: 'birth_date') DateTime? birthDate,
     @JsonKey(name: 'document_id') String? documentId,
     String? phone,
     String? diagnosis,
     @JsonKey(name: 'doctor_id') int? doctorId,
-    @JsonKey(name: 'created_at') String? createdAt,
+    @JsonKey(name: 'created_at') DateTime? createdAt,
   });
 }
 
@@ -193,7 +193,7 @@ class __$$PatientImplCopyWithImpl<$Res>
         birthDate: freezed == birthDate
             ? _value.birthDate
             : birthDate // ignore: cast_nullable_to_non_nullable
-                  as String?,
+                  as DateTime?,
         documentId: freezed == documentId
             ? _value.documentId
             : documentId // ignore: cast_nullable_to_non_nullable
@@ -213,7 +213,7 @@ class __$$PatientImplCopyWithImpl<$Res>
         createdAt: freezed == createdAt
             ? _value.createdAt
             : createdAt // ignore: cast_nullable_to_non_nullable
-                  as String?,
+                  as DateTime?,
       ),
     );
   }
@@ -245,7 +245,7 @@ class _$PatientImpl implements _Patient {
   final int age;
   @override
   @JsonKey(name: 'birth_date')
-  final String? birthDate;
+  final DateTime? birthDate;
   @override
   @JsonKey(name: 'document_id')
   final String? documentId;
@@ -258,7 +258,7 @@ class _$PatientImpl implements _Patient {
   final int? doctorId;
   @override
   @JsonKey(name: 'created_at')
-  final String? createdAt;
+  final DateTime? createdAt;
 
   @override
   String toString() {
@@ -320,12 +320,12 @@ abstract class _Patient implements Patient {
     required final int id,
     required final String name,
     required final int age,
-    @JsonKey(name: 'birth_date') final String? birthDate,
+    @JsonKey(name: 'birth_date') final DateTime? birthDate,
     @JsonKey(name: 'document_id') final String? documentId,
     final String? phone,
     final String? diagnosis,
     @JsonKey(name: 'doctor_id') final int? doctorId,
-    @JsonKey(name: 'created_at') final String? createdAt,
+    @JsonKey(name: 'created_at') final DateTime? createdAt,
   }) = _$PatientImpl;
 
   factory _Patient.fromJson(Map<String, dynamic> json) = _$PatientImpl.fromJson;
@@ -338,7 +338,7 @@ abstract class _Patient implements Patient {
   int get age;
   @override
   @JsonKey(name: 'birth_date')
-  String? get birthDate;
+  DateTime? get birthDate;
   @override
   @JsonKey(name: 'document_id')
   String? get documentId;
@@ -351,7 +351,7 @@ abstract class _Patient implements Patient {
   int? get doctorId;
   @override
   @JsonKey(name: 'created_at')
-  String? get createdAt;
+  DateTime? get createdAt;
 
   /// Create a copy of Patient
   /// with the given fields replaced by the non-null parameter values.

@@ -12,8 +12,8 @@ class User with _$User {
     @JsonKey(name: 'full_name') String? fullName,
     @JsonKey(name: 'is_active') @Default(true) bool isActive,
     @JsonKey(name: 'is_available') @Default(true) bool isAvailable,
-    @JsonKey(name: 'registration_date') String? registrationDate,
-    @JsonKey(name: 'created_at') String? createdAt,
+    @JsonKey(name: 'registration_date') DateTime? registrationDate,
+    @JsonKey(name: 'created_at') DateTime? createdAt,
   }) = _User;
 
   factory User.fromJson(Map<String, dynamic> json) => _$UserFromJson(json);

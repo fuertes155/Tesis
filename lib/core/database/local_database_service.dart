@@ -24,6 +24,7 @@ class LocalDatabaseService {
   final _sessionsStore = intMapStoreFactory.store('sessions');
   final _usersStore = intMapStoreFactory.store('users');
   final _metaStore = stringMapStoreFactory.store('metadata');
+  final _pendingStore = intMapStoreFactory.store('pending_actions');
 
   Future<void> init() async {
     if (kIsWeb) {
@@ -100,6 +101,25 @@ class LocalDatabaseService {
       await _sessionsStore.delete(txn);
       await _usersStore.delete(txn);
       await _metaStore.delete(txn);
+      await _pendingStore.delete(txn);
     });
+  }
+
+  // --- Pending Actions ---
+  Future<void> addPendingAction(String action, String entity, Map<String, dynamic> data) async {
+    await _pendingStore.add(_db, {
+      'action': action, // CREATE, UPDATE, DELETE
+      'entity': entity, // patients, sessions
+      'data': data,
+      'timestamp': DateTime.now().toIso8601String(),
+    });
+  }
+
+  Future<List<RecordSnapshot<int, Map<String, dynamic>>>> getPendingActions() async {
+    return await _pendingStore.find(_db, finder: Finder(sortOrders: [SortOrder('timestamp')]));
+  }
+
+  Future<void> deletePendingAction(int key) async {
+    await _pendingStore.record(key).delete(_db);
   }
 }

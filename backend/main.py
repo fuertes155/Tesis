@@ -1,9 +1,10 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.routers import users, patients, sessions
-from app.database import engine, Base, SessionLocal
+from app.database import engine, Base, SessionLocal, SQLALCHEMY_DATABASE_URL
 from app import models
 from app.security import get_password_hash
+from app.core.config import settings
 from sqlalchemy import text
 import time
 import logging
@@ -12,13 +13,24 @@ import logging
 Base.metadata.create_all(bind=engine)
 
 def _ensure_db_schema() -> None:
-    if not str(engine.url).startswith("sqlite"):
+    if not SQLALCHEMY_DATABASE_URL.startswith("sqlite"):
         return
     with engine.begin() as conn:
-        cols = {r[1] for r in conn.execute(text("PRAGMA table_info(sessions)")).fetchall()}
-        if "external_id" not in cols:
+        # sessions table
+        cols_s = {r[1] for r in conn.execute(text("PRAGMA table_info(sessions)")).fetchall()}
+        if "external_id" not in cols_s:
             conn.execute(text("ALTER TABLE sessions ADD COLUMN external_id TEXT"))
         conn.execute(text("CREATE UNIQUE INDEX IF NOT EXISTS ix_sessions_external_id ON sessions(external_id)"))
+
+        # users table
+        cols_u = {r[1] for r in conn.execute(text("PRAGMA table_info(users)")).fetchall()}
+        if "full_name" not in cols_u:
+            conn.execute(text("ALTER TABLE users ADD COLUMN full_name TEXT"))
+
+        # patients table
+        cols_p = {r[1] for r in conn.execute(text("PRAGMA table_info(patients)")).fetchall()}
+        if "user_id" not in cols_p:
+            conn.execute(text("ALTER TABLE patients ADD COLUMN user_id INTEGER"))
 
 _ensure_db_schema()
 
@@ -56,9 +68,9 @@ def _ensure_seed_users() -> None:
 _ensure_seed_users()
 
 app = FastAPI(
-    title="NeuroApp Backend",
+    title=settings.PROJECT_NAME,
     description="Backend API for Neuropsychological Evaluation App",
-    version="0.1.0"
+    version=settings.VERSION,
 )
 
 _logger = logging.getLogger("neuroapp")
@@ -98,14 +110,18 @@ app.add_middleware(
 )
 
 # Include Routers
-app.include_router(users.router)
-app.include_router(patients.router)
-app.include_router(sessions.router)
+app.include_router(users.router, prefix=settings.API_V1_STR)
+app.include_router(patients.router, prefix=settings.API_V1_STR)
+app.include_router(sessions.router, prefix=settings.API_V1_STR)
 
 @app.get("/")
 def read_root():
-    return {"message": "Welcome to NeuroApp API"}
+    return {"message": f"Welcome to {settings.PROJECT_NAME}"}
 
 @app.get("/health")
 def health_check():
     return {"status": "healthy"}
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8000)

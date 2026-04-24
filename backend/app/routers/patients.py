@@ -4,6 +4,7 @@ from typing import List
 from app import schemas, models
 from app.database import get_db
 from app.deps import require_roles
+from app.core.audit import log_action
 
 router = APIRouter(
     prefix="/patients",
@@ -31,6 +32,16 @@ def create_patient(
     db.add(db_patient)
     db.commit()
     db.refresh(db_patient)
+    
+    log_action(
+        db=db,
+        user_id=_user.id,
+        action="CREATE",
+        entity_type="Patient",
+        entity_id=db_patient.id,
+        new_value=patient.model_dump()
+    )
+    
     return db_patient
 
 @router.get("/{patient_id}", response_model=schemas.Patient)
@@ -53,9 +64,26 @@ def delete_patient(
     patient = db.query(models.Patient).filter(models.Patient.id == patient_id).first()
     if patient is None:
         raise HTTPException(status_code=404, detail="Patient not found")
+    
+    old_data = {
+        "id": patient.id,
+        "name": patient.name,
+        "document_id": patient.document_id
+    }
+    
     db.query(models.Session).filter(models.Session.patient_id == patient_id).delete(synchronize_session=False)
     db.delete(patient)
     db.commit()
+    
+    log_action(
+        db=db,
+        user_id=_user.id,
+        action="DELETE",
+        entity_type="Patient",
+        entity_id=patient_id,
+        old_value=old_data
+    )
+    
     return {"status": "deleted", "id": patient_id}
 
 @router.put("/{patient_id}/assign-doctor", response_model=schemas.Patient)
@@ -76,6 +104,16 @@ def assign_doctor(
     db_patient.doctor_id = doctor_id
     db.commit()
     db.refresh(db_patient)
+    
+    log_action(
+        db=db,
+        user_id=_user.id,
+        action="UPDATE",
+        entity_type="Patient",
+        entity_id=patient_id,
+        new_value={"doctor_id": doctor_id}
+    )
+    
     return db_patient
 
 @router.put("/{patient_id}", response_model=schemas.Patient)
@@ -89,10 +127,23 @@ def update_patient(
     if patient is None:
         raise HTTPException(status_code=404, detail="Patient not found")
 
+    old_data = {k: getattr(patient, k) for k in payload.model_dump(exclude_unset=True).keys()}
+    
     data = payload.model_dump(exclude_unset=True)
     for k, v in data.items():
         setattr(patient, k, v)
 
     db.commit()
     db.refresh(patient)
+    
+    log_action(
+        db=db,
+        user_id=_user.id,
+        action="UPDATE",
+        entity_type="Patient",
+        entity_id=patient_id,
+        old_value=old_data,
+        new_value=data
+    )
+    
     return patient

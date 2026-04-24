@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:intl/intl.dart';
 import 'recent_activity_card.dart';
 import 'recent_activity_skeleton.dart';
 import '../models/session.dart';
@@ -88,7 +89,7 @@ class HomeRecentActivitySection extends StatelessWidget {
         final color = isCompleted ? Colors.green : Colors.orange;
         final action =
             isCompleted ? 'Evaluación completada' : 'Sesión en progreso';
-        final time = date;
+        final time = DateFormat('dd/MM HH:mm').format(date);
         return RecentActivityCard(
               patientName: name,
               action: action,

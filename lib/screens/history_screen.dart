@@ -1,13 +1,18 @@
 import 'package:flutter/material.dart';
-import 'package:get_it/get_it.dart';
+import 'package:intl/intl.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_animate/flutter_animate.dart';
-import '../services/api_service.dart';
+import '../core/theme/app_theme.dart';
+import '../widgets/empty_state_view.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../providers/data_providers.dart';
+import '../models/session.dart';
+
 part 'history_screen_state.dart';
 
-class HistoryScreen extends StatefulWidget {
+class HistoryScreen extends ConsumerStatefulWidget {
   const HistoryScreen({super.key});
 
   @override
-  State<HistoryScreen> createState() => HistoryScreenState();
+  ConsumerState<HistoryScreen> createState() => HistoryScreenState();
 }

@@ -8,11 +8,11 @@ class Session with _$Session {
   const factory Session({
     required int id,
     @JsonKey(name: 'patient_id') required int patientId,
-    required String date,
+    required DateTime date,
     required String status,
     required String notes,
     @JsonKey(name: 'external_id') String? externalId,
-    @JsonKey(name: 'created_at') String? createdAt,
+    @JsonKey(name: 'created_at') DateTime? createdAt,
   }) = _Session;
 
   factory Session.fromJson(Map<String, dynamic> json) => _$SessionFromJson(json);
