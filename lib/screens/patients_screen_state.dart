@@ -3,6 +3,8 @@ part of 'patients_screen.dart';
 class PatientsScreenState extends ConsumerState<PatientsScreen> {
   String _searchQuery = '';
   String? _noticeBanner;
+  final GlobalKey<SliverAnimatedListState> _listKey = GlobalKey<SliverAnimatedListState>();
+  final List<Patient> _displayedPatients = [];
 
   @override
   void initState() {
@@ -51,7 +53,8 @@ class PatientsScreenState extends ConsumerState<PatientsScreen> {
           final filtered = patientsList
               .where((p) => SearchUtils.matches(p.name, _searchQuery))
               .toList();
-          return _buildCustomScroll(context, patients: filtered);
+          _updateDisplayedList(filtered);
+          return _buildCustomScroll(context, patients: _displayedPatients);
         },
       ),
     );
@@ -104,7 +107,6 @@ class PatientsScreenState extends ConsumerState<PatientsScreen> {
                 bottom: spacing.md,
               ),
               title: Row(
-                crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
                   Text(
                     'Pacientes',
@@ -229,7 +231,7 @@ class PatientsScreenState extends ConsumerState<PatientsScreen> {
                 delegate: SliverChildBuilderDelegate(
                   (_, i) => Padding(
                     padding: EdgeInsets.only(bottom: spacing.sm),
-                    child: _PatientCardSkeleton(),
+                    child: const PatientCardSkeleton(),
                   ),
                   childCount: 5,
                 ),
@@ -242,43 +244,13 @@ class PatientsScreenState extends ConsumerState<PatientsScreen> {
           else
             SliverPadding(
               padding: EdgeInsets.symmetric(horizontal: spacing.lg),
-              sliver: SliverList(
-                delegate: SliverChildBuilderDelegate(
-                  (context, index) {
-                    final patient = patients[index];
-                    final name = patient.name;
-                    final id = patient.id.toString();
-                    final age = patient.age.toString();
-                    final intId = patient.id;
-
-                    return Padding(
-                      padding: EdgeInsets.only(bottom: spacing.sm),
-                      child: _PatientCard(
-                        name: name,
-                        age: age,
-                        id: id,
-                        canDelete: canDelete,
-                        onTap: () async {
-                          final result = await context.push(
-                            '/patient_detail',
-                            extra: {'name': name, 'id': patient.id},
-                          );
-                          if (result == true) {
-                            ref.invalidate(patientsProvider);
-                            ref.invalidate(sessionsProvider);
-                          }
-                        },
-                        onDelete: canDelete
-                            ? () => _confirmDelete(
-                                context, name, id, intId, sem, cs)
-                            : null,
-                      ),
-                    ).animate()
-                        .fadeIn(delay: (index * 50).ms)
-                        .slideX(begin: 0.06);
-                  },
-                  childCount: patients.length,
-                ),
+              sliver: SliverAnimatedList(
+                key: _listKey,
+                initialItemCount: _displayedPatients.length,
+                itemBuilder: (context, index, animation) {
+                  final patient = _displayedPatients[index];
+                  return _buildAnimatedItem(patient, animation, canDelete, sem, cs, spacing);
+                },
               ),
             ),
 
@@ -350,6 +322,72 @@ class PatientsScreenState extends ConsumerState<PatientsScreen> {
         );
       }
     }
+  }
+
+  void _updateDisplayedList(List<Patient> newList) {
+    if (_displayedPatients.isEmpty && newList.isNotEmpty) {
+      _displayedPatients.addAll(newList);
+      return;
+    }
+
+    final oldList = List<Patient>.from(_displayedPatients);
+    final added = newList.where((n) => !oldList.any((o) => o.id == n.id)).toList();
+    final removed = oldList.where((o) => !newList.any((n) => n.id == o.id)).toList();
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+
+      for (var p in removed) {
+        final idx = _displayedPatients.indexWhere((x) => x.id == p.id);
+        if (idx != -1) {
+          final removedPatient = _displayedPatients.removeAt(idx);
+          _listKey.currentState?.removeItem(
+            idx,
+            (context, animation) => _buildAnimatedItem(removedPatient, animation, false, context.sem, Theme.of(context).colorScheme, context.spacing),
+            duration: const Duration(milliseconds: 400),
+          );
+        }
+      }
+
+      for (var p in added) {
+        _displayedPatients.add(p);
+        _listKey.currentState?.insertItem(_displayedPatients.length - 1, duration: const Duration(milliseconds: 400));
+      }
+    });
+  }
+
+  Widget _buildAnimatedItem(Patient patient, Animation<double> animation, bool canDelete, AppSemanticColors sem, ColorScheme cs, AppSpacing spacing) {
+    return SlideTransition(
+      position: animation.drive(
+        Tween<Offset>(begin: const Offset(1, 0), end: Offset.zero)
+            .chain(CurveTween(curve: Curves.easeOutCubic)),
+      ),
+      child: FadeTransition(
+        opacity: animation,
+        child: Padding(
+          padding: EdgeInsets.only(bottom: spacing.sm),
+          child: _PatientCard(
+            name: patient.name,
+            age: patient.age.toString(),
+            id: patient.id.toString(),
+            canDelete: canDelete,
+            onTap: () async {
+              final result = await context.push(
+                '/patient_detail',
+                extra: {'name': patient.name, 'id': patient.id},
+              );
+              if (result == true) {
+                ref.invalidate(patientsProvider);
+                ref.invalidate(sessionsProvider);
+              }
+            },
+            onDelete: canDelete
+                ? () => _confirmDelete(context, patient.name, patient.id.toString(), patient.id, sem, cs)
+                : null,
+          ),
+        ),
+      ),
+    );
   }
 }
 
@@ -469,9 +507,9 @@ class _PatientCard extends StatelessWidget {
                       const SizedBox(height: 3),
                       Row(
                         children: [
-                          _MiniTag(text: '$age años', color: cs.primary),
+                          Flexible(child: _MiniTag(text: '$age años', color: cs.primary)),
                           const SizedBox(width: 6),
-                          _MiniTag(text: 'ID: $id', color: cs.onSurfaceVariant),
+                          Flexible(child: _MiniTag(text: 'ID: $id', color: cs.onSurfaceVariant)),
                         ],
                       ),
                     ],

@@ -13,6 +13,7 @@ class Patient(Base):
     document_id = Column(String, nullable=True)
     phone = Column(String, nullable=True)
     diagnosis = Column(String, nullable=True)
+    email = Column(String, nullable=True)
     doctor_id = Column(Integer, ForeignKey("users.id"), nullable=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=True, unique=True)
     registration_date = Column(DateTime, default=lambda: datetime.now(timezone.utc))

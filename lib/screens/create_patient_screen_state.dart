@@ -6,6 +6,7 @@ class CreatePatientScreenState extends ConsumerState<CreatePatientScreen> {
   final _birthDateController = TextEditingController();
   final _docIdController = TextEditingController();
   final _phoneController = TextEditingController();
+  final _emailController = TextEditingController();
   final _diagnosisController = TextEditingController(text: 'Pendiente');
   bool _isLoading = false;
 
@@ -15,6 +16,7 @@ class CreatePatientScreenState extends ConsumerState<CreatePatientScreen> {
     _birthDateController.dispose();
     _docIdController.dispose();
     _phoneController.dispose();
+    _emailController.dispose();
     _diagnosisController.dispose();
     super.dispose();
   }
@@ -55,6 +57,7 @@ class CreatePatientScreenState extends ConsumerState<CreatePatientScreen> {
         'birth_date': _birthDateController.text,
         'document_id': _docIdController.text,
         'phone': _phoneController.text,
+        'email': _emailController.text,
         'diagnosis': 'Pendiente',
       });
       api.pushNotice('patient_created');
@@ -280,6 +283,17 @@ class CreatePatientScreenState extends ConsumerState<CreatePatientScreen> {
                             prefixIcon: Icon(Icons.phone_outlined),
                           ),
                         ).animate().fadeIn(delay: 400.ms),
+                        SizedBox(height: spacing.md),
+
+                        TextFormField(
+                          controller: _emailController,
+                          keyboardType: TextInputType.emailAddress,
+                          decoration: const InputDecoration(
+                            labelText: 'Correo Electrónico (Opcional)',
+                            hintText: 'ejemplo@correo.com',
+                            prefixIcon: Icon(Icons.email_outlined),
+                          ),
+                        ).animate().fadeIn(delay: 420.ms),
 
                         SizedBox(height: spacing.x2l),
 

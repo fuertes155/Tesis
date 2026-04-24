@@ -7,6 +7,10 @@ class UsersAdminScreenState extends ConsumerState<UsersAdminScreen> {
   String _patientQuery = '';
   String _doctorQuery = '';
   bool _showOnlyAvailableDoctors = true;
+  final GlobalKey<AnimatedListState> _doctorListKey = GlobalKey<AnimatedListState>();
+  final GlobalKey<AnimatedListState> _patientListKey = GlobalKey<AnimatedListState>();
+  final List<Map<String, dynamic>> _displayedDoctors = [];
+  final List<Map<String, dynamic>> _displayedPatientsAdmin = [];
 
   @override
   void initState() {
@@ -21,9 +25,19 @@ class UsersAdminScreenState extends ConsumerState<UsersAdminScreen> {
       final results = await Future.wait([api.getUsers(), api.getPatients()]);
       final users = results[0] as List<User>;
       final patients = results[1] as List<Patient>;
+      debugPrint("DEBUG: Fetched users from API: ${users.map((u) => '${u.username}=${u.role}').toList()}");
       setState(() {
         _users = users.map(_userToMap).toList();
         _patients = patients.map(_patientToMap).toList();
+        
+        final doctorsAll = _users.where((u) => u['role'] == 'doctor').toList();
+        final doctors = _showOnlyAvailableDoctors
+            ? doctorsAll.where((d) => (d['is_available'] ?? true) == true).toList()
+            : doctorsAll;
+        
+        _updateDisplayedDoctors(doctors);
+        _updateDisplayedPatientsAdmin(_patients);
+        
         _isLoading = false;
       });
     } catch (e) {
@@ -71,16 +85,27 @@ class UsersAdminScreenState extends ConsumerState<UsersAdminScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Asignar Médico'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: doctors
-              .map(
-                (d) => ListTile(
-                  title: Text(d['username']),
-                  onTap: () => Navigator.pop(ctx, d['id']),
-                ),
-              )
-              .toList(),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              maxHeight: MediaQuery.of(context).size.height * 0.4,
+            ),
+            child: ListView(
+              shrinkWrap: true,
+              children: doctors
+                  .map(
+                    (d) => ListTile(
+                      title: Text(
+                        d['username'],
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      onTap: () => Navigator.pop(ctx, d['id']),
+                    ),
+                  )
+                  .toList(),
+            ),
+          ),
         ),
       ),
     );
@@ -234,6 +259,7 @@ class UsersAdminScreenState extends ConsumerState<UsersAdminScreen> {
                     return;
                   }
                   try {
+                    debugPrint("DEBUG: Sending role: $selectedRole");
                     await api.adminCreateUser(
                       username: emailController.text,
                       password: passController.text,
@@ -352,7 +378,7 @@ class UsersAdminScreenState extends ConsumerState<UsersAdminScreen> {
         ],
       ),
       body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
+          ? _buildAdminSkeleton(context)
           : LayoutBuilder(
               builder: (context, constraints) {
                 final w = constraints.maxWidth;
@@ -584,6 +610,28 @@ class UsersAdminScreenState extends ConsumerState<UsersAdminScreen> {
     );
   }
 
+  Widget _buildAdminSkeleton(BuildContext context) {
+    final s = context.spacing;
+    final horizontal = MediaQuery.of(context).size.width < 720 ? s.md : s.x2l + s.md;
+    return SingleChildScrollView(
+      padding: EdgeInsets.symmetric(horizontal: horizontal, vertical: s.x2l),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const SkeletonLoader(width: 300, height: 32),
+          const SizedBox(height: 12),
+          const SkeletonLoader(width: 500, height: 16),
+          const SizedBox(height: 32),
+          const DashboardGridSkeleton(),
+          const SizedBox(height: 48),
+          const SkeletonLoader(width: 150, height: 24),
+          const SizedBox(height: 16),
+          const ProfessionalTableSkeleton(),
+        ],
+      ),
+    );
+  }
+
   Widget _buildSectionHeader(String title, IconData icon) {
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
@@ -646,7 +694,7 @@ class UsersAdminScreenState extends ConsumerState<UsersAdminScreen> {
                           Expanded(flex: 3, child: _headerCell('CONTACTO')),
                           SizedBox(width: 160, child: _headerCell('REGISTRO')),
                           SizedBox(width: 140, child: _headerCell('ESTADO')),
-                          SizedBox(width: 120, child: _headerCell('ACCIONES')),
+                          SizedBox(width: 160, child: _headerCell('ACCIONES')),
                         ],
                       ),
                     ),
@@ -654,23 +702,41 @@ class UsersAdminScreenState extends ConsumerState<UsersAdminScreen> {
                     if (items.isEmpty)
                       _buildEmptyState()
                     else
-                      Column(
-                        children: [
-                          for (
-                            int index = 0;
-                            index < items.length;
-                            index++
-                          ) ...[
-                            _buildProfessionalRow(
-                              items[index],
-                              tableType,
-                              doctorNamesById: doctorNamesById,
-                              patientsPerDoctor: patientsPerDoctor,
-                            ),
-                            if (index != items.length - 1)
-                              Divider(height: 1, color: cs.outlineVariant),
-                          ],
-                        ],
+                      Builder(
+                        builder: (context) {
+                          if (tableType == 'doctor') {
+                            return AnimatedList(
+                              key: _doctorListKey,
+                              initialItemCount: _displayedDoctors.length,
+                              shrinkWrap: true,
+                              physics: const NeverScrollableScrollPhysics(),
+                              itemBuilder: (context, index, animation) {
+                                return _buildAnimatedRow(_displayedDoctors[index], animation, 'doctor');
+                              },
+                            );
+                          } else if (tableType == 'patient') {
+                            return AnimatedList(
+                              key: _patientListKey,
+                              initialItemCount: _displayedPatientsAdmin.length,
+                              shrinkWrap: true,
+                              physics: const NeverScrollableScrollPhysics(),
+                              itemBuilder: (context, index, animation) {
+                                return _buildAnimatedRow(_displayedPatientsAdmin[index], animation, 'patient');
+                              },
+                            );
+                          } else {
+                            // Admins static for now
+                            return Column(
+                              children: [
+                                for (int index = 0; index < items.length; index++) ...[
+                                  _buildProfessionalRow(items[index], tableType),
+                                  if (index != items.length - 1)
+                                    Divider(height: 1, color: cs.outlineVariant),
+                                ],
+                              ],
+                            );
+                          }
+                        },
                       ),
                   ],
                 ),
@@ -706,7 +772,9 @@ class UsersAdminScreenState extends ConsumerState<UsersAdminScreen> {
     final sem = context.sem;
     final bool isStaff = tableType == 'admin' || tableType == 'doctor';
     final name = isStaff
-        ? (item['username'] ?? 'Sin nombre')
+        ? (item['full_name'] != null && item['full_name'].toString().isNotEmpty
+            ? item['full_name']
+            : (item['username'] ?? 'Sin nombre'))
         : (item['name'] ?? 'Sin nombre');
     final id = item['id'].toString();
     final email = isStaff ? item['username'] : (item['phone'] ?? 'N/A');
@@ -911,7 +979,7 @@ class UsersAdminScreenState extends ConsumerState<UsersAdminScreen> {
           ),
           // ACTIONS
           SizedBox(
-            width: 120,
+            width: 160,
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -953,12 +1021,176 @@ class UsersAdminScreenState extends ConsumerState<UsersAdminScreen> {
                   padding: EdgeInsets.zero,
                   constraints: const BoxConstraints(),
                 ),
+                const SizedBox(width: 4),
+                IconButton(
+                  icon: Icon(
+                    Icons.delete_outline_rounded,
+                    size: 20,
+                    color: sem.danger,
+                  ),
+                  onPressed: () => _deleteItem(item, tableType),
+                  tooltip: 'Eliminar',
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                ),
               ],
             ),
           ),
         ],
       ),
     );
+  }
+
+  Future<void> _deleteItem(dynamic item, String tableType) async {
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+    final sem = context.sem;
+    final r = context.radii;
+
+    final bool isStaff = tableType == 'admin' || tableType == 'doctor';
+    final entityName = isStaff
+        ? (item['full_name'] != null && item['full_name'].toString().isNotEmpty
+            ? item['full_name']
+            : item['username'] ?? 'este usuario')
+        : (item['name'] ?? 'este paciente');
+
+    final entityLabel = tableType == 'doctor'
+        ? 'médico'
+        : tableType == 'admin'
+            ? 'administrador'
+            : 'paciente';
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: r.radiusMd),
+        icon: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: sem.danger.withValues(alpha: 0.1),
+            shape: BoxShape.circle,
+          ),
+          child: Icon(
+            Icons.warning_amber_rounded,
+            color: sem.danger,
+            size: 36,
+          ),
+        ),
+        title: Text(
+          '¿Eliminar $entityLabel?',
+          style: const TextStyle(fontWeight: FontWeight.w800),
+        ),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              RichText(
+                textAlign: TextAlign.center,
+                text: TextSpan(
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: cs.onSurfaceVariant,
+                    height: 1.5,
+                  ),
+                  children: [
+                    const TextSpan(text: 'Estás a punto de eliminar a '),
+                    TextSpan(
+                      text: entityName.toString(),
+                      style: TextStyle(
+                        fontWeight: FontWeight.w800,
+                        color: cs.onSurface,
+                      ),
+                    ),
+                    const TextSpan(text: '. '),
+                    if (isStaff)
+                      const TextSpan(
+                        text: 'Esto también eliminará permanentemente su perfil de acceso.',
+                      )
+                    else
+                      const TextSpan(
+                        text: 'Esto también eliminará todas sus sesiones y resultados asociados.',
+                      ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 20),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: sem.danger.withValues(alpha: 0.05),
+                  borderRadius: r.radiusSm,
+                  border: Border.all(color: sem.danger.withValues(alpha: 0.1)),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.info_outline_rounded, color: sem.danger, size: 16),
+                    const SizedBox(width: 8),
+                    const Expanded(
+                      child: Text(
+                        'Esta acción no se puede deshacer.',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.red,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            style: FilledButton.styleFrom(
+              backgroundColor: sem.danger,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: r.radiusSm),
+            ),
+            child: const Text('Sí, eliminar'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    try {
+      final api = await ref.read(apiServiceProvider.future);
+      final id = int.parse(item['id'].toString());
+
+      if (tableType == 'patient') {
+        await api.deletePatient(id);
+      } else {
+        await api.deleteUser(id);
+      }
+
+      ref.invalidate(patientsProvider);
+      ref.invalidate(sessionsProvider);
+      ref.invalidate(currentUserProvider);
+      await _fetchData();
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('$entityLabel eliminado correctamente'.replaceRange(0, 1, entityLabel[0].toUpperCase())),
+          backgroundColor: sem.success,
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error al eliminar: $e'),
+          backgroundColor: sem.danger,
+        ),
+      );
+    }
   }
 
   Future<void> _editItem(dynamic item, String tableType) async {
@@ -976,6 +1208,9 @@ class UsersAdminScreenState extends ConsumerState<UsersAdminScreen> {
       );
       final diagnosisCtrl = TextEditingController(
         text: (item['diagnosis'] ?? '').toString(),
+      );
+      final emailCtrl = TextEditingController(
+        text: (item['email'] ?? '').toString(),
       );
 
       if (!mounted) return;
@@ -1010,6 +1245,12 @@ class UsersAdminScreenState extends ConsumerState<UsersAdminScreen> {
                     controller: diagnosisCtrl,
                     textCapitalization: TextCapitalization.sentences,
                     decoration: const InputDecoration(labelText: 'Diagnóstico'),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: emailCtrl,
+                    decoration: const InputDecoration(labelText: 'Correo Electrónico (Opcional)'),
+                    keyboardType: TextInputType.emailAddress,
                   ),
                 ],
               ),
@@ -1047,6 +1288,7 @@ class UsersAdminScreenState extends ConsumerState<UsersAdminScreen> {
         'diagnosis': diagnosisCtrl.text.trim().isEmpty
             ? null
             : diagnosisCtrl.text.trim(),
+        'email': emailCtrl.text.trim().isEmpty ? null : emailCtrl.text.trim(),
       });
       ref.invalidate(patientsProvider);
       ref.invalidate(sessionsProvider);
@@ -1056,6 +1298,9 @@ class UsersAdminScreenState extends ConsumerState<UsersAdminScreen> {
 
     final usernameCtrl = TextEditingController(
       text: (item['username'] ?? '').toString(),
+    );
+    final fullNameCtrl = TextEditingController(
+      text: (item['full_name'] ?? '').toString(),
     );
     bool isActive = (item['is_active'] ?? true) == true;
     bool isAvailable = (item['is_available'] ?? true) == true;
@@ -1078,10 +1323,19 @@ class UsersAdminScreenState extends ConsumerState<UsersAdminScreen> {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     TextField(
-                      controller: usernameCtrl,
+                      controller: fullNameCtrl,
                       textCapitalization: TextCapitalization.words,
                       decoration: const InputDecoration(
+                        labelText: 'Nombre Completo',
+                        prefixIcon: Icon(Icons.person_outline_rounded),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: usernameCtrl,
+                      decoration: const InputDecoration(
                         labelText: 'Correo/Usuario',
+                        prefixIcon: Icon(Icons.email_outlined),
                       ),
                     ),
                     const SizedBox(height: 12),
@@ -1130,7 +1384,9 @@ class UsersAdminScreenState extends ConsumerState<UsersAdminScreen> {
     }
 
     final userId = int.parse(item['id'].toString());
+    final fullName = fullNameCtrl.text.trim();
     final payload = <String, dynamic>{'username': username};
+    if (fullName.isNotEmpty) payload['full_name'] = fullName;
     if (tableType == 'admin') payload['is_active'] = isActive;
     if (tableType == 'doctor') payload['is_available'] = isAvailable;
 
@@ -1164,6 +1420,7 @@ class UsersAdminScreenState extends ConsumerState<UsersAdminScreen> {
     return {
       'id': u.id,
       'username': u.username,
+      'full_name': u.fullName,
       'role': u.role,
       'is_active': u.isActive,
       'is_available': u.isAvailable,
@@ -1182,5 +1439,66 @@ class UsersAdminScreenState extends ConsumerState<UsersAdminScreen> {
       'created_at': p.createdAt,
       'registration_date': p.createdAt, // For consistency in table
     };
+  }
+
+  void _updateDisplayedDoctors(List<Map<String, dynamic>> newList) {
+    _syncList(_displayedDoctors, newList, _doctorListKey);
+  }
+
+  void _updateDisplayedPatientsAdmin(List<Map<String, dynamic>> newList) {
+    _syncList(_displayedPatientsAdmin, newList, _patientListKey);
+  }
+
+  void _syncList(List<Map<String, dynamic>> current, List<Map<String, dynamic>> newList, GlobalKey<AnimatedListState> key) {
+    if (current.isEmpty && newList.isNotEmpty) {
+      current.addAll(newList);
+      return;
+    }
+    
+    final oldList = List<Map<String, dynamic>>.from(current);
+    final added = newList.where((n) => !oldList.any((o) => o['id'] == n['id'])).toList();
+    final removed = oldList.where((o) => !newList.any((n) => n['id'] == o['id'])).toList();
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      for (var item in removed) {
+        final idx = current.indexWhere((x) => x['id'] == item['id']);
+        if (idx != -1) {
+          final removedItem = current.removeAt(idx);
+          key.currentState?.removeItem(
+            idx,
+            (context, animation) => _buildAnimatedRow(removedItem, animation, 'removed'),
+            duration: const Duration(milliseconds: 400),
+          );
+        }
+      }
+      for (var item in added) {
+        current.add(item);
+        key.currentState?.insertItem(current.length - 1, duration: const Duration(milliseconds: 400));
+      }
+    });
+  }
+
+  Widget _buildAnimatedRow(Map<String, dynamic> item, Animation<double> animation, String type) {
+    String tableType = 'patient';
+    if (item.containsKey('role')) {
+      tableType = item['role'] == 'gestor' ? 'admin' : 'doctor';
+    }
+
+    return SlideTransition(
+      position: animation.drive(
+        Tween<Offset>(begin: const Offset(0.2, 0), end: Offset.zero)
+            .chain(CurveTween(curve: Curves.easeOutCubic)),
+      ),
+      child: FadeTransition(
+        opacity: animation,
+        child: Column(
+          children: [
+            _buildProfessionalRow(item, tableType),
+            Divider(height: 1, color: Theme.of(context).colorScheme.outlineVariant),
+          ],
+        ),
+      ),
+    );
   }
 }

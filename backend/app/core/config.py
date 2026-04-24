@@ -1,4 +1,10 @@
+import os
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+# Get the directory of the current file (config.py)
+# backend/app/core/config.py -> backend/
+ROOT_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+ENV_FILE = os.path.join(ROOT_DIR, ".env")
 
 class Settings(BaseSettings):
     PROJECT_NAME: str = "NeuroApp API"
@@ -11,6 +17,6 @@ class Settings(BaseSettings):
     
     DATABASE_URL: str = "sqlite:///./sql_app.db"
     
-    model_config = SettingsConfigDict(env_file=".env")
+    model_config = SettingsConfigDict(env_file=ENV_FILE)
 
 settings = Settings()

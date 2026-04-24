@@ -532,11 +532,14 @@ class _KpiRow extends StatelessWidget {
                   ),
                 ),
                 SizedBox(height: spacing.md),
-                Text(
-                  isAvailable ? 'Disponible' : 'No disponible',
-                  style: theme.textTheme.headlineSmall?.copyWith(
-                    fontWeight: FontWeight.w900,
-                    color: isAvailable ? sem.success : sem.danger,
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text(
+                    isAvailable ? 'Disponible' : 'No disponible',
+                    style: theme.textTheme.headlineSmall?.copyWith(
+                      fontWeight: FontWeight.w900,
+                      color: isAvailable ? sem.success : sem.danger,
+                    ),
                   ),
                 ),
                 Text(
@@ -765,26 +768,12 @@ class _ShimmerDoctorKpi extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final spacing = context.spacing;
-    final r = context.radii;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final shimmerColor = isDark ? const Color(0xFF0F1F38) : const Color(0xFFE2EFF8);
-
     return Row(
-      children: List.generate(2, (i) {
-        return Expanded(
-          child: Container(
-            height: 110,
-            margin: EdgeInsets.only(
-              left: i == 0 ? 0 : spacing.md / 2,
-              right: i == 1 ? 0 : spacing.md / 2,
-            ),
-            decoration: BoxDecoration(
-              color: shimmerColor,
-              borderRadius: r.radiusLg,
-            ),
-          ),
-        );
-      }),
+      children: [
+        Expanded(child: SkeletonLoader(width: double.infinity, height: 110, borderRadius: context.radii.lg)),
+        SizedBox(width: spacing.md),
+        Expanded(child: SkeletonLoader(width: double.infinity, height: 110, borderRadius: context.radii.lg)),
+      ],
     );
   }
 }
@@ -792,16 +781,6 @@ class _ShimmerDoctorKpi extends StatelessWidget {
 class _ShimmerPatientCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    final r = context.radii;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final shimmerColor = isDark ? const Color(0xFF0F1F38) : const Color(0xFFE2EFF8);
-
-    return Container(
-      height: 100,
-      decoration: BoxDecoration(
-        color: shimmerColor,
-        borderRadius: r.radiusLg,
-      ),
-    );
+    return const PatientCardSkeleton();
   }
 }

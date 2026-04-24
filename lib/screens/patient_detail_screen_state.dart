@@ -434,10 +434,12 @@ class _PatientDetailState extends ConsumerState<PatientDetailScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Eliminar paciente'),
-        content: Text(
-          count == null
-              ? '¿Seguro que deseas eliminar a "$_currentPatientName"? Esta acción es permanente.'
-              : 'Vas a eliminar a "$_currentPatientName" y $count sesión(es) asociada(s). Esta acción es permanente.',
+        content: SingleChildScrollView(
+          child: Text(
+            count == null
+                ? '¿Seguro que deseas eliminar a "$_currentPatientName"? Esta acción es permanente.'
+                : 'Vas a eliminar a "$_currentPatientName" y $count sesión(es) asociada(s). Esta acción es permanente.',
+          ),
         ),
         actions: [
           TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: const Text('CANCELAR')),
@@ -624,13 +626,18 @@ class _InfoRow extends StatelessWidget {
           child: Text(
             label,
             style: theme.textTheme.bodyMedium?.copyWith(color: cs.onSurfaceVariant),
+            overflow: TextOverflow.ellipsis,
           ),
         ),
-        Text(
-          value,
-          style: theme.textTheme.bodyMedium?.copyWith(
-            fontWeight: FontWeight.w700,
-            color: valueColor ?? cs.onSurface,
+        const SizedBox(width: 8),
+        Flexible(
+          child: Text(
+            value,
+            style: theme.textTheme.bodyMedium?.copyWith(
+              fontWeight: FontWeight.w700,
+              color: valueColor ?? cs.onSurface,
+            ),
+            textAlign: TextAlign.right,
           ),
         ),
       ],

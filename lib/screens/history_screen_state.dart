@@ -415,17 +415,6 @@ class _SessionCard extends StatelessWidget {
 class _SessionSkeleton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final c = isDark ? const Color(0xFF0F1F38) : const Color(0xFFE2EFF8);
-    return Container(
-      height: 80,
-      decoration: BoxDecoration(
-        color: c,
-        borderRadius: BorderRadius.circular(16),
-      ),
-    ).animate(onPlay: (c) => c.repeat()).shimmer(
-          duration: 1200.ms,
-          color: isDark ? const Color(0xFF1A3050) : const Color(0xFFEFF8FF),
-        );
+    return const SessionCardSkeleton();
   }
 }

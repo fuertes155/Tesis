@@ -1,9 +1,19 @@
+import os
 from sqlalchemy import create_engine, event
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 from app.core.config import settings
 
-SQLALCHEMY_DATABASE_URL = settings.DATABASE_URL
+# Calculate absolute path for SQLite
+db_url = settings.DATABASE_URL
+if db_url.startswith("sqlite:///./"):
+    # backend/app/database.py -> backend/
+    base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    db_name = db_url.replace("sqlite:///./", "")
+    db_path = os.path.join(base_dir, db_name)
+    db_url = f"sqlite:///{db_path}"
+
+SQLALCHEMY_DATABASE_URL = db_url
 
 engine = create_engine(
     SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False}

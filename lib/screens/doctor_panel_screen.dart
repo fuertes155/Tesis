@@ -12,6 +12,7 @@ import '../widgets/status_badge.dart';
 import '../widgets/empty_state_view.dart';
 import '../core/utils/search_utils.dart';
 import '../providers/api_providers.dart';
+import '../widgets/skeleton_loader.dart';
 
 part 'doctor_panel_screen_state.dart';
 

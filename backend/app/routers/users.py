@@ -17,13 +17,7 @@ router = APIRouter(
 )
 
 def _is_strong_password(p: str) -> bool:
-    return (
-        len(p) >= 8
-        and re.search(r"[A-Z]", p) is not None
-        and re.search(r"[a-z]", p) is not None
-        and re.search(r"\d", p) is not None
-        and re.search(r"[^A-Za-z0-9]", p) is not None
-    )
+    return len(p) >= 6
 
 
 def _get_user_by_username_ci(db: Session, username: str) -> models.User | None:
@@ -37,19 +31,28 @@ def _get_user_by_username_ci(db: Session, username: str) -> models.User | None:
 
 def _create_role_profile(db: Session, user: models.User) -> None:
     """Create the role-specific profile (Doctor, Administrator, or Patient) for a user."""
-    if user.role == "doctor":
-        db.add(models.Doctor(user_id=user.id))
-    elif user.role == "gestor":
-        db.add(models.Administrator(user_id=user.id))
-    elif user.role == "user":
-        db.add(models.Patient(
-            user_id=user.id,
-            name=user.full_name or user.username,
-            age=0,
-        ))
+    role = user.role.strip().lower()
+    if role == "doctor":
+        # Check if already exists to avoid unique constraint errors
+        existing = db.query(models.Doctor).filter(models.Doctor.user_id == user.id).first()
+        if not existing:
+            db.add(models.Doctor(user_id=user.id))
+    elif role == "gestor":
+        existing = db.query(models.Administrator).filter(models.Administrator.user_id == user.id).first()
+        if not existing:
+            db.add(models.Administrator(user_id=user.id))
+    elif role == "user":
+        existing = db.query(models.Patient).filter(models.Patient.user_id == user.id).first()
+        if not existing:
+            db.add(models.Patient(
+                user_id=user.id,
+                name=user.full_name or user.username,
+                age=0,
+            ))
     try:
         db.commit()
-    except Exception:
+    except Exception as e:
+        print(f"ERROR: Failed to create role profile: {e}")
         db.rollback()
 
 
@@ -78,9 +81,18 @@ def auth_login(payload: schemas.UserLogin, db: Session = Depends(get_db)):
     normalized = payload.username.strip().lower()
     user = _get_user_by_username_ci(db, normalized)
     if not user:
-        raise HTTPException(status_code=404, detail="Usuario no registrado")
-    if not verify_password(payload.password, user.hashed_password):
-        raise HTTPException(status_code=400, detail="Contraseña incorrecta")
+        raise HTTPException(status_code=401, detail="Usuario o contraseña incorrectos")
+    try:
+        valid_password = verify_password(payload.password, user.hashed_password)
+    except Exception as e:
+        print(f"ERROR: Password verification failed: {e}")
+        valid_password = False
+
+    if not valid_password:
+        raise HTTPException(status_code=401, detail="Usuario o contraseña incorrectos")
+    
+    if not user.is_active:
+        raise HTTPException(status_code=403, detail="Cuenta de usuario inactiva. Contacte al administrador.")
 
     token = create_access_token(subject=user.username, role=user.role)
     return schemas.Token(access_token=token, user=user)
@@ -148,6 +160,7 @@ def register_user(
             detail="Email ya registrado",
         )
     hashed_password = get_password_hash(user.password)
+    print(f"DEBUG: Registering user with role: {user.role}", flush=True)
     db_user = models.User(
         username=normalized,
         hashed_password=hashed_password,
@@ -288,6 +301,13 @@ def update_user(
     if "full_name" in data and data["full_name"] is not None:
         db_user.full_name = data["full_name"]
 
+    if "role" in data and data["role"] is not None:
+        new_role = data["role"].strip().lower()
+        if new_role != db_user.role:
+            db_user.role = new_role
+            # Ensure the new profile is created if it doesn't exist
+            _create_role_profile(db, db_user)
+
     if "is_active" in data and data["is_active"] is not None:
         db_user.is_active = bool(data["is_active"])
 
@@ -297,3 +317,63 @@ def update_user(
     db.commit()
     db.refresh(db_user)
     return db_user
+
+
+@router.delete("/{user_id}")
+def delete_user(
+    user_id: int,
+    db: Session = Depends(get_db),
+    _admin: models.User = Depends(require_roles("gestor")),
+):
+    """Admin-only: permanently delete a user and their role profile."""
+    if _admin.id == user_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="No puedes eliminarte a ti mismo",
+        )
+
+    db_user = db.query(models.User).filter(models.User.id == user_id).first()
+    if not db_user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    old_data = {
+        "id": db_user.id,
+        "username": db_user.username,
+        "role": db_user.role,
+    }
+
+    # Remove role-specific profiles
+    db.query(models.Doctor).filter(models.Doctor.user_id == user_id).delete(
+        synchronize_session=False
+    )
+    db.query(models.Administrator).filter(
+        models.Administrator.user_id == user_id
+    ).delete(synchronize_session=False)
+
+    # Remove sessions tied to patients owned by this user, then the patients
+    owned_patients = (
+        db.query(models.Patient)
+        .filter(models.Patient.user_id == user_id)
+        .all()
+    )
+    for p in owned_patients:
+        db.query(models.Session).filter(
+            models.Session.patient_id == p.id
+        ).delete(synchronize_session=False)
+    db.query(models.Patient).filter(
+        models.Patient.user_id == user_id
+    ).delete(synchronize_session=False)
+
+    db.delete(db_user)
+    db.commit()
+
+    log_action(
+        db=db,
+        user_id=_admin.id,
+        action="DELETE",
+        entity_type="User",
+        entity_id=user_id,
+        old_value=old_data,
+    )
+
+    return {"status": "deleted", "id": user_id}

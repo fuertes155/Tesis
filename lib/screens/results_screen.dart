@@ -153,20 +153,22 @@ class ResultsScreen extends ConsumerWidget {
                     ),
                   SizedBox(height: spacing.xl),
                   if (isHighScore)
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(Icons.emoji_events_rounded, color: sem.success, size: 20),
-                        const SizedBox(width: 6),
-                        Text(
-                          'RENDIMIENTO SOBRESALIENTE',
-                          style: theme.textTheme.labelSmall?.copyWith(
-                            color: sem.success,
-                            fontWeight: FontWeight.w900,
-                            letterSpacing: 1.5,
+                    FittedBox(
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.emoji_events_rounded, color: sem.success, size: 20),
+                          const SizedBox(width: 6),
+                          Text(
+                            'RENDIMIENTO SOBRESALIENTE',
+                            style: theme.textTheme.labelSmall?.copyWith(
+                              color: sem.success,
+                              fontWeight: FontWeight.w900,
+                              letterSpacing: 1.5,
+                            ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     )
                   else
                     Text(
@@ -194,12 +196,15 @@ class ResultsScreen extends ConsumerWidget {
               children: [
                 Icon(Icons.analytics_outlined, color: cs.primary, size: 20),
                 SizedBox(width: spacing.sm),
-                Text(
-                  'DETALLE POR DOMINIOS',
-                  style: theme.textTheme.labelSmall?.copyWith(
-                    color: cs.onSurfaceVariant,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: 1.5,
+                Expanded(
+                  child: Text(
+                    'DETALLE POR DOMINIOS',
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      color: cs.onSurfaceVariant,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 1.5,
+                    ),
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
               ],

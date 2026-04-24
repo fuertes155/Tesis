@@ -183,8 +183,14 @@ class ApiService {
       await flushPendingSessions();
       return authMap;
     } on dio.DioException catch (e) {
+      final detail = e.response?.data?['detail'];
+      if (detail != null) throw Exception(detail);
+      
       if (e.response?.statusCode == 401) {
         throw Exception('Credenciales inválidas');
+      }
+      if (e.response?.statusCode == 404) {
+        throw Exception('Usuario no registrado');
       }
       throw Exception('Error al iniciar sesión: ${e.message}');
     }
@@ -227,6 +233,8 @@ class ApiService {
       final response = await _dio.post('/patients/', data: patientData);
       return Patient.fromJson(response.data);
     } on dio.DioException catch (e) {
+      final detail = e.response?.data?['detail'];
+      if (detail != null) throw Exception(detail);
       if (!skipOffline && _localDb != null) {
         await _localDb.addPendingAction('CREATE', 'patients', patientData);
         // Return a mock patient or throw a specific 'queued' exception
@@ -537,6 +545,14 @@ class ApiService {
     }
   }
 
+  Future<void> deleteUser(int userId) async {
+    try {
+      await _dio.delete('/users/$userId');
+    } on dio.DioException catch (e) {
+      throw Exception('Error al eliminar usuario: ${e.message}');
+    }
+  }
+
   Future<Map<String, dynamic>> adminCreateUser({
     required String username,
     required String password,
@@ -555,6 +571,8 @@ class ApiService {
       );
       return response.data;
     } on dio.DioException catch (e) {
+      final detail = e.response?.data?['detail'];
+      if (detail != null) throw Exception(detail);
       throw Exception('Error al crear usuario: ${e.message}');
     }
   }

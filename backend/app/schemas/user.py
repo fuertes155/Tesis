@@ -2,6 +2,11 @@ from pydantic import BaseModel, field_validator
 from typing import Optional
 from datetime import datetime
 
+def _title_case(name: str) -> str:
+    """Capitalize the first letter of each word in a name."""
+    return " ".join(w.capitalize() for w in name.split())
+
+
 class UserBase(BaseModel):
     username: str
     role: str = "doctor"
@@ -12,8 +17,23 @@ class UserBase(BaseModel):
     def _normalize_username(cls, v: str) -> str:
         return v.strip().lower()
 
+    @field_validator("full_name")
+    @classmethod
+    def _capitalize_full_name(cls, v: Optional[str]) -> Optional[str]:
+        if v is None:
+            return None
+        stripped = v.strip()
+        if not stripped:
+            return None
+        return _title_case(stripped)
+
 class UserCreate(UserBase):
     password: str
+
+    @field_validator("role")
+    @classmethod
+    def _normalize_role(cls, v: str) -> str:
+        return v.strip().lower()
 
 class UserLogin(BaseModel):
     username: str
@@ -37,6 +57,7 @@ class User(UserBase):
 class UserUpdate(BaseModel):
     username: Optional[str] = None
     full_name: Optional[str] = None
+    role: Optional[str] = None
     is_active: Optional[bool] = None
     is_available: Optional[bool] = None
 
@@ -46,6 +67,16 @@ class UserUpdate(BaseModel):
         if v is None:
             return None
         return v.strip().lower()
+
+    @field_validator("full_name")
+    @classmethod
+    def _capitalize_update_full_name(cls, v: Optional[str]) -> Optional[str]:
+        if v is None:
+            return None
+        stripped = v.strip()
+        if not stripped:
+            return None
+        return _title_case(stripped)
 
 class Token(BaseModel):
     access_token: str

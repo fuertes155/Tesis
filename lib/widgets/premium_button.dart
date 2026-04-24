@@ -93,6 +93,11 @@ class _PremiumButtonState extends State<PremiumButton>
               )
             : glass.accentGradient);
 
+    final shadowColor = cs.primary.withValues(alpha: _pressed ? 0.35 : 0.22);
+    final shadowBlur = _pressed ? 12.0 : 20.0;
+    final shadowOffset = _pressed ? const Offset(0, 4) : const Offset(0, 8);
+    final shadowSpread = _pressed ? -2.0 : -4.0;
+
     return GestureDetector(
       onTapDown: _onTapDown,
       onTapUp: _onTapUp,
@@ -105,7 +110,7 @@ class _PremiumButtonState extends State<PremiumButton>
           child: child,
         ),
         child: AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
+          duration: const Duration(milliseconds: 150),
           height: widget.height,
           decoration: BoxDecoration(
             gradient: gradient,
@@ -114,10 +119,10 @@ class _PremiumButtonState extends State<PremiumButton>
                 ? []
                 : [
                     BoxShadow(
-                      color: cs.primary.withValues(alpha: _pressed ? 0.4 : 0.25),
-                      blurRadius: _pressed ? 16 : 24,
-                      spreadRadius: -4,
-                      offset: Offset(0, _pressed ? 4 : 10),
+                      color: shadowColor,
+                      blurRadius: shadowBlur,
+                      spreadRadius: shadowSpread,
+                      offset: shadowOffset,
                     ),
                   ],
           ),
