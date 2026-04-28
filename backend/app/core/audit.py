@@ -20,8 +20,8 @@ def log_action(
         action=action,
         entity_type=entity_type,
         entity_id=entity_id,
-        old_value=json.dumps(old_value) if old_value else None,
-        new_value=json.dumps(new_value) if new_value else None,
+        old_value=json.dumps(old_value, default=str) if old_value else None,
+        new_value=json.dumps(new_value, default=str) if new_value else None,
     )
     db.add(db_log)
     db.commit()

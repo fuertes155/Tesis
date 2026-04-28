@@ -6,6 +6,7 @@ class _PatientDetailState extends ConsumerState<PatientDetailScreen> {
   Map<String, dynamic>? _patientData;
   List<Map<String, dynamic>> _recentSessions = [];
   List<dynamic> _allPatients = [];
+  List<dynamic> _patientResults = [];
   bool _loading = true;
 
   @override
@@ -39,15 +40,22 @@ class _PatientDetailState extends ConsumerState<PatientDetailScreen> {
           .toList()
         ..sort((a, b) => b.date.compareTo(a.date));
         
+      List<dynamic> results = [];
+      try {
+        results = await api.getLatestResultsForPatient(_currentPatientId!);
+      } catch (_) {}
+
       if (!mounted) return;
       setState(() {
         _currentPatientName = patient.name;
+        _patientResults = results;
         _patientData = {
           'name': patient.name,
           'age': patient.age,
           'id': patient.id,
           'diagnosis': patient.diagnosis ?? 'Sin diagnóstico',
           'doctor_id': patient.doctorId,
+          'latestResult': results.isNotEmpty ? results.first : null,
         };
         _recentSessions = patientSessions
             .take(5)
@@ -202,6 +210,16 @@ class _PatientDetailState extends ConsumerState<PatientDetailScreen> {
               onPressed: () => context.pop(),
             ),
             actions: [
+              IconButton(
+                tooltip: 'Sincronizar Offline',
+                icon: const Icon(Icons.cloud_sync_rounded, color: Colors.white),
+                onPressed: () {
+                  try {
+                    ref.read(syncServiceProvider.notifier).flushPendingActions();
+                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Sincronizando datos locales...')));
+                  } catch (_) {}
+                },
+              ),
               if (_currentPatientId != null &&
                   ref.watch(apiServiceProvider).value?.currentRole == 'gestor')
                 IconButton(
@@ -313,11 +331,19 @@ class _PatientDetailState extends ConsumerState<PatientDetailScreen> {
                         // ── Acciones rápidas ──────────────────────────────
                         _SectionLabel(label: 'ACCIONES RÁPIDAS', icon: Icons.flash_on_rounded),
                         SizedBox(height: spacing.lg),
-                        _ActionsGrid(patientId: _currentPatientId)
+                        _ActionsGrid(patientId: _currentPatientId, patientData: _patientData)
                             .animate(key: ValueKey('actions_$_currentPatientId'))
                             .fadeIn(delay: 150.ms)
                             .slideY(begin: 0.1),
                         SizedBox(height: spacing.x2l),
+
+                        // ── Gráfico de Evolución ───────────────────────────
+                        if (_patientResults.isNotEmpty) ...[
+                          _SectionLabel(label: 'EVOLUCIÓN COGNITIVA', icon: Icons.show_chart_rounded),
+                          SizedBox(height: spacing.lg),
+                          _EvolutionChart(results: _patientResults),
+                          SizedBox(height: spacing.x2l),
+                        ],
 
                         // ── Sesiones recientes o Estado Vacío ───────────────
                         if (_recentSessions.isNotEmpty) ...[
@@ -647,7 +673,8 @@ class _InfoRow extends StatelessWidget {
 
 class _ActionsGrid extends StatelessWidget {
   final int? patientId;
-  const _ActionsGrid({this.patientId});
+  final Map<String, dynamic>? patientData;
+  const _ActionsGrid({this.patientId, this.patientData});
 
   @override
   Widget build(BuildContext context) {
@@ -681,12 +708,31 @@ class _ActionsGrid extends StatelessWidget {
         onTap: () => context.push('/history'),
       ),
       _ActionItem(
-        icon: Icons.ios_share_rounded,
-        label: 'Exportar',
-        subtitle: 'Datos del paciente',
+        icon: Icons.picture_as_pdf_rounded,
+        label: 'Exportar PDF',
+        subtitle: 'Reporte clínico',
         color: cs.onSurfaceVariant,
         isPrimary: false,
-        onTap: () {},
+        onTap: () async {
+          final latestResult = patientData?['latestResult'];
+          final num rawScore = latestResult != null ? (latestResult['score'] ?? 0) : 0;
+          final double score = rawScore.toDouble();
+          
+          final dynamic detailsData = latestResult?['details'];
+          Map<String, dynamic> parsedDetails = {'Global': score};
+          
+          if (detailsData is Map) {
+            parsedDetails = Map<String, dynamic>.from(detailsData);
+          }
+          
+          await PdfService.generateResultsPdf(
+            patientName: patientData?['name'] ?? 'Paciente',
+            title: latestResult != null ? 'Resultados - ${latestResult['game_name']}' : 'Resumen General',
+            score: score,
+            details: parsedDetails,
+            patientId: patientId?.toString(),
+          );
+        },
       ),
     ];
 
@@ -932,6 +978,104 @@ class _SessionMiniCard extends StatelessWidget {
               ),
             ),
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _EvolutionChart extends StatelessWidget {
+  final List<dynamic> results;
+  
+  const _EvolutionChart({required this.results});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+    
+    // Sort oldest to newest for the graph
+    final sorted = List<dynamic>.from(results)
+      ..sort((a, b) => (a['id'] as int).compareTo(b['id'] as int));
+
+    List<FlSpot> spots = [];
+    for (int i = 0; i < sorted.length; i++) {
+      final r = sorted[i];
+      final num rawScore = r['score'] ?? 0;
+      final double score = rawScore.toDouble();
+      spots.add(FlSpot(i.toDouble(), score));
+    }
+
+    if (spots.isEmpty) return const SizedBox();
+
+    return Container(
+      height: 220,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: cs.surfaceContainerLowest,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: cs.outlineVariant),
+      ),
+      child: LineChart(
+        LineChartData(
+          gridData: FlGridData(
+            show: true,
+            drawVerticalLine: false,
+            horizontalInterval: 20,
+            getDrawingHorizontalLine: (value) => FlLine(
+              color: cs.outlineVariant.withValues(alpha: 0.5),
+              strokeWidth: 1,
+            ),
+          ),
+          titlesData: FlTitlesData(
+            show: true,
+            rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+            topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+            bottomTitles: AxisTitles(
+              sideTitles: SideTitles(
+                showTitles: true,
+                getTitlesWidget: (value, meta) {
+                  final idx = value.toInt();
+                  if (idx >= 0 && idx < sorted.length) {
+                    return Padding(
+                      padding: const EdgeInsets.only(top: 8.0),
+                      child: Text(
+                        '#${sorted[idx]['id']}',
+                        style: TextStyle(color: cs.onSurfaceVariant, fontSize: 10),
+                      ),
+                    );
+                  }
+                  return const SizedBox();
+                },
+              ),
+            ),
+          ),
+          borderData: FlBorderData(show: false),
+          minX: 0,
+          maxX: (spots.length - 1).toDouble(),
+          minY: 0,
+          maxY: 100,
+          lineBarsData: [
+            LineChartBarData(
+              spots: spots,
+              isCurved: true,
+              color: cs.primary,
+              barWidth: 3,
+              isStrokeCapRound: true,
+              dotData: const FlDotData(show: true),
+              belowBarData: BarAreaData(
+                show: true,
+                gradient: LinearGradient(
+                  colors: [
+                    cs.primary.withValues(alpha: 0.3),
+                    cs.primary.withValues(alpha: 0.0),
+                  ],
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );
