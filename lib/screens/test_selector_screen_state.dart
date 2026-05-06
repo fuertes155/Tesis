@@ -38,6 +38,13 @@ class TestSelectorScreenState extends State<TestSelectorScreen> {
   void initState() {
     super.initState();
     _selected = {for (final k in _tests.keys) k: false};
+    if (widget.initialSelection != null) {
+      for (final k in widget.initialSelection!) {
+        if (_selected.containsKey(k)) {
+          _selected[k] = true;
+        }
+      }
+    }
   }
 
   int get _totalMinutes => _tests.entries

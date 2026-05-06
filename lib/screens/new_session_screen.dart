@@ -31,7 +31,14 @@ class NewSessionScreen extends ConsumerWidget {
         color: cs.primary,
         durationLabel: '~26 min',
         isPrimary: true,
-        onTap: () => context.push('/test_selector'),
+        onTap: () => context.push('/test_selector', extra: {
+          'initialSelection': [
+            'Prueba de Memoria Visual',
+            'Prueba de Atención Sostenida',
+            'Prueba de Fluidez Verbal',
+            'Prueba de Funciones Ejecutivas (Stroop)',
+          ]
+        }),
       ),
       _Battery(
         title: 'Atención y Memoria',
@@ -41,7 +48,12 @@ class NewSessionScreen extends ConsumerWidget {
         color: cs.tertiary,
         durationLabel: '~14 min',
         isPrimary: false,
-        onTap: () => context.push('/test_selector'),
+        onTap: () => context.push('/test_selector', extra: {
+          'initialSelection': [
+            'Prueba de Memoria Visual',
+            'Prueba de Atención Sostenida',
+          ]
+        }),
       ),
       _Battery(
         title: 'Screening Rápido',
@@ -51,7 +63,11 @@ class NewSessionScreen extends ConsumerWidget {
         color: cs.secondary,
         durationLabel: '~8 min',
         isPrimary: false,
-        onTap: () => context.push('/test_selector'),
+        onTap: () => context.push('/test_selector', extra: {
+          'initialSelection': [
+            'Prueba de Memoria Visual',
+          ]
+        }),
       ),
     ];
 

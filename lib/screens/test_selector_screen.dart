@@ -6,7 +6,9 @@ import '../widgets/premium_button.dart';
 part 'test_selector_screen_state.dart';
 
 class TestSelectorScreen extends StatefulWidget {
-  const TestSelectorScreen({super.key});
+  final List<String>? initialSelection;
+
+  const TestSelectorScreen({super.key, this.initialSelection});
 
   @override
   State<TestSelectorScreen> createState() => TestSelectorScreenState();

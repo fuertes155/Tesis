@@ -141,7 +141,17 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: '/test_selector',
-        builder: (context, state) => const TestSelectorScreen(),
+        builder: (context, state) {
+          final extra = state.extra;
+          List<String>? initialSelection;
+          if (extra is Map<String, dynamic>) {
+            final sel = extra['initialSelection'];
+            if (sel is List) {
+              initialSelection = sel.cast<String>();
+            }
+          }
+          return TestSelectorScreen(initialSelection: initialSelection);
+        },
       ),
       GoRoute(
         path: '/profile',
