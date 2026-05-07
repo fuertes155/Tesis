@@ -1,19 +1,20 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.routers import users, patients, sessions
-from app.database import engine, Base, SessionLocal, SQLALCHEMY_DATABASE_URL
-from app import models
-from app.security import get_password_hash
+from app.api.v1 import users, patients, sessions
+from app.infrastructure.database import engine, Base, SessionLocal
+from app.infrastructure import models
+from app.core.security import get_password_hash
 from app.core.config import settings
 from sqlalchemy import text
 import time
 import logging
 
 # Create database tables
+print(f"DEBUG: Using database URL: {settings.DATABASE_URL}")
 Base.metadata.create_all(bind=engine)
 
 def _ensure_db_schema() -> None:
-    if not SQLALCHEMY_DATABASE_URL.startswith("sqlite"):
+    if not settings.DATABASE_URL.startswith("sqlite"):
         return
     with engine.begin() as conn:
         # sessions table
@@ -69,8 +70,9 @@ _ensure_seed_users()
 
 app = FastAPI(
     title=settings.PROJECT_NAME,
-    description="Backend API for Neuropsychological Evaluation App",
+    description="Backend API for Neuropsychological Evaluation App (Clean Architecture)",
     version=settings.VERSION,
+    openapi_url=f"{settings.API_V1_STR}/openapi.json"
 )
 
 _logger = logging.getLogger("neuroapp")
@@ -102,17 +104,16 @@ async def request_log_middleware(request, call_next):
 # Configure CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[],
-    allow_origin_regex=r"^http://(localhost|127\.0\.0\.1)(:\d+)?$",
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Include Routers
-app.include_router(users.router, prefix=settings.API_V1_STR)
-app.include_router(patients.router, prefix=settings.API_V1_STR)
-app.include_router(sessions.router, prefix=settings.API_V1_STR)
+# Include Routers with explicit tags
+app.include_router(users.router, prefix=f"{settings.API_V1_STR}/users", tags=["users"])
+app.include_router(patients.router, prefix=f"{settings.API_V1_STR}/patients", tags=["patients"])
+app.include_router(sessions.router, prefix=f"{settings.API_V1_STR}/sessions", tags=["sessions"])
 
 @app.get("/")
 def read_root():
@@ -124,4 +125,4 @@ def health_check():
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
