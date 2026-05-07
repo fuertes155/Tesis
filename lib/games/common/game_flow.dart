@@ -17,10 +17,12 @@ class GameFlow extends ConsumerStatefulWidget {
 class _GameFlowState extends ConsumerState<GameFlow> {
   int _currentIndex = 0;
   int? _age;
+  late DateTime _startTime;
 
   @override
   void initState() {
     super.initState();
+    _startTime = DateTime.now();
     _loadPatientInfo();
     _startNext();
   }
@@ -50,13 +52,15 @@ class _GameFlowState extends ConsumerState<GameFlow> {
       context.push(route).then((_) => _startNext());
     });
   }
-
   Future<void> _complete() async {
+    final endTime = DateTime.now();
+    final durationMs = endTime.difference(_startTime).inMilliseconds;
     final api = await ref.read(apiServiceProvider.future);
     await GameResults.sendSession(
       api: api,
       status: 'completed',
       notes: 'Batería de pruebas finalizada.',
+      durationMs: durationMs,
     );
     if (!mounted) return;
     context.go('/home');

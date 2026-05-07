@@ -53,6 +53,7 @@ class _StroopGameState extends ConsumerState<StroopGame> {
   List<int> _reactionTimes = [];
   bool _pulseCorrect = false;
   bool _wrongShake = false;
+  DateTime? _gameStartTime;
 
   @override
   void initState() {
@@ -62,6 +63,7 @@ class _StroopGameState extends ConsumerState<StroopGame> {
   void _startGame() {
     setState(() {
       _isPlaying = true;
+      _gameStartTime = DateTime.now();
       _currentRound = 0;
       _score = 0;
       _correctStreak = 0;
@@ -187,6 +189,9 @@ class _StroopGameState extends ConsumerState<StroopGame> {
       'raw_score': _score,
     };
     final api = ref.read(apiServiceProvider).requireValue;
+    final durationMs = _gameStartTime != null
+        ? DateTime.now().difference(_gameStartTime!).inMilliseconds
+        : 0;
     final future = GameResults.sendGameResult(
       api: api,
       title: 'Resultados - Funciones Ejecutivas',
@@ -194,6 +199,7 @@ class _StroopGameState extends ConsumerState<StroopGame> {
       details: details,
       gameKey: 'stroop',
       metrics: metrics,
+      durationMs: durationMs,
       age: widget.patientAge,
     );
 

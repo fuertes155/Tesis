@@ -9,6 +9,7 @@ class GameResults {
     int? patientId,
     required String status,
     required String notes,
+    int durationMs = 0,
     DateTime? date,
   }) async {
     final pid = patientId ?? api.currentPatientId;
@@ -23,6 +24,7 @@ class GameResults {
         status: status,
         notes: notes,
         date: date,
+        durationMs: durationMs,
         externalId: externalId,
       );
       await api.flushPendingSessions();
@@ -32,6 +34,7 @@ class GameResults {
         status: status,
         notes: notes,
         date: isoDate,
+        durationMs: durationMs,
         externalId: externalId,
       );
     }
@@ -63,6 +66,7 @@ class GameResults {
     required Map<String, dynamic> details,
     required String gameKey,
     required Map<String, dynamic> metrics,
+    int durationMs = 0,
     int? age,
     DateTime? date,
   }) async {
@@ -86,6 +90,7 @@ class GameResults {
       patientId: pid,
       status: 'completed',
       notes: notes,
+      durationMs: durationMs,
       date: date,
     );
 

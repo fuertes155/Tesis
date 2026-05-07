@@ -48,6 +48,7 @@ class _VisualMemoryGameState extends ConsumerState<VisualMemoryGame> {
   bool _started = false;
   DateTime? _selectionStart;
   final List<int> _selectionTimesMs = [];
+  DateTime? _gameStartTime;
 
   @override
   void initState() {
@@ -63,6 +64,7 @@ class _VisualMemoryGameState extends ConsumerState<VisualMemoryGame> {
   void _startGame() {
     setState(() {
       _started = true;
+      _gameStartTime = DateTime.now();
       _isGameOver = false;
       _score = 0;
       _level = 1;
@@ -193,6 +195,9 @@ class _VisualMemoryGameState extends ConsumerState<VisualMemoryGame> {
       'selections': _selectionTimesMs.length,
     };
     final api = ref.read(apiServiceProvider).value!;
+    final durationMs = _gameStartTime != null
+        ? DateTime.now().difference(_gameStartTime!).inMilliseconds
+        : 0;
     final future = GameResults.sendGameResult(
       api: api,
       title: 'Resultados - Memoria Visual',
@@ -200,6 +205,7 @@ class _VisualMemoryGameState extends ConsumerState<VisualMemoryGame> {
       details: details,
       gameKey: 'visual_memory',
       metrics: metrics,
+      durationMs: durationMs,
       age: widget.patientAge,
     );
     showDialog(

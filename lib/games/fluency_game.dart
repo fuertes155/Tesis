@@ -46,6 +46,7 @@ class _FluencyGameState extends ConsumerState<FluencyGame> {
   bool _speechEnabled = false;
   bool _isListening = false;
   String _lastWords = '';
+  DateTime? _gameStartTime;
 
   @override
   void initState() {
@@ -132,6 +133,7 @@ class _FluencyGameState extends ConsumerState<FluencyGame> {
       _timeLeft = gameDuration;
       _wordCount = 0;
       _isPlaying = true;
+      _gameStartTime = DateTime.now();
       _isFinished = false;
       _isPaused = false;
     });
@@ -201,6 +203,9 @@ class _FluencyGameState extends ConsumerState<FluencyGame> {
       'paused': _isPaused,
     };
     final api = ref.read(apiServiceProvider).value!;
+    final durationMs = _gameStartTime != null
+        ? DateTime.now().difference(_gameStartTime!).inMilliseconds
+        : 0;
     final future = GameResults.sendGameResult(
       api: api,
       title: 'Resultados - Lenguaje',
@@ -208,6 +213,7 @@ class _FluencyGameState extends ConsumerState<FluencyGame> {
       details: details,
       gameKey: 'fluency',
       metrics: metrics,
+      durationMs: durationMs,
       age: widget.patientAge,
     );
     showDialog(

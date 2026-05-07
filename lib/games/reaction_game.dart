@@ -43,6 +43,7 @@ class _ReactionGameState extends ConsumerState<ReactionGame> {
   double _iconScale = 1.0;
   bool _started = false;
   int _tooEarly = 0;
+  DateTime? _gameStartTime;
 
   @override
   void initState() {
@@ -56,6 +57,9 @@ class _ReactionGameState extends ConsumerState<ReactionGame> {
   }
 
   void _startRound() {
+    if (!_started) {
+      _gameStartTime = DateTime.now();
+    }
     setState(() {
       _started = true;
       _state = GameState.waiting;
@@ -141,6 +145,9 @@ class _ReactionGameState extends ConsumerState<ReactionGame> {
       'too_early': _tooEarly,
     };
     final api = ref.read(apiServiceProvider).value!;
+    final durationMs = _gameStartTime != null
+        ? DateTime.now().difference(_gameStartTime!).inMilliseconds
+        : 0;
     final future = GameResults.sendGameResult(
       api: api,
       title: 'Resultados - Atención',
@@ -148,6 +155,7 @@ class _ReactionGameState extends ConsumerState<ReactionGame> {
       details: details,
       gameKey: 'reaction',
       metrics: metrics,
+      durationMs: durationMs,
       age: widget.patientAge,
     );
     showDialog(

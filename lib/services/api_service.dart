@@ -158,7 +158,7 @@ class ApiService {
 
     try {
       final response = await _dio.post(
-        '/users/auth/login',
+        '/users/login',
         data: {'username': username, 'password': password},
       );
 
@@ -193,6 +193,20 @@ class ApiService {
         throw Exception('Usuario no registrado');
       }
       throw Exception('Error al iniciar sesión: ${e.message}');
+    }
+  }
+
+  Future<bool> verify2FA(String username, String code) async {
+    try {
+      final response = await _dio.post(
+        '/users/verify-2fa',
+        data: {'username': username, 'code': code},
+      );
+      return response.data['status'] == 'success';
+    } on dio.DioException catch (e) {
+      final detail = e.response?.data?['detail'];
+      if (detail != null) throw Exception(detail);
+      throw Exception('Código de verificación incorrecto');
     }
   }
 
@@ -336,6 +350,7 @@ class ApiService {
     required String notes,
     DateTime? date,
     String? externalId,
+    int durationMs = 0,
     bool skipOffline = false,
   }) async {
     if (patientId <= 0 && !skipOffline) throw Exception('ID de paciente inválido');
@@ -350,6 +365,7 @@ class ApiService {
       'date': isoDate,
       'status': status,
       'notes': notes,
+      'duration_ms': durationMs,
       'external_id': ext,
     };
 
@@ -371,6 +387,7 @@ class ApiService {
     required String notes,
     required String date,
     required String externalId,
+    int durationMs = 0,
   }) async {
     final prefs = await SharedPreferences.getInstance();
     final raw = prefs.getString(_prefsPendingSessionsKey);
@@ -381,6 +398,7 @@ class ApiService {
       'notes': notes,
       'date': date,
       'external_id': externalId,
+      'duration_ms': durationMs,
       'ts': DateTime.now().toIso8601String(),
     });
     await prefs.setString(_prefsPendingSessionsKey, jsonEncode(list));
