@@ -24,6 +24,7 @@ import 'providers/api_providers.dart';
 import 'screens/patient_welcome_screen.dart';
 import 'screens/users_admin_screen.dart';
 import 'screens/profile_screen.dart';
+import 'screens/mfa_screen.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
   return GoRouter(
@@ -66,6 +67,7 @@ final routerProvider = Provider<GoRouter>((ref) {
     },
     routes: [
       GoRoute(path: '/', builder: (context, state) => const LoginScreen()),
+      GoRoute(path: '/mfa', builder: (context, state) => const MfaScreen()),
       GoRoute(
         path: '/home',
         pageBuilder: (context, state) => CustomTransitionPage(

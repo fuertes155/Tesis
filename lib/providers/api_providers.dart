@@ -18,12 +18,17 @@ Future<SharedPreferences> sharedPrefs(Ref ref) {
 
 @Riverpod(keepAlive: true)
 Dio dio(Ref ref) {
+  var baseUrl = const String.fromEnvironment(
+    'API_BASE_URL',
+    defaultValue: 'http://127.0.0.1:8000',
+  );
+  if (!baseUrl.endsWith('/api/v1')) {
+    baseUrl = '$baseUrl/api/v1';
+  }
+
   final dioInstance = Dio(
     BaseOptions(
-      baseUrl: const String.fromEnvironment(
-        'API_BASE_URL',
-        defaultValue: 'http://localhost:8000/api/v1',
-      ),
+      baseUrl: baseUrl,
       connectTimeout: const Duration(seconds: 10),
       receiveTimeout: const Duration(seconds: 10),
       contentType: 'application/json',

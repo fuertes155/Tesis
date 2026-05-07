@@ -43,12 +43,17 @@ class LoginScreenState extends ConsumerState<LoginScreen> {
         throw Exception('Ingresa usuario y contraseña');
       }
       final api = await ref.read(apiServiceProvider.future);
-      await api.login(username, password);
+      final authData = await api.login(username, password);
 
       if (!mounted) return;
       HapticFeedback.mediumImpact();
-      final role = api.currentRole ?? 'doctor';
-      _navigateBasedOnRole(role);
+      
+      final bool mfaRequired = authData['mfa_required'] ?? false;
+      if (mfaRequired) {
+        context.go('/mfa');
+      } else {
+        _navigateBasedOnRole(api.currentRole ?? 'doctor');
+      }
     } catch (e) {
       HapticFeedback.vibrate();
       setState(() {

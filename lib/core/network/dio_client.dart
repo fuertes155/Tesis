@@ -7,12 +7,17 @@ part 'dio_client.g.dart';
 
 @riverpod
 Dio dioClient(Ref ref) {
+  var baseUrl = const String.fromEnvironment(
+    'API_BASE_URL',
+    defaultValue: 'http://127.0.0.1:8000',
+  );
+  if (!baseUrl.endsWith('/api/v1')) {
+    baseUrl = '$baseUrl/api/v1';
+  }
+
   final dio = Dio(
     BaseOptions(
-      baseUrl: const String.fromEnvironment(
-        'API_BASE_URL',
-        defaultValue: 'http://127.0.0.1:8000',
-      ),
+      baseUrl: baseUrl,
       connectTimeout: const Duration(seconds: 10),
       receiveTimeout: const Duration(seconds: 10),
       contentType: 'application/json',
