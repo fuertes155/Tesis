@@ -10,8 +10,11 @@ class User(Base):
     username = Column(String, unique=True, index=True)
     hashed_password = Column(String)
     role = Column(String, default="doctor")
+    full_name = Column(String, nullable=True)
     is_active = Column(Boolean, default=True)
     is_available = Column(Boolean, default=True)
+    is_2fa_enabled = Column(Boolean, default=False)
+    totp_secret = Column(String, nullable=True)
     registration_date = Column(DateTime, default=datetime.utcnow)
 
 class Patient(Base):
@@ -37,6 +40,7 @@ class Session(Base):
     date = Column(String)
     status = Column(String)
     notes = Column(Text)
+    duration_ms = Column(Integer, default=0)
     external_id = Column(String, unique=True, index=True, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 

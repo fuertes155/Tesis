@@ -5,6 +5,7 @@ from datetime import datetime
 class UserBase(BaseModel):
     username: EmailStr
     role: str = "doctor"
+    full_name: Optional[str] = None
 
     @field_validator("username")
     @classmethod
@@ -18,6 +19,7 @@ class User(UserBase):
     id: int
     is_active: bool = True
     is_available: bool = True
+    is_2fa_enabled: bool = False
     registration_date: datetime
 
     class Config:
@@ -47,6 +49,7 @@ class SessionBase(BaseModel):
     date: str
     status: str
     notes: str
+    duration_ms: int = 0
     external_id: Optional[str] = None
 
 class SessionCreate(SessionBase):

@@ -14,7 +14,8 @@ class UserService:
         db_user = models.User(
             username=user.username,
             hashed_password=hashed_password,
-            role=user.role
+            role=user.role,
+            full_name=user.full_name
         )
         db.add(db_user)
         db.commit()
