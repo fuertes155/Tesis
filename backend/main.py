@@ -21,17 +21,31 @@ def _ensure_db_schema() -> None:
         cols_s = {r[1] for r in conn.execute(text("PRAGMA table_info(sessions)")).fetchall()}
         if "external_id" not in cols_s:
             conn.execute(text("ALTER TABLE sessions ADD COLUMN external_id TEXT"))
+        if "created_at" not in cols_s:
+            conn.execute(text("ALTER TABLE sessions ADD COLUMN created_at DATETIME"))
+            conn.execute(text("UPDATE sessions SET created_at = datetime('now') WHERE created_at IS NULL"))
         conn.execute(text("CREATE UNIQUE INDEX IF NOT EXISTS ix_sessions_external_id ON sessions(external_id)"))
 
         # users table
         cols_u = {r[1] for r in conn.execute(text("PRAGMA table_info(users)")).fetchall()}
         if "full_name" not in cols_u:
             conn.execute(text("ALTER TABLE users ADD COLUMN full_name TEXT"))
+        if "is_2fa_enabled" not in cols_u:
+            conn.execute(text("ALTER TABLE users ADD COLUMN is_2fa_enabled BOOLEAN DEFAULT 0"))
+        if "totp_secret" not in cols_u:
+            conn.execute(text("ALTER TABLE users ADD COLUMN totp_secret TEXT"))
 
         # patients table
         cols_p = {r[1] for r in conn.execute(text("PRAGMA table_info(patients)")).fetchall()}
         if "user_id" not in cols_p:
             conn.execute(text("ALTER TABLE patients ADD COLUMN user_id INTEGER"))
+        if "email" not in cols_p:
+            conn.execute(text("ALTER TABLE patients ADD COLUMN email TEXT"))
+        if "created_at" not in cols_p:
+            conn.execute(text("ALTER TABLE patients ADD COLUMN created_at DATETIME"))
+            if "registration_date" in cols_p:
+                conn.execute(text("UPDATE patients SET created_at = registration_date WHERE created_at IS NULL"))
+            conn.execute(text("UPDATE patients SET created_at = datetime('now') WHERE created_at IS NULL"))
 
 _ensure_db_schema()
 
@@ -104,11 +118,17 @@ async def request_log_middleware(request, call_next):
 # Configure CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origin_regex=r"https?://(localhost|127\.0\.0\.1)(:\d+)?",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["*"],
 )
+
+
+# Note: In production, you should restrict allow_origins to your specific domain.
+# But for development with Flutter's dynamic ports, "*" is the most reliable way.
+
 
 # Include Routers with explicit tags
 app.include_router(users.router, prefix=f"{settings.API_V1_STR}/users", tags=["users"])
