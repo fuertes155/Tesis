@@ -7,7 +7,7 @@ from app.core.config import settings
 from app.infrastructure.database import get_db
 from app.infrastructure import models
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl=f"{settings.API_V1_STR}/users/login")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl=f"{settings.API_V1_STR}/users/auth/login")
 
 def get_current_user(
     db: Session = Depends(get_db), token: str = Depends(oauth2_scheme)
@@ -19,8 +19,8 @@ def get_current_user(
     )
     try:
         payload = security.decode_access_token(token)
-        username: str = payload.get("sub")
-        if username is None:
+        username = payload.get("sub")
+        if not isinstance(username, str) or not username:
             raise credentials_exception
     except JWTError:
         raise credentials_exception

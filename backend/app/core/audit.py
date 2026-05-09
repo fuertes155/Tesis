@@ -1,6 +1,6 @@
 import json
 from sqlalchemy.orm import Session
-from app.models import AuditLog
+from app.infrastructure.models import AuditLog
 from typing import Any, Optional
 
 def log_action(

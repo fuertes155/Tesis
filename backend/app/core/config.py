@@ -1,10 +1,25 @@
-import os
+from pathlib import Path
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 # Get the directory of the current file (config.py)
 # backend/app/core/config.py -> backend/
-ROOT_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-ENV_FILE = os.path.join(ROOT_DIR, ".env")
+ROOT_DIR = Path(__file__).resolve().parents[2]
+ENV_FILE = ROOT_DIR / ".env"
+
+
+def _resolve_sqlite_url(url: str) -> str:
+    if not url.startswith("sqlite:///"):
+        return url
+
+    db_path = url.removeprefix("sqlite:///")
+    if db_path == ":memory:":
+        return url
+
+    path = Path(db_path)
+    if path.is_absolute():
+        return url
+
+    return f"sqlite:///{(ROOT_DIR / path).resolve().as_posix()}"
 
 class Settings(BaseSettings):
     PROJECT_NAME: str = "NeuroApp API"
@@ -20,3 +35,4 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=ENV_FILE)
 
 settings = Settings()
+settings.DATABASE_URL = _resolve_sqlite_url(settings.DATABASE_URL)

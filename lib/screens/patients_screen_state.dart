@@ -573,19 +573,7 @@ class _MiniTag extends StatelessWidget {
 
 // ── Skeleton ──────────────────────────────────────────────────────────────────
 
-// Skeleton card
 
-class _PatientCardSkeleton extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    final s = context.spacing;
-    return SkeletonLoader(
-      width: double.infinity,
-      height: 72,
-      borderRadius: context.radii.md,
-    );
-  }
-}
 
 // ── Empty state ────────────────────────────────────────────────────────────────
 

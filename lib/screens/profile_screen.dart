@@ -14,7 +14,6 @@ class ProfileScreen extends ConsumerWidget {
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
     final s = context.spacing;
-    final r = context.radii;
     final api = ref.watch(apiServiceProvider).value;
     final themeMode = ref.watch(themeProvider);
 

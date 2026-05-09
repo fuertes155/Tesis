@@ -1,0 +1,16 @@
+{
+  "python.defaultInterpreterPath": "C:\\Program Files\\Python312\\python.exe",
+  "python.analysis.extraPaths": [
+    "${workspaceFolder}/backend",
+    "C:\\Program Files\\Python312\\Lib\\site-packages",
+    "C:\\Users\\Samuel\\AppData\\Roaming\\Python\\Python312\\site-packages"
+  ],
+  "python.analysis.typeCheckingMode": "basic",
+  "python.analysis.reportMissingImports": false,
+  "python.analysis.reportMissingModuleSource": false,
+  "python.analysis.autoImportCompletions": true,
+  "python.analysis.indexing": true,
+  "[python]": {
+    "editor.defaultFormatter": "ms-python.python"
+  }
+}

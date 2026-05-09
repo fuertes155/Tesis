@@ -17,7 +17,6 @@ import '../widgets/home_recent_activity_section.dart';
 import '../core/theme/app_theme.dart';
 import '../core/theme/app_decorations.dart';
 import '../providers/api_providers.dart';
-import '../providers/theme_provider.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});

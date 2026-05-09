@@ -160,7 +160,6 @@ class ProfessionalTableSkeleton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final s = context.spacing;
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
     
