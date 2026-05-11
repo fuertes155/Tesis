@@ -58,7 +58,7 @@ def _ensure_seed_users() -> None:
         ]
         default_password = "Password123!"
         for s in seeds:
-            uname = s["username"].strip().lower()
+            uname = str(s["username"]).strip().lower()
             u = db.query(models.User).filter(models.User.username == uname).first()
             if not u:
                 u = models.User(
@@ -71,7 +71,7 @@ def _ensure_seed_users() -> None:
                 db.add(u)
             else:
                 if u.role != s["role"]:
-                    u.role = s["role"]
+                    u.role = str(s["role"])
                 if u.is_active is False:
                     u.is_active = True
                 if s["role"] == "doctor":
