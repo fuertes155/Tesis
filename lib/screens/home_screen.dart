@@ -309,7 +309,9 @@ class HomeScreenState extends ConsumerState<HomeScreen> {
                                     final profile = ref.watch(currentUserProvider);
                                     return profile.when(
                                       data: (u) => Text(
-                                        u.username,
+                                        (u.fullName != null && u.fullName!.trim().isNotEmpty) 
+                                            ? u.fullName! 
+                                            : u.username,
                                         style: theme.textTheme.headlineMedium?.copyWith(
                                           fontWeight: FontWeight.w900,
                                           color: cs.onSurface,

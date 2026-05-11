@@ -158,7 +158,7 @@ class ApiService {
 
     try {
       final response = await _dio.post(
-        '/users/login',
+        '/users/auth/login',
         data: {'username': username, 'password': password},
       );
 
