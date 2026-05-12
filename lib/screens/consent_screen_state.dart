@@ -23,20 +23,23 @@ class ConsentScreenState extends State<ConsentScreen> {
           icon: const Icon(Icons.arrow_back_rounded),
           onPressed: () => Navigator.of(context).pop(),
         ),
-        title: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(6),
-              decoration: BoxDecoration(
-                color: cs.primary.withValues(alpha: 0.10),
-                borderRadius: BorderRadius.circular(8),
+        title: FittedBox(
+          fit: BoxFit.scaleDown,
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(
+                  color: cs.primary.withValues(alpha: 0.10),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(Icons.gavel_rounded, size: 16, color: cs.primary),
               ),
-              child: Icon(Icons.gavel_rounded, size: 16, color: cs.primary),
-            ),
-            const SizedBox(width: 8),
-            const Text('Consentimiento Informado'),
-          ],
+              const SizedBox(width: 8),
+              const Text('Consentimiento Informado'),
+            ],
+          ),
         ),
         centerTitle: false,
       ),

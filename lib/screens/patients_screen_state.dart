@@ -108,12 +108,15 @@ class PatientsScreenState extends ConsumerState<PatientsScreen> {
               ),
               title: Row(
                 children: [
-                  Text(
-                    'Pacientes',
-                    style: theme.textTheme.headlineSmall?.copyWith(
-                      fontWeight: FontWeight.w900,
-                      color: cs.onSurface,
-                      letterSpacing: -0.5,
+                  Flexible(
+                    child: Text(
+                      'Pacientes',
+                      style: theme.textTheme.headlineSmall?.copyWith(
+                        fontWeight: FontWeight.w900,
+                        color: cs.onSurface,
+                        letterSpacing: -0.5,
+                      ),
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
                   if (!isLoading) ...[
