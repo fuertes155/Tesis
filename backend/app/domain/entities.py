@@ -1,6 +1,7 @@
 from pydantic import BaseModel, ConfigDict, field_validator
 from typing import Optional, Any
 from datetime import datetime
+import html
 
 
 # ── helpers ───────────────────────────────────────────────────────────────────
@@ -106,14 +107,17 @@ class PatientBase(BaseModel):
     diagnosis: Optional[str] = None
     email: Optional[str] = None
     doctor_id: Optional[int] = None
+    has_consent: bool = False
 
-    @field_validator("name")
+    @field_validator("name", "document_id", "phone", "diagnosis", "email", mode='before')
     @classmethod
-    def _capitalize_name(cls, v: str) -> str:
-        stripped = v.strip()
+    def _sanitize_fields(cls, v: Any) -> Any:
+        if v is None or not isinstance(v, str):
+            return v
+        stripped = html.escape(v.strip())
         if not stripped:
-            return stripped
-        return _title_case(stripped)
+            return None if v is None else ""
+        return _title_case(stripped) if "name" in str(cls) else stripped
 
 
 class PatientCreate(PatientBase):
@@ -129,15 +133,15 @@ class PatientUpdate(BaseModel):
     diagnosis: Optional[str] = None
     doctor_id: Optional[int] = None
 
-    @field_validator("name")
+    @field_validator("name", "document_id", "phone", "diagnosis", mode='before')
     @classmethod
-    def _capitalize_update_name(cls, v: Optional[str]) -> Optional[str]:
-        if v is None:
-            return None
-        stripped = v.strip()
+    def _sanitize_update_fields(cls, v: Any) -> Any:
+        if v is None or not isinstance(v, str):
+            return v
+        stripped = html.escape(v.strip())
         if not stripped:
             return None
-        return _title_case(stripped)
+        return _title_case(stripped) if "name" in str(cls) else stripped
 
 
 class Patient(PatientBase):
@@ -159,6 +163,13 @@ class SessionBase(BaseModel):
     duration_ms: int = 0
     external_id: Optional[str] = None
 
+    @field_validator("notes", "external_id", mode='before')
+    @classmethod
+    def _sanitize_strings(cls, v: Any) -> Any:
+        if v is None or not isinstance(v, str):
+            return v
+        return html.escape(v)
+
 
 class SessionCreate(SessionBase):
     pass
@@ -168,6 +179,13 @@ class SessionUpdate(BaseModel):
     date: Optional[str] = None
     status: Optional[str] = None
     notes: Optional[str] = None
+
+    @field_validator("notes", "status", mode='before')
+    @classmethod
+    def _sanitize_update_strings(cls, v: Any) -> Any:
+        if v is None or not isinstance(v, str):
+            return v
+        return html.escape(v)
 
 
 class Session(SessionBase):

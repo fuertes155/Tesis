@@ -103,25 +103,24 @@ class HomeScreenState extends ConsumerState<HomeScreen> {
       final pending14 = List<int>.filled(14, 0);
       for (final s in sList) {
         final status = s.status.toLowerCase();
+        // Ensure s.date is handled as DateTime
         final d = s.date;
-        if (true) { // d is already DateTime
-          final dd = DateTime(d.year, d.month, d.day);
-          for (var i = 0; i < buckets30.length; i++) {
-            if (dd == buckets30[i]) {
-              counts30[i] += 1;
-              break;
-            }
+        final dd = DateTime(d.year, d.month, d.day);
+        for (var i = 0; i < buckets30.length; i++) {
+          if (dd == buckets30[i]) {
+            counts30[i] += 1;
+            break;
           }
-          for (var i = 0; i < buckets14.length; i++) {
-            if (dd == buckets14[i]) {
-              counts14[i] += 1;
-              if (status.isEmpty ||
-                  status == 'scheduled' ||
-                  status == 'en_progreso') {
-                pending14[i] += 1;
-              }
-              break;
+        }
+        for (var i = 0; i < buckets14.length; i++) {
+          if (dd == buckets14[i]) {
+            counts14[i] += 1;
+            if (status.isEmpty ||
+                status == 'scheduled' ||
+                status == 'en_progreso') {
+              pending14[i] += 1;
             }
+            break;
           }
         }
         if (status.isEmpty ||
@@ -294,7 +293,8 @@ class HomeScreenState extends ConsumerState<HomeScreen> {
                         return Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Row(
+                            Wrap(
+                              crossAxisAlignment: WrapCrossAlignment.center,
                               children: [
                                 Text(
                                   '$greeting, ',
@@ -340,10 +340,11 @@ class HomeScreenState extends ConsumerState<HomeScreen> {
                               ],
                             ),
                             SizedBox(height: spacing.xs),
-                            Row(
+                            Wrap(
+                              crossAxisAlignment: WrapCrossAlignment.center,
+                              spacing: 6,
                               children: [
                                 Icon(Icons.calendar_today_outlined, size: 14, color: cs.onSurfaceVariant),
-                                const SizedBox(width: 6),
                                 Text(
                                   dateStr,
                                   style: theme.textTheme.bodyMedium?.copyWith(
@@ -366,14 +367,15 @@ class HomeScreenState extends ConsumerState<HomeScreen> {
                         counts30: _counts30,
                       ),
                       SizedBox(height: spacing.xl),
-                      Row(
+                      Wrap(
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        spacing: spacing.sm,
                         children: [
                           Icon(
                             Icons.grid_view_rounded,
                             size: 20,
                             color: cs.primary,
                           ),
-                          SizedBox(width: spacing.sm),
                           Text(
                             'ACCESO RÁPIDO',
                             style: theme.textTheme.labelSmall?.copyWith(
@@ -387,17 +389,21 @@ class HomeScreenState extends ConsumerState<HomeScreen> {
                       SizedBox(height: spacing.lg),
                       const HomeDashboardGrid(),
                       const SizedBox(height: 64),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      Wrap(
+                        alignment: WrapAlignment.spaceBetween,
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        spacing: spacing.md,
+                        runSpacing: spacing.md,
                         children: [
-                          Row(
+                          Wrap(
+                            crossAxisAlignment: WrapCrossAlignment.center,
+                            spacing: spacing.sm,
                             children: [
                               Icon(
                                 Icons.analytics_outlined,
                                 size: 20,
                                 color: cs.primary,
                               ),
-                              SizedBox(width: spacing.sm),
                               Text(
                                 'ANÁLISIS DE ACTIVIDAD',
                                 style: theme.textTheme.labelSmall?.copyWith(
@@ -457,103 +463,115 @@ class HomeScreenState extends ConsumerState<HomeScreen> {
                       else
                         Builder(builder: (ctx) {
                             final glass = ctx.glass;
+                            final bool isMobile = ctx.isMobile;
+                            
+                            final weeklyChartCard = Container(
+                              padding: EdgeInsets.all(spacing.lg),
+                              decoration: BoxDecoration(
+                                gradient: glass.cardGradient,
+                                borderRadius: r.radiusXl,
+                                border: Border.all(color: glass.borderColor, width: 1),
+                                boxShadow: ctx.premiumShadows,
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    children: [
+                                      Container(
+                                        padding: const EdgeInsets.all(6),
+                                        decoration: BoxDecoration(
+                                          color: cs.primary.withValues(alpha: 0.10),
+                                          borderRadius: BorderRadius.circular(8),
+                                        ),
+                                        child: Icon(Icons.bar_chart_rounded, color: cs.primary, size: 16),
+                                      ),
+                                      SizedBox(width: spacing.sm),
+                                      Text(
+                                        'Sesiones Semanales',
+                                        style: theme.textTheme.titleMedium?.copyWith(
+                                          fontWeight: FontWeight.w800,
+                                          color: cs.onSurface,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  SizedBox(height: spacing.xl),
+                                  WeeklyChart(counts: _weeklyCounts),
+                                ],
+                              ),
+                            );
+
+                            final statusChartCard = Container(
+                              padding: EdgeInsets.all(spacing.lg),
+                              decoration: BoxDecoration(
+                                gradient: glass.cardGradient,
+                                borderRadius: r.radiusXl,
+                                border: Border.all(color: glass.borderColor, width: 1),
+                                boxShadow: ctx.premiumShadows,
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    children: [
+                                      Container(
+                                        padding: const EdgeInsets.all(6),
+                                        decoration: BoxDecoration(
+                                          color: cs.tertiary.withValues(alpha: 0.10),
+                                          borderRadius: BorderRadius.circular(8),
+                                        ),
+                                        child: Icon(Icons.donut_small_rounded, color: cs.tertiary, size: 16),
+                                      ),
+                                      SizedBox(width: spacing.sm),
+                                      Text(
+                                        'Estado',
+                                        style: theme.textTheme.titleMedium?.copyWith(
+                                          fontWeight: FontWeight.w800,
+                                          color: cs.onSurface,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  SizedBox(height: spacing.xl),
+                                  StatusChart(
+                                    completed: _statusCounts(_daysFilter)['completed'] ?? 0,
+                                    pending: _statusCounts(_daysFilter)['pending'] ?? 0,
+                                  ),
+                                ],
+                              ),
+                            );
+
+                            if (isMobile) {
+                              return Column(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: [
+                                  weeklyChartCard,
+                                  SizedBox(height: spacing.lg),
+                                  statusChartCard,
+                                ],
+                              );
+                            }
+
                             return Row(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Expanded(
-                                  flex: 7,
-                                  child: Container(
-                                    padding: EdgeInsets.all(spacing.lg),
-                                    decoration: BoxDecoration(
-                                      gradient: glass.cardGradient,
-                                      borderRadius: r.radiusXl,
-                                      border: Border.all(color: glass.borderColor, width: 1),
-                                      boxShadow: ctx.premiumShadows,
-                                    ),
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        Row(
-                                          children: [
-                                            Container(
-                                              padding: const EdgeInsets.all(6),
-                                              decoration: BoxDecoration(
-                                                color: cs.primary.withValues(alpha: 0.10),
-                                                borderRadius: BorderRadius.circular(8),
-                                              ),
-                                              child: Icon(Icons.bar_chart_rounded, color: cs.primary, size: 16),
-                                            ),
-                                            SizedBox(width: spacing.sm),
-                                            Text(
-                                              'Sesiones por Día',
-                                              style: theme.textTheme.titleMedium?.copyWith(
-                                                fontWeight: FontWeight.w800,
-                                                color: cs.onSurface,
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                        SizedBox(height: spacing.xl),
-                                        WeeklyChart(counts: _weeklyCounts),
-                                      ],
-                                    ),
-                                  ),
-                                ),
+                                Expanded(flex: 7, child: weeklyChartCard),
                                 SizedBox(width: spacing.lg),
-                                Expanded(
-                                  flex: 4,
-                                  child: Container(
-                                    padding: EdgeInsets.all(spacing.lg),
-                                    decoration: BoxDecoration(
-                                      gradient: glass.cardGradient,
-                                      borderRadius: r.radiusXl,
-                                      border: Border.all(color: glass.borderColor, width: 1),
-                                      boxShadow: ctx.premiumShadows,
-                                    ),
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        Row(
-                                          children: [
-                                            Container(
-                                              padding: const EdgeInsets.all(6),
-                                              decoration: BoxDecoration(
-                                                color: cs.tertiary.withValues(alpha: 0.10),
-                                                borderRadius: BorderRadius.circular(8),
-                                              ),
-                                              child: Icon(Icons.donut_small_rounded, color: cs.tertiary, size: 16),
-                                            ),
-                                            SizedBox(width: spacing.sm),
-                                            Text(
-                                              'Estado',
-                                              style: theme.textTheme.titleMedium?.copyWith(
-                                                fontWeight: FontWeight.w800,
-                                                color: cs.onSurface,
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                        SizedBox(height: spacing.xl),
-                                        StatusChart(
-                                          completed: _statusCounts(_daysFilter)['completed'] ?? 0,
-                                          pending: _statusCounts(_daysFilter)['pending'] ?? 0,
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ),
+                                Expanded(flex: 4, child: statusChartCard),
                               ],
                             );
                           }).animate().fadeIn(delay: 400.ms),
                       const SizedBox(height: 64),
-                      Row(
+                      Wrap(
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        spacing: spacing.sm,
                         children: [
                           Icon(
                             Icons.history_rounded,
                             size: 20,
                             color: cs.primary,
                           ),
-                          SizedBox(width: spacing.sm),
                           Text(
                             'REGISTRO DE ACTIVIDAD',
                             style: theme.textTheme.labelSmall?.copyWith(
@@ -565,20 +583,43 @@ class HomeScreenState extends ConsumerState<HomeScreen> {
                         ],
                       ).animate().fadeIn(delay: 500.ms),
                       SizedBox(height: spacing.lg),
-                      HomeRecentActivitySection(
-                        loading: _loading,
-                        sessions: _filteredRecent(),
-                        patientNames: _patientNames,
-                        onTapSession: (s) async {
-                          final pid = s.patientId;
-                          final name = _patientNames[pid] ?? 'Paciente #$pid';
-                          final result = await context.push(
-                            '/patient_detail',
-                            extra: {'name': name, 'id': pid},
-                          );
-                          if (result == true) await _fetch();
-                        },
-                      ).animate().fadeIn(delay: 600.ms),
+                      if (_allSessions.isEmpty && !_loading)
+                        Container(
+                          width: double.infinity,
+                          padding: EdgeInsets.all(spacing.xl),
+                          decoration: AppDecorations.premiumCard(context, radius: 16),
+                          child: Column(
+                            children: [
+                              Icon(Icons.event_note_outlined, size: 48, color: cs.primary.withValues(alpha: 0.5)),
+                              SizedBox(height: spacing.md),
+                              Text(
+                                'No hay sesiones registradas',
+                                style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+                              ),
+                              SizedBox(height: spacing.xs),
+                              Text(
+                                'Las sesiones y evaluaciones aparecerán aquí una vez que comiences a trabajar con tus pacientes.',
+                                textAlign: TextAlign.center,
+                                style: theme.textTheme.bodyMedium?.copyWith(color: cs.onSurfaceVariant),
+                              ),
+                            ],
+                          ),
+                        ).animate().fadeIn(delay: 600.ms)
+                      else
+                        HomeRecentActivitySection(
+                          loading: _loading,
+                          sessions: _filteredRecent(),
+                          patientNames: _patientNames,
+                          onTapSession: (s) async {
+                            final pid = s.patientId;
+                            final name = _patientNames[pid] ?? 'Paciente #$pid';
+                            final result = await context.push(
+                              '/patient_detail',
+                              extra: {'name': name, 'id': pid},
+                            );
+                            if (result == true) await _fetch();
+                          },
+                        ).animate().fadeIn(delay: 600.ms),
                     ],
                   ),
                 ),

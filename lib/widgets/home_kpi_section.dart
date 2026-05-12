@@ -82,10 +82,10 @@ class HomeKpiSection extends StatelessWidget {
         ];
 
         final extent = width > 800
-            ? 220.0
-            : width > 500
             ? 240.0
-            : 260.0;
+            : width > 500
+            ? 260.0
+            : 280.0;
         return GridView.builder(
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),

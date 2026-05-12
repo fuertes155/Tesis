@@ -9,6 +9,7 @@ class CreatePatientScreenState extends ConsumerState<CreatePatientScreen> {
   final _emailController = TextEditingController();
   final _diagnosisController = TextEditingController(text: 'Pendiente');
   bool _isLoading = false;
+  bool _hasConsent = false;
 
   @override
   void dispose() {
@@ -23,6 +24,15 @@ class CreatePatientScreenState extends ConsumerState<CreatePatientScreen> {
 
   Future<void> _createPatient() async {
     if (!_formKey.currentState!.validate()) return;
+    if (!_hasConsent) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Debe aceptar el consentimiento informado.'),
+          backgroundColor: Theme.of(context).colorScheme.error,
+        ),
+      );
+      return;
+    }
     setState(() => _isLoading = true);
 
     try {
@@ -59,6 +69,7 @@ class CreatePatientScreenState extends ConsumerState<CreatePatientScreen> {
         'phone': _phoneController.text,
         'email': _emailController.text,
         'diagnosis': 'Pendiente',
+        'has_consent': _hasConsent,
       });
       api.pushNotice('patient_created');
 
@@ -294,6 +305,35 @@ class CreatePatientScreenState extends ConsumerState<CreatePatientScreen> {
                             prefixIcon: Icon(Icons.email_outlined),
                           ),
                         ).animate().fadeIn(delay: 420.ms),
+
+                        SizedBox(height: spacing.xl),
+
+                        // ── Consentimiento Informado ────────────────────
+                        _SectionHeader(
+                          icon: Icons.verified_user_outlined,
+                          label: 'Consentimiento',
+                          color: cs.secondary,
+                        ),
+                        SizedBox(height: spacing.lg),
+
+                        Container(
+                          decoration: BoxDecoration(
+                            color: cs.surfaceContainerLowest,
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(color: cs.outlineVariant.withValues(alpha: 0.5)),
+                          ),
+                          child: CheckboxListTile(
+                            value: _hasConsent,
+                            onChanged: (val) {
+                              setState(() => _hasConsent = val ?? false);
+                            },
+                            title: const Text('Consentimiento Informado'),
+                            subtitle: const Text('El paciente o su tutor legal ha firmado el consentimiento para el tratamiento de datos y terapias.'),
+                            controlAffinity: ListTileControlAffinity.leading,
+                            contentPadding: EdgeInsets.symmetric(horizontal: spacing.md, vertical: spacing.xs),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                          ),
+                        ).animate().fadeIn(delay: 440.ms),
 
                         SizedBox(height: spacing.x2l),
 

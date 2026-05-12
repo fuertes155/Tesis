@@ -69,7 +69,11 @@ class DoctorPanelScreenState extends ConsumerState<DoctorPanelScreen> {
     final glass = context.glass;
     
     final bool isAvailable = me?.isAvailable ?? true;
-    final username = me?.username ?? ref.watch(apiServiceProvider).value?.currentUsername ?? 'Doctor';
+    final apiAsync = ref.watch(apiServiceProvider);
+    final username = me?.username ?? 
+        (me?.fullName?.isNotEmpty == true ? me!.fullName! : null) ??
+        apiAsync.maybeWhen(data: (api) => api.currentUsername, orElse: () => 'Doctor') ??
+        'Doctor';
 
     return Scaffold(
       backgroundColor: cs.surface,
@@ -293,26 +297,33 @@ class _SectionHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final theme = Theme.of(context);
-    return Row(
+    return Wrap(
+      crossAxisAlignment: WrapCrossAlignment.center,
+      spacing: 10,
+      runSpacing: 8,
       children: [
-        Container(
-          padding: const EdgeInsets.all(6),
-          decoration: BoxDecoration(
-            color: cs.primary.withValues(alpha: 0.10),
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Icon(icon, size: 16, color: cs.primary),
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(6),
+              decoration: BoxDecoration(
+                color: cs.primary.withValues(alpha: 0.10),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Icon(icon, size: 16, color: cs.primary),
+            ),
+            const SizedBox(width: 10),
+            Text(
+              label,
+              style: theme.textTheme.labelSmall?.copyWith(
+                color: cs.onSurfaceVariant,
+                fontWeight: FontWeight.w800,
+                letterSpacing: 1.5,
+              ),
+            ),
+          ],
         ),
-        const SizedBox(width: 10),
-        Text(
-          label,
-          style: theme.textTheme.labelSmall?.copyWith(
-            color: cs.onSurfaceVariant,
-            fontWeight: FontWeight.w800,
-            letterSpacing: 1.5,
-          ),
-        ),
-        const Spacer(),
         if (badge != null)
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),

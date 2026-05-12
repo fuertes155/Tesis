@@ -12,6 +12,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:speech_to_text/speech_to_text.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import '../providers/api_providers.dart';
+import '../core/theme/app_theme.dart';
 
 class FluencyGame extends ConsumerStatefulWidget {
   final bool flowMode;
@@ -202,7 +203,10 @@ class _FluencyGameState extends ConsumerState<FluencyGame> {
       'duration_s': gameDuration - _timeLeft,
       'paused': _isPaused,
     };
-    final api = ref.read(apiServiceProvider).value!;
+    final apiAsync = ref.read(apiServiceProvider);
+    final api = apiAsync.value;
+    if (api == null) return;
+
     final durationMs = _gameStartTime != null
         ? DateTime.now().difference(_gameStartTime!).inMilliseconds
         : 0;
@@ -346,170 +350,206 @@ class _FluencyGameState extends ConsumerState<FluencyGame> {
             ),
         ],
       ),
-      body: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              if (!_isPlaying && !_isFinished) ...[
-                if (!_isFocusMode) ...[
-                  const Icon(
-                    Icons.record_voice_over_outlined,
-                    size: 80,
-                    color: Colors.blue,
-                  ),
-                  const SizedBox(height: 32),
-                ],
-                Text(
-                  'Selecciona el tipo de prueba',
-                  style: theme.textTheme.headlineSmall,
-                ),
-                const SizedBox(height: 32),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          final h = constraints.maxHeight;
+          final isSmall = h < 650;
+          final isMobile = context.isMobile;
+
+          return SingleChildScrollView(
+            physics: const BouncingScrollPhysics(),
+            child: ConstrainedBox(
+              constraints: BoxConstraints(minHeight: h),
+              child: Padding(
+                padding: EdgeInsets.all(isSmall ? 16.0 : 24.0),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.start,
                   children: [
-                    Expanded(
-                      child: _GameModeCard(
-                        title: 'Fonológica',
-                        subtitle: _isFocusMode ? '' : 'Palabras con una letra',
-                        icon: Icons.abc,
-                        onTap: () => _startGame(false),
+                    SizedBox(height: isSmall ? 10 : 32),
+                    if (!_isPlaying && !_isFinished) ...[
+                      if (!_isFocusMode) ...[
+                        Icon(
+                          Icons.record_voice_over_outlined,
+                          size: isSmall ? 50 : 80,
+                          color: Colors.blue,
+                        ),
+                        SizedBox(height: isSmall ? 12 : 32),
+                      ],
+                      Text(
+                        'Selecciona el tipo de prueba',
+                        style: theme.textTheme.headlineSmall,
+                        textAlign: TextAlign.center,
                       ),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: _GameModeCard(
-                        title: 'Semántica',
-                        subtitle: _isFocusMode ? '' : 'Palabras de una categoría',
-                        icon: Icons.category_outlined,
-                        onTap: () => _startGame(true),
+                      const SizedBox(height: 32),
+                      isMobile 
+                      ? Column(
+                          children: [
+                            _GameModeCard(
+                              title: 'Fonológica',
+                              subtitle: _isFocusMode ? '' : 'Palabras con una letra',
+                              icon: Icons.abc,
+                              onTap: () => _startGame(false),
+                            ),
+                            const SizedBox(height: 16),
+                            _GameModeCard(
+                              title: 'Semántica',
+                              subtitle: _isFocusMode ? '' : 'Palabras de una categoría',
+                              icon: Icons.category_outlined,
+                              onTap: () => _startGame(true),
+                            ),
+                          ],
+                        )
+                      : Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                          children: [
+                            Expanded(
+                              child: _GameModeCard(
+                                title: 'Fonológica',
+                                subtitle: _isFocusMode ? '' : 'Palabras con una letra',
+                                icon: Icons.abc,
+                                onTap: () => _startGame(false),
+                              ),
+                            ),
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: _GameModeCard(
+                                title: 'Semántica',
+                                subtitle: _isFocusMode ? '' : 'Palabras de una categoría',
+                                icon: Icons.category_outlined,
+                                onTap: () => _startGame(true),
+                              ),
+                            ),
+                          ],
+                        ),
+                    ] else ...[
+                      Text(
+                        _currentPrompt,
+                        style: (isSmall ? theme.textTheme.headlineLarge : theme.textTheme.displayMedium)?.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: theme.colorScheme.primary,
+                        ),
+                        textAlign: TextAlign.center,
                       ),
-                    ),
-                  ],
-                ),
-              ] else ...[
-                Text(
-                  _currentPrompt,
-                  style: theme.textTheme.displayMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: theme.colorScheme.primary,
-                  ),
-                ),
-                const SizedBox(height: 48),
-                Stack(
-                  alignment: Alignment.center,
-                  children: [
-                    if (!_isFocusMode)
-                      SizedBox(
-                        width: 150,
-                        height: 150,
-                        child: CircularProgressIndicator(
-                          value: _timeLeft / gameDuration,
-                          strokeWidth: 12,
-                          backgroundColor: Colors.grey[200],
-                          valueColor: AlwaysStoppedAnimation<Color>(
-                            _isListening ? Colors.blue : (_timeLeft > 10 ? Colors.green : Colors.red),
+                      SizedBox(height: isSmall ? 24 : 48),
+                      Stack(
+                        alignment: Alignment.center,
+                        children: [
+                          if (!_isFocusMode)
+                            SizedBox(
+                              width: isSmall ? 120 : 150,
+                              height: isSmall ? 120 : 150,
+                              child: CircularProgressIndicator(
+                                value: _timeLeft / gameDuration,
+                                strokeWidth: isSmall ? 8 : 12,
+                                backgroundColor: Colors.grey[200],
+                                valueColor: AlwaysStoppedAnimation<Color>(
+                                  _isListening ? Colors.blue : (_timeLeft > 10 ? Colors.green : Colors.red),
+                                ),
+                              ),
+                            ),
+                          if (_isListening && !_isFocusMode)
+                            SizedBox(
+                              width: isSmall ? 140 : 170,
+                              height: isSmall ? 140 : 170,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                valueColor: AlwaysStoppedAnimation<Color>(Colors.blue),
+                              ),
+                            ).animate(onPlay: (c) => c.repeat()).scale(begin: const Offset(1, 1), end: const Offset(1.1, 1.1)),
+                          Text(
+                            '$_timeLeft',
+                            style: theme.textTheme.displayLarge?.copyWith(
+                              fontWeight: FontWeight.w900,
+                              fontSize: _isFocusMode ? (isSmall ? 100 : 120) : (isSmall ? 60 : 80),
+                              color: _isListening ? Colors.blue : null,
+                            ),
+                          ),
+                          if (_isPaused)
+                            const Positioned(
+                              bottom: 0,
+                              child: Text(
+                                'PAUSA',
+                                style: TextStyle(
+                                  color: Colors.red,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                      if (_lastWords.isNotEmpty && !_isFocusMode) ...[
+                        const SizedBox(height: 16),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                          decoration: BoxDecoration(
+                            color: Colors.blue.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Text(
+                            'Última palabra: $_lastWords',
+                            style: const TextStyle(color: Colors.blue, fontWeight: FontWeight.w500),
+                            textAlign: TextAlign.center,
                           ),
                         ),
+                      ],
+                      SizedBox(height: isSmall ? 20 : 40),
+                      if (!_isFocusMode) ...[
+                        Text('Conteo de Palabras', style: theme.textTheme.titleMedium),
+                        const SizedBox(height: 16),
+                      ],
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          FloatingActionButton(
+                            heroTag: 'dec',
+                            onPressed: _isPlaying && !_isPaused
+                                ? _decrementCount
+                                : null,
+                            backgroundColor: _isFocusMode ? Colors.transparent : Colors.red[100],
+                            elevation: _isFocusMode ? 0 : 4,
+                            mini: isSmall,
+                            shape: _isFocusMode ? const CircleBorder(side: BorderSide(color: Colors.red, width: 1)) : null,
+                            child: const Icon(Icons.remove, color: Colors.red),
+                          ),
+                          SizedBox(width: isSmall ? 24 : 32),
+                          Text(
+                            '$_wordCount',
+                            style: theme.textTheme.displayMedium?.copyWith(
+                              fontWeight: FontWeight.bold,
+                              fontSize: _isFocusMode ? (isSmall ? 80 : 100) : (isSmall ? 56 : 72),
+                            ),
+                          ),
+                          SizedBox(width: isSmall ? 24 : 32),
+                          FloatingActionButton(
+                            heroTag: 'inc',
+                            onPressed: _isPlaying && !_isPaused
+                                ? _incrementCount
+                                : null,
+                            backgroundColor: _isFocusMode ? Colors.transparent : Colors.green[100],
+                            elevation: _isFocusMode ? 0 : 4,
+                            mini: isSmall,
+                            shape: _isFocusMode ? const CircleBorder(side: BorderSide(color: Colors.green, width: 1)) : null,
+                            child: const Icon(Icons.add, color: Colors.green),
+                          ),
+                        ],
                       ),
-                    if (_isListening && !_isFocusMode)
-                      const SizedBox(
-                        width: 170,
-                        height: 170,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          valueColor: AlwaysStoppedAnimation<Color>(Colors.blue),
-                        ),
-                      ).animate(onPlay: (c) => c.repeat()).scale(begin: const Offset(1, 1), end: const Offset(1.1, 1.1)),
-                    Text(
-                      '$_timeLeft',
-                      style: theme.textTheme.displayLarge?.copyWith(
-                        fontWeight: FontWeight.w900,
-                        fontSize: _isFocusMode ? 120 : 80,
-                        color: _isListening ? Colors.blue : null,
-                      ),
-                    ),
-                    if (_isPaused)
-                      const Positioned(
-                        bottom: 8,
-                        child: Text(
-                          'PAUSA',
-                          style: TextStyle(
-                            color: Colors.red,
-                            fontWeight: FontWeight.bold,
+                      SizedBox(height: isSmall ? 24 : 40),
+                      if (_isPlaying && !_isFocusMode)
+                        SizedBox(
+                          width: double.infinity,
+                          child: OutlinedButton(
+                            onPressed: _endGame,
+                            child: const Text('Finalizar Ahora'),
                           ),
                         ),
-                      ),
+                    ],
                   ],
                 ),
-                if (_lastWords.isNotEmpty && !_isFocusMode) ...[
-                  const SizedBox(height: 16),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                    decoration: BoxDecoration(
-                      color: Colors.blue.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Text(
-                      'Última palabra: $_lastWords',
-                      style: const TextStyle(color: Colors.blue, fontWeight: FontWeight.w500),
-                      textAlign: TextAlign.center,
-                    ),
-                  ),
-                ],
-                const SizedBox(height: 40),
-                if (!_isFocusMode) ...[
-                  Text('Conteo de Palabras', style: theme.textTheme.titleMedium),
-                  const SizedBox(height: 16),
-                ],
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    FloatingActionButton(
-                      heroTag: 'dec',
-                      onPressed: _isPlaying && !_isPaused
-                          ? _decrementCount
-                          : null,
-                      backgroundColor: _isFocusMode ? Colors.transparent : Colors.red[100],
-                      elevation: _isFocusMode ? 0 : 4,
-                      shape: _isFocusMode ? const CircleBorder(side: BorderSide(color: Colors.red, width: 1)) : null,
-                      child: const Icon(Icons.remove, color: Colors.red),
-                    ),
-                    const SizedBox(width: 32),
-                    Text(
-                      '$_wordCount',
-                      style: theme.textTheme.displayMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        fontSize: _isFocusMode ? 100 : 72,
-                      ),
-                    ),
-                    const SizedBox(width: 32),
-                    FloatingActionButton(
-                      heroTag: 'inc',
-                      onPressed: _isPlaying && !_isPaused
-                          ? _incrementCount
-                          : null,
-                      backgroundColor: _isFocusMode ? Colors.transparent : Colors.green[100],
-                      elevation: _isFocusMode ? 0 : 4,
-                      shape: _isFocusMode ? const CircleBorder(side: BorderSide(color: Colors.green, width: 1)) : null,
-                      child: const Icon(Icons.add, color: Colors.green),
-                    ),
-                  ],
-                ),
-                const Spacer(),
-                if (_isPlaying && !_isFocusMode)
-                  SizedBox(
-                    width: double.infinity,
-                    child: OutlinedButton(
-                      onPressed: _endGame,
-                      child: const Text('Finalizar Ahora'),
-                    ),
-                  ),
-              ],
-            ],
-          ),
-        ),
+              ),
+            ),
+          );
+        },
       ),
     );
   }
@@ -530,12 +570,13 @@ class _GameModeCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isMobile = MediaQuery.of(context).size.width < 600;
     return Card(
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: onTap,
         child: Padding(
-          padding: const EdgeInsets.all(24.0),
+          padding: EdgeInsets.all(isMobile ? 16.0 : 24.0),
           child: Column(
             children: [
               Icon(

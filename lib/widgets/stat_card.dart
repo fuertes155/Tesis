@@ -131,12 +131,15 @@ class StatCard extends StatelessWidget {
           Row(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              Text(
-                value,
-                style: theme.textTheme.headlineMedium?.copyWith(
-                  fontWeight: FontWeight.w900,
-                  color: cs.onSurface,
-                  letterSpacing: -1.5,
+              Expanded(
+                child: Text(
+                  value,
+                  style: theme.textTheme.headlineMedium?.copyWith(
+                    fontWeight: FontWeight.w900,
+                    color: cs.onSurface,
+                    letterSpacing: -1.5,
+                  ),
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
               if (sparklinePoints != null) ...[

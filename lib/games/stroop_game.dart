@@ -318,120 +318,136 @@ class _StroopGameState extends ConsumerState<StroopGame> {
               : 'Funciones Ejecutivas ($_currentRound/$totalRounds)',
         ),
       ),
-      body: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              if (!_isPlaying) ...[
-                const Icon(
-                  Icons.psychology_alt,
-                  size: 80,
-                  color: Colors.purple,
-                ),
-                const SizedBox(height: 32),
-                const Text(
-                  'Test Stroop',
-                  style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 16),
-                const Text(
-                  'Selecciona el COLOR de la tinta,\nno la palabra escrita.',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 18, color: Colors.grey),
-                ),
-                const SizedBox(height: 48),
-                FilledButton.icon(
-                  onPressed: () {
-                    setState(() => _showIntro = false);
-                    _startGame();
-                  },
-                  icon: const Icon(Icons.play_arrow),
-                  label: const Text('COMENZAR'),
-                  style: FilledButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 48,
-                      vertical: 16,
-                    ),
-                  ),
-                ),
-              ] else ...[
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          final double h = constraints.maxHeight;
+          final double w = constraints.maxWidth;
+          final bool isSmall = h < 600;
+          
+          return SingleChildScrollView(
+            physics: const BouncingScrollPhysics(),
+            child: ConstrainedBox(
+              constraints: BoxConstraints(minHeight: h),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.start,
                   children: [
-                    Chip(label: Text('Ronda: $_currentRound/$totalRounds')),
-                    const SizedBox(width: 8),
-                    Chip(label: Text('Puntos: $_score')),
-                  ],
-                ),
-                const Spacer(),
-                AnimatedSwitcher(
-                      duration: const Duration(milliseconds: 180),
-                      transitionBuilder: (child, anim) => FadeTransition(
-                        opacity: CurvedAnimation(
-                          parent: anim,
-                          curve: Curves.easeOut,
-                        ),
-                        child: ScaleTransition(
-                          scale: Tween(begin: 0.98, end: 1.0).animate(anim),
-                          child: child,
-                        ),
+                    SizedBox(height: isSmall ? 10 : 40),
+                    if (!_isPlaying) ...[
+                      Icon(
+                        Icons.psychology_alt,
+                        size: isSmall ? 50 : 80,
+                        color: Colors.purple,
                       ),
-                      child: Container(
-                        key: ValueKey('${_wordText}_${_wordColor.toARGB32()}'),
-                        padding: const EdgeInsets.all(48),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(24),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.05),
-                              blurRadius: 20,
-                              offset: const Offset(0, 10),
-                            ),
-                          ],
-                        ),
-                        child: Text(
-                          _wordText,
-                          style: TextStyle(
-                            fontSize: 64,
-                            fontWeight: FontWeight.w900,
-                            color: _wordColor,
-                            letterSpacing: 2,
+                      SizedBox(height: isSmall ? 12 : 32),
+                      Text(
+                        'Test Stroop',
+                        style: TextStyle(fontSize: isSmall ? 22 : 28, fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 16),
+                      const Text(
+                        'Selecciona el COLOR de la tinta,\nno la palabra escrita.',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(fontSize: 18, color: Colors.grey),
+                      ),
+                      SizedBox(height: isSmall ? 32 : 48),
+                      FilledButton.icon(
+                        onPressed: () {
+                          setState(() => _showIntro = false);
+                          _startGame();
+                        },
+                        icon: const Icon(Icons.play_arrow),
+                        label: const Text('COMENZAR'),
+                        style: FilledButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 48,
+                            vertical: 16,
                           ),
                         ),
                       ),
-                    )
-                    .animate(target: _pulseCorrect ? 1 : 0)
-                    .scale(
-                      duration: 160.ms,
-                      begin: const Offset(1, 1),
-                      end: const Offset(1.06, 1.06),
-                      curve: Curves.easeOut,
-                    )
-                    .animate(target: _wrongShake ? 1 : 0)
-                    .shake(duration: 180.ms, hz: 5, offset: const Offset(8, 0)),
-                const Spacer(),
-                Text(
-                  'Selecciona el color:',
-                  style: TextStyle(color: Colors.grey[600]),
+                    ] else ...[
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Chip(label: Text('Ronda: $_currentRound/$totalRounds')),
+                          const SizedBox(width: 8),
+                          Chip(label: Text('Puntos: $_score')),
+                        ],
+                      ),
+                      SizedBox(height: isSmall ? 20 : 40),
+                      AnimatedSwitcher(
+                        duration: const Duration(milliseconds: 180),
+                        transitionBuilder: (child, anim) => FadeTransition(
+                          opacity: CurvedAnimation(
+                            parent: anim,
+                            curve: Curves.easeOut,
+                          ),
+                          child: ScaleTransition(
+                            scale: Tween(begin: 0.98, end: 1.0).animate(anim),
+                            child: child,
+                          ),
+                        ),
+                        child: Container(
+                          key: ValueKey('${_wordText}_${_wordColor.toARGB32()}'),
+                          padding: EdgeInsets.all(isSmall ? 24 : 48),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(24),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.05),
+                                blurRadius: 20,
+                                offset: const Offset(0, 10),
+                              ),
+                            ],
+                          ),
+                          child: Text(
+                            _wordText,
+                            style: TextStyle(
+                              fontSize: isSmall ? 48 : 64,
+                              fontWeight: FontWeight.w900,
+                              color: _wordColor,
+                              letterSpacing: 2,
+                            ),
+                          ),
+                        ),
+                      )
+                      .animate(target: _pulseCorrect ? 1 : 0)
+                      .scale(
+                        duration: 160.ms,
+                        begin: const Offset(1, 1),
+                        end: const Offset(1.06, 1.06),
+                        curve: Curves.easeOut,
+                      )
+                      .animate(target: _wrongShake ? 1 : 0)
+                      .shake(duration: 180.ms, hz: 5, offset: const Offset(8, 0)),
+                      SizedBox(height: isSmall ? 20 : 40),
+                      Text(
+                        'Selecciona el color:',
+                        style: TextStyle(color: Colors.grey[600]),
+                      ),
+                      const SizedBox(height: 24),
+                      Wrap(
+                        alignment: WrapAlignment.center,
+                        spacing: 20,
+                        runSpacing: 20,
+                        children: _colors.entries.map((entry) {
+                          return _ColorButton(
+                            color: entry.value,
+                            onTap: () => _handleInput(entry.value),
+                            size: isSmall ? 60 : 70,
+                          );
+                        }).toList(),
+                      ),
+                      const SizedBox(height: 20),
+                    ],
+                  ],
                 ),
-                const SizedBox(height: 24),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  children: _colors.entries.map((entry) {
-                    return _ColorButton(
-                      color: entry.value,
-                      onTap: () => _handleInput(entry.value),
-                    );
-                  }).toList(),
-                ),
-                const SizedBox(height: 48),
-              ],
-            ],
-          ),
-        ),
+              ),
+            ),
+          );
+        },
       ),
     );
   }
@@ -440,8 +456,13 @@ class _StroopGameState extends ConsumerState<StroopGame> {
 class _ColorButton extends StatelessWidget {
   final Color color;
   final VoidCallback onTap;
+  final double size;
 
-  const _ColorButton({required this.color, required this.onTap});
+  const _ColorButton({
+    required this.color,
+    required this.onTap,
+    this.size = 70.0,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -454,8 +475,8 @@ class _ColorButton extends StatelessWidget {
         splashColor: Colors.white24,
         highlightColor: Colors.white10,
         child: Ink(
-          width: 70,
-          height: 70,
+          width: size,
+          height: size,
           decoration: ShapeDecoration(
             color: color,
             shape: const CircleBorder(

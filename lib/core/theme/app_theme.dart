@@ -593,4 +593,8 @@ extension AppThemeX on BuildContext {
 
   List<BoxShadow> get premiumShadows =>
       Theme.of(this).extension<AppPremiumShadows>()?.premiumShadow ?? [];
+
+  bool get isMobile => MediaQuery.sizeOf(this).width < 600;
+  bool get isTablet => MediaQuery.sizeOf(this).width >= 600 && MediaQuery.sizeOf(this).width < 1024;
+  bool get isDesktop => MediaQuery.sizeOf(this).width >= 1024;
 }

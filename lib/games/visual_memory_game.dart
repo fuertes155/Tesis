@@ -11,6 +11,7 @@ import '../widgets/animated_dialog.dart';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/api_providers.dart';
+import '../core/theme/app_theme.dart';
 
 class VisualMemoryGame extends ConsumerStatefulWidget {
   final bool flowMode;
@@ -268,6 +269,8 @@ class _VisualMemoryGameState extends ConsumerState<VisualMemoryGame> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
     final flowLabel =
         widget.flowMode && widget.flowIndex != null && widget.flowTotal != null
         ? 'Memoria Visual (${widget.flowIndex! + 1}/${widget.flowTotal})'
@@ -307,6 +310,7 @@ class _VisualMemoryGameState extends ConsumerState<VisualMemoryGame> {
     }
 
     return Scaffold(
+      backgroundColor: Colors.white,
       appBar: AppBar(
         title: Text(
           widget.flowMode &&
@@ -319,95 +323,152 @@ class _VisualMemoryGameState extends ConsumerState<VisualMemoryGame> {
           TextButton(onPressed: _startGame, child: const Text('Reiniciar')),
         ],
       ),
-      body: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Text(
-                _showingPattern
-                    ? 'Memoriza las casillas azules'
-                    : 'Selecciona las casillas que viste',
-                style: Theme.of(context).textTheme.titleLarge,
-              ),
-              const SizedBox(height: 24),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          final double h = constraints.maxHeight;
+          final double w = constraints.maxWidth;
+          
+          final double maxPossibleGrid = min(w - 32, h - 260);
+          final double gridSide = maxPossibleGrid.clamp(180.0, 420.0);
+          final double cellSide = (gridSide - (gridSize - 1) * 12) / gridSize;
+
+          return SingleChildScrollView(
+            physics: const BouncingScrollPhysics(),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 16.0),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  Chip(label: Text('Puntos: $_score')),
-                  const SizedBox(width: 12),
-                  Chip(label: Text('Recordar: $_itemsToRemember')),
-                  const SizedBox(width: 12),
-                  Chip(label: Text('Memorizar: ${_memorizeSeconds}s')),
+                  SizedBox(height: h > 500 ? 10 : 0),
+                  Text(
+                    _showingPattern
+                        ? 'Memoriza las casillas azules'
+                        : 'Selecciona las casillas que viste',
+                    style: theme.textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.bold,
+                      color: cs.onSurface,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 20),
+                  Wrap(
+                    alignment: WrapAlignment.center,
+                    spacing: 12,
+                    runSpacing: 10,
+                    children: [
+                      _buildInfoChip('Puntos: $_score', Colors.blue, Icons.stars_rounded),
+                      _buildInfoChip('Recordar: $_itemsToRemember', Colors.orange, Icons.psychology_rounded),
+                      _buildInfoChip('Tiempo: ${_memorizeSeconds}s', Colors.purple, Icons.timer_rounded),
+                    ],
+                  ),
+                  const SizedBox(height: 32),
+                  Align(
+                    alignment: Alignment.topCenter,
+                    child: UnconstrainedBox(
+                      child: SizedBox(
+                        width: gridSide,
+                        height: gridSide,
+                        child: GridView.builder(
+                          physics: const NeverScrollableScrollPhysics(),
+                          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: gridSize,
+                            crossAxisSpacing: 12,
+                            mainAxisSpacing: 12,
+                            mainAxisExtent: cellSide,
+                            childAspectRatio: 1.0,
+                          ),
+                          itemCount: totalCells,
+                          itemBuilder: (context, index) {
+                            bool isTarget = _targetIndices.contains(index);
+                            bool isSelected = _selectedIndices.contains(index);
+                            bool showAsTarget = _showingPattern && isTarget;
+                            Color cellColor = isSelected 
+                                ? (isTarget ? Colors.green : Colors.red) 
+                                : (showAsTarget ? Colors.blue : Colors.grey.shade200);
+                            return _buildGridCell(index, cellColor, showAsTarget, isTarget);
+                          },
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 32),
                 ],
               ),
-              const SizedBox(height: 12),
-              AspectRatio(
-                aspectRatio: 1,
-                child: GridView.builder(
-                  physics: const NeverScrollableScrollPhysics(),
-                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: gridSize,
-                    crossAxisSpacing: 8,
-                    mainAxisSpacing: 8,
-                  ),
-                  itemCount: totalCells,
-                  itemBuilder: (context, index) {
-                    bool isTarget = _targetIndices.contains(index);
-                    bool isSelected = _selectedIndices.contains(index);
-                    bool showAsTarget = _showingPattern && isTarget;
-
-                    Color cellColor = Colors.grey.shade300;
-                    if (showAsTarget) {
-                      cellColor = Colors.blue;
-                    } else if (isSelected) {
-                      cellColor = isTarget ? Colors.green : Colors.red;
-                    }
-
-                    final cell = GestureDetector(
-                      onTap: () => _onCellTap(index),
-                      child: AnimatedContainer(
-                        duration: const Duration(milliseconds: 300),
-                        decoration: BoxDecoration(
-                          color: cellColor,
-                          borderRadius: BorderRadius.circular(8),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.1),
-                              blurRadius: 4,
-                              offset: const Offset(2, 2),
-                            ),
-                          ],
-                        ),
-                        child: _showingPattern
-                            ? Center(
-                                child: Text(
-                                  _countdown > 0 ? '$_countdown' : '',
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 24,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              )
-                            : null,
-                      ),
-                    );
-                    return cell
-                        .animate(target: _wrongIndex == index ? 1 : 0)
-                        .shake(
-                          duration: 200.ms,
-                          hz: 5,
-                          offset: const Offset(8, 0),
-                        );
-                  },
-                ),
-              ),
-            ],
-          ),
-        ),
+            ),
+          );
+        },
       ),
     );
+  }
+
+  Widget _buildInfoChip(String label, Color color, IconData icon) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: color.withValues(alpha: 0.2)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 16, color: color),
+          const SizedBox(width: 6),
+          Text(
+            label,
+            style: TextStyle(
+              color: color,
+              fontWeight: FontWeight.bold,
+              fontSize: 13,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildGridCell(int index, Color cellColor, bool showAsTarget, bool isTarget) {
+    return GestureDetector(
+      onTap: () => _onCellTap(index),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 250),
+        curve: Curves.easeInOut,
+        decoration: BoxDecoration(
+          color: cellColor,
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: [
+            if (showAsTarget || _selectedIndices.contains(index))
+              BoxShadow(
+                color: cellColor.withValues(alpha: 0.3),
+                blurRadius: 10,
+                spreadRadius: 1,
+                offset: const Offset(0, 4),
+              )
+            else
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.04),
+                blurRadius: 4,
+                offset: const Offset(0, 2),
+              ),
+          ],
+        ),
+        child: showAsTarget
+            ? Center(
+                child: Text(
+                  _countdown > 0 ? '$_countdown' : '',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 26,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              )
+            : null,
+      ),
+    ).animate(target: _wrongIndex == index ? 1 : 0).shake(
+          duration: 250.ms,
+          hz: 6,
+          offset: const Offset(10, 0),
+        );
   }
 }

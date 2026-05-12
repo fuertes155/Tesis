@@ -33,7 +33,9 @@ class PatientService:
 
     @staticmethod
     def create_patient(db: Session, patient: entities.PatientCreate):
-        db_patient = models.Patient(**patient.model_dump())
+        data = patient.model_dump()
+        data.pop("has_consent", None)
+        db_patient = models.Patient(**data)
         db.add(db_patient)
         db.commit()
         db.refresh(db_patient)

@@ -65,36 +65,36 @@ def main() -> int:
 
     s, body = _request_json(
         "POST",
-        "/users/auth/login",
+        "/api/v1/users/auth/login",
         {"username": "samuel@gmail.com", "password": "Password123!"},
     )
     ok = _expect(200, s, body, "POST /users/auth/login (doctor seed)") and ok
 
     s, body = _request_json(
         "POST",
-        "/users/auth/login",
+        "/api/v1/users/auth/login",
         {"username": "samuel1@gmail.com", "password": "Password123!"},
     )
     ok = _expect(200, s, body, "POST /users/auth/login (gestor seed)") and ok
     token = body.get("access_token") if isinstance(body, dict) else None
     if token:
         auth = {"Authorization": f"Bearer {token}"}
-        s2, body2 = _request_json("GET", "/users/", headers=auth)
+        s2, body2 = _request_json("GET", "/api/v1/users/", headers=auth)
         ok = _expect(200, s2, body2, "GET /users/ (gestor token)") and ok
-        s3, body3 = _request_json("GET", "/patients/", headers=auth)
+        s3, body3 = _request_json("GET", "/api/v1/patients/", headers=auth)
         ok = _expect(200, s3, body3, "GET /patients/ (gestor token)") and ok
 
     email = f"smoke{int(time.time())}@example.com"
     s, body = _request_json(
         "POST",
-        "/users/auth/register",
+        "/api/v1/users/auth/register",
         {"username": email.upper(), "password": "Password123!", "role": "doctor"},
     )
     ok = _expect(201, s, body, "POST /users/auth/register (new)") and ok
 
     s, body = _request_json(
         "POST",
-        "/users/auth/register",
+        "/api/v1/users/auth/register",
         {"username": email.lower(), "password": "Password123!", "role": "doctor"},
     )
     ok = _expect(409, s, body, "POST /users/auth/register (duplicate)") and ok
