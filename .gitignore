@@ -43,3 +43,26 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Environment and secrets
+.env
+backend/.env
+
+# Database files
+*.db
+backend/data/*.db
+
+# Python cache
+__pycache__/
+**/__pycache__/
+*.pyc
+
+# Analysis artifacts and logs
+analysis_*.txt
+flutter_*.log
+tests_output.txt
+pyright_analysis.txt
+pyrightconfig.json
+
+# Scratch / temporary files
+scratch/

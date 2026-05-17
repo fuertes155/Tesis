@@ -11,7 +11,6 @@ import '../widgets/animated_dialog.dart';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/api_providers.dart';
-import '../core/theme/app_theme.dart';
 
 class VisualMemoryGame extends ConsumerStatefulWidget {
   final bool flowMode;

@@ -1,38 +1,69 @@
 <!DOCTYPE html>
-<html>
+<html lang="es">
 <head>
   <!--
     If you are serving your web app in a path other than the root, change the
     href value below to reflect the base path you are serving from.
-
-    The path provided below has to start and end with a slash "/" in order for
-    it to work correctly.
-
-    For more details:
-    * https://developer.mozilla.org/en-US/docs/Web/HTML/Element/base
-
-    This is a placeholder for base href that will be replaced by the value of
-    the `--base-href` argument provided to `flutter build`.
   -->
   <base href="$FLUTTER_BASE_HREF">
 
   <meta charset="UTF-8">
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
-  <meta name="description" content="A new Flutter project.">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
+  <meta name="description" content="NeuroApp360 — Plataforma de evaluación neuropsicológica para profesionales de la salud. Gestión de pacientes, sesiones y pruebas cognitivas.">
+  <meta name="keywords" content="neuropsicología, evaluación cognitiva, hospital, pacientes, pruebas neurológicas">
+  <meta name="author" content="NeuroApp360">
+  <meta name="theme-color" content="#0B6E99">
+  <meta name="color-scheme" content="light dark">
+
+  <!-- Open Graph -->
+  <meta property="og:title" content="NeuroApp360 — Evaluación Neuropsicológica">
+  <meta property="og:description" content="Plataforma clínica de evaluación neuropsicológica para profesionales de la salud.">
+  <meta property="og:type" content="website">
 
   <!-- iOS meta tags & icons -->
   <meta name="mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black">
-  <meta name="apple-mobile-web-app-title" content="NeuroApp">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="NeuroApp360">
   <link rel="apple-touch-icon" href="icons/Icon-192.png">
 
   <!-- Favicon -->
   <link rel="icon" type="image/png" href="favicon.png"/>
 
-  <title>NeuroApp</title>
+  <title>NeuroApp360 | Hospital Central — Evaluación Neuropsicológica</title>
   <link rel="manifest" href="manifest.json">
+
+  <!-- Accessibility: prefers-reduced-motion and high contrast support -->
+  <style>
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+    }
+  </style>
+
+  <!-- Loading indicator for slow connections (accessibility: ARIA live region) -->
+  <style>
+    .loading-container {
+      display: flex; justify-content: center; align-items: center;
+      height: 100vh; font-family: 'Inter', 'Segoe UI', sans-serif;
+      background: #F7F9FB; color: #333;
+    }
+    .loading-container p { font-size: 1.1rem; }
+  </style>
 </head>
 <body>
+  <!-- Accessible loading state with ARIA live region -->
+  <div id="loading" class="loading-container" role="status" aria-live="polite" aria-label="Cargando aplicación">
+    <p>Cargando NeuroApp360…</p>
+  </div>
+
+  <script>
+    // Remove loading indicator once Flutter has rendered
+    window.addEventListener('flutter-first-frame', function () {
+      var loading = document.getElementById('loading');
+      if (loading) loading.remove();
+    });
+  </script>
   <script src="flutter_bootstrap.js" async></script>
 </body>
 </html>

@@ -1,4 +1,4 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from app.api.v1 import users, patients, sessions
 from app.infrastructure.database import engine, Base, SessionLocal
@@ -8,9 +8,11 @@ from app.core.config import settings
 from sqlalchemy import text
 import time
 import logging
+from collections import defaultdict
+from datetime import datetime, timezone
 
 # Create database tables
-print(f"DEBUG: Using database URL: {settings.DATABASE_URL}")
+logging.getLogger("neuroapp").info("Starting database initialization…")
 Base.metadata.create_all(bind=engine)
 
 def _ensure_db_schema() -> None:
@@ -90,9 +92,38 @@ app = FastAPI(
 )
 
 _logger = logging.getLogger("neuroapp")
+_start_time = time.time()
+
+# ── Rate Limiter (in-memory, per-IP) ─────────────────────────────────────────
+_rate_limit_store: dict[str, list[float]] = defaultdict(list)
+RATE_LIMIT_WINDOW = 60   # seconds
+RATE_LIMIT_MAX = 60      # max requests per window
+
 
 @app.middleware("http")
-async def request_log_middleware(request, call_next):
+async def security_headers_middleware(request: Request, call_next):
+    """Add security headers, timing headers, and basic rate limiting."""
+    # ── Rate Limiting ─────────────────────────────────────────────────────────
+    client_ip = request.client.host if request.client else "unknown"
+    now = time.time()
+    # Clean old entries
+    _rate_limit_store[client_ip] = [
+        t for t in _rate_limit_store[client_ip] if now - t < RATE_LIMIT_WINDOW
+    ]
+    if len(_rate_limit_store[client_ip]) >= RATE_LIMIT_MAX:
+        return Response(
+            content='{"detail":"Too many requests. Try again later."}',
+            status_code=429,
+            media_type="application/json",
+            headers={
+                "Retry-After": str(RATE_LIMIT_WINDOW),
+                "X-RateLimit-Limit": str(RATE_LIMIT_MAX),
+                "X-RateLimit-Remaining": "0",
+            },
+        )
+    _rate_limit_store[client_ip].append(now)
+
+    # ── Execute Request & Measure Latency ─────────────────────────────────────
     start = time.perf_counter()
     try:
         response = await call_next(request)
@@ -106,6 +137,26 @@ async def request_log_middleware(request, call_next):
         )
         raise
     elapsed_ms = (time.perf_counter() - start) * 1000.0
+
+    # ── Latency / Timing Headers ──────────────────────────────────────────────
+    response.headers["X-Response-Time"] = f"{elapsed_ms:.1f}ms"
+    response.headers["X-Request-Id"] = f"{int(now * 1000)}"
+
+    # ── Rate Limit Info Headers ───────────────────────────────────────────────
+    remaining = RATE_LIMIT_MAX - len(_rate_limit_store[client_ip])
+    response.headers["X-RateLimit-Limit"] = str(RATE_LIMIT_MAX)
+    response.headers["X-RateLimit-Remaining"] = str(max(remaining, 0))
+
+    # ── Security Headers (OWASP) ──────────────────────────────────────────────
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["X-XSS-Protection"] = "1; mode=block"
+    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    response.headers["Permissions-Policy"] = "camera=(), microphone=(self), geolocation=()"
+    response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate"
+    response.headers["Pragma"] = "no-cache"
+
+    # ── Logging ───────────────────────────────────────────────────────────────
     _logger.info(
         "HTTP %s %s -> %s (%.1fms)",
         request.method,
@@ -122,12 +173,8 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
-    expose_headers=["*"],
+    expose_headers=["X-Response-Time", "X-Request-Id", "X-RateLimit-Limit", "X-RateLimit-Remaining"],
 )
-
-
-# Note: In production, you should restrict allow_origins to your specific domain.
-# But for development with Flutter's dynamic ports, "*" is the most reliable way.
 
 
 # Include Routers with explicit tags
@@ -141,7 +188,40 @@ def read_root():
 
 @app.get("/health")
 def health_check():
-    return {"status": "healthy"}
+    """Comprehensive health check for availability testing."""
+    uptime_seconds = time.time() - _start_time
+    db = SessionLocal()
+    db_ok = False
+    try:
+        db.execute(text("SELECT 1"))
+        db_ok = True
+    except Exception:
+        pass
+    finally:
+        db.close()
+    return {
+        "status": "healthy" if db_ok else "degraded",
+        "uptime_seconds": round(uptime_seconds, 1),
+        "database": "connected" if db_ok else "error",
+        "version": settings.VERSION,
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+    }
+
+@app.get("/readiness")
+def readiness_check():
+    """Kubernetes-style readiness probe for load balancers."""
+    db = SessionLocal()
+    try:
+        db.execute(text("SELECT 1"))
+        return {"ready": True}
+    except Exception:
+        return Response(
+            content='{"ready":false}',
+            status_code=503,
+            media_type="application/json",
+        )
+    finally:
+        db.close()
 
 if __name__ == "__main__":
     import uvicorn

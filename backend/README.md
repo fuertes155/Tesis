@@ -1,47 +1,49 @@
-# Backend (FastAPI)
+# NeuroApp Backend - Clean Architecture
 
-## Ejecutar
+Este backend ha sido refactorizado siguiendo los principios de **Clean Architecture** para garantizar escalabilidad, testabilidad y desacoplamiento.
 
-```powershell
-cd d:\Tesis\flutter_application_1\backend
+## Estructura del Proyecto
+
+```text
+app/
+├── api/            # Capa de Controladores (FastAPI Routers)
+│   └── v1/         # Versión 1 de la API
+├── application/    # Capa de Casos de Uso (Servicios de Negocio)
+├── core/           # Configuraciones Globales y Seguridad
+├── domain/         # Capa de Entidades (Modelos Pydantic / Lógica Pura)
+└── infrastructure/ # Capa de Implementación (Base de Datos / SQLAlchemy)
+```
+
+## Requisitos
+
+- Python 3.10+
+- FastAPI
+- SQLAlchemy
+- Pydantic Settings
+
+## Instalación
+
+1. Crear un entorno virtual:
+   ```bash
+   python -m venv venv
+   source venv/bin/activate  # En Windows: venv\Scripts\activate
+   ```
+
+2. Instalar dependencias:
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+3. Configurar el archivo `.env` basado en `.env.example`.
+
+## Ejecución
+
+Para ejecutar el servidor con la nueva arquitectura:
+
+```bash
 python -B -m uvicorn main:app --reload --host 127.0.0.1 --port 8000
 ```
 
-Endpoints:
-
-- http://127.0.0.1:8000/health
-- http://127.0.0.1:8000/docs
-
-## Conectar con el Frontend
-
-El frontend usa la variable `API_BASE_URL` (dart-define). Para web local:
-
-```powershell
-cd d:\Tesis\flutter_application_1
-flutter run -d chrome --web-hostname 127.0.0.1 --web-port 55912 --dart-define=API_BASE_URL=http://127.0.0.1:8000
-```
-
-Para ejecutar ambos desde VS Code: `Terminal → Run Task… → dev: fullstack`.
-
-## Pruebas rápidas (sin extensiones)
-
-Con el backend corriendo:
-
-```powershell
-cd d:\Tesis\flutter_application_1
-python backend\scripts\smoke_auth.py
-```
-
-## Registro y login
-
-- Login (token): `POST /users/auth/login`
-- Registro (token): `POST /users/auth/register`
-
-Ambos esperan JSON:
-
-```json
-{
-  "username": "correo@dominio.com",
-  "password": "Password123!"
-}
-```
+La documentación interactiva estará disponible en:
+- Swagger UI: `http://127.0.0.1:8000/docs`
+- ReDoc: `http://127.0.0.1:8000/redoc`

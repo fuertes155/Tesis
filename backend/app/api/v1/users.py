@@ -1,3 +1,6 @@
+import logging
+import re
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from sqlalchemy import func
@@ -14,7 +17,16 @@ router = APIRouter()
 
 
 def _is_strong_password(p: str) -> bool:
-    return len(p) >= 6
+    """Require min 8 chars, at least one uppercase, one lowercase, and one digit."""
+    if len(p) < 8:
+        return False
+    if not re.search(r"[A-Z]", p):
+        return False
+    if not re.search(r"[a-z]", p):
+        return False
+    if not re.search(r"\d", p):
+        return False
+    return True
 
 
 def _get_user_by_username_ci(db: Session, username: str) -> models.User | None:
@@ -55,7 +67,7 @@ def _create_role_profile(db: Session, user: models.User) -> None:
     try:
         db.commit()
     except Exception as e:
-        print(f"ERROR: Failed to create role profile: {e}")
+        logging.getLogger("neuroapp").error("Failed to create role profile: %s", e)
         db.rollback()
 
 
@@ -87,8 +99,7 @@ def auth_login(payload: entities.UserLogin, db: Session = Depends(get_db)):
         raise HTTPException(status_code=401, detail="Usuario o contraseña incorrectos")
     try:
         valid_password = security.verify_password(payload.password, user.hashed_password)
-    except Exception as e:
-        print(f"ERROR: Password verification failed: {e}")
+    except Exception:
         valid_password = False
 
     if not valid_password:
@@ -163,7 +174,7 @@ def register_user(
             detail="Email ya registrado",
         )
     hashed_password = security.get_password_hash(user.password)
-    print(f"DEBUG: Registering user with role: {user.role}", flush=True)
+
     db_user = models.User(
         username=normalized,
         hashed_password=hashed_password,
@@ -400,13 +411,10 @@ def verify_2fa(payload: dict, db: Session = Depends(get_db)):
         return {"status": "success", "message": "2FA not enabled, proceeding"}
 
     if not db_user.totp_secret:
-        # Fallback for testing if secret is not set but enabled
-        if code == "123456":
-            return {"status": "success"}
         raise HTTPException(status_code=400, detail="2FA secret not configured")
 
     totp = pyotp.TOTP(db_user.totp_secret)
-    if totp.verify(code) or code == "123456":  # Keep 123456 as backdoor for dev
+    if totp.verify(code):
         return {"status": "success"}
 
     raise HTTPException(status_code=401, detail="Código inválido")

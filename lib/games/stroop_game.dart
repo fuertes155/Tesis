@@ -321,7 +321,6 @@ class _StroopGameState extends ConsumerState<StroopGame> {
       body: LayoutBuilder(
         builder: (context, constraints) {
           final double h = constraints.maxHeight;
-          final double w = constraints.maxWidth;
           final bool isSmall = h < 600;
           
           return SingleChildScrollView(

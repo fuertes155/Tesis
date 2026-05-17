@@ -1,13 +1,15 @@
 {
-    "name": "NeuroApp Hospital",
-    "short_name": "NeuroApp",
+    "name": "NeuroApp360 — Evaluación Neuropsicológica",
+    "short_name": "NeuroApp360",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#F7F9FB",
     "theme_color": "#0B6E99",
-    "description": "A new Flutter project.",
+    "description": "Plataforma clínica de evaluación neuropsicológica para profesionales de la salud. Gestión de pacientes, sesiones y pruebas cognitivas.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
+    "lang": "es",
+    "categories": ["medical", "health"],
     "icons": [
         {
             "src": "icons/Icon-192.png",
