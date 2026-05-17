@@ -97,7 +97,7 @@ _start_time = time.time()
 # ── Rate Limiter (in-memory, per-IP) ─────────────────────────────────────────
 _rate_limit_store: dict[str, list[float]] = defaultdict(list)
 RATE_LIMIT_WINDOW = 60   # seconds
-RATE_LIMIT_MAX = 60      # max requests per window
+RATE_LIMIT_MAX = 200     # max requests per window
 
 
 @app.middleware("http")

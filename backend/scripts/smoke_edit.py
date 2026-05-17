@@ -40,7 +40,7 @@ def _request_json(method: str, path: str, payload: dict | None = None, headers: 
 def main() -> int:
     s, body = _request_json(
         "POST",
-        "/users/auth/login",
+        "/api/v1/users/auth/login",
         {"username": "samuel1@gmail.com", "password": "Password123!"},
     )
     if s != 200 or not isinstance(body, dict):
@@ -52,7 +52,7 @@ def main() -> int:
     email = f"edit{int(time.time())}@example.com"
     s, u = _request_json(
         "POST",
-        "/users/",
+        "/api/v1/users/register",
         {"username": email, "password": "Password123!", "role": "doctor"},
         headers=auth,
     )
@@ -63,7 +63,7 @@ def main() -> int:
     user_id = u["id"]
     s, u2 = _request_json(
         "PUT",
-        f"/users/{user_id}",
+        f"/api/v1/users/{user_id}",
         {"is_available": False},
         headers=auth,
     )
@@ -73,7 +73,7 @@ def main() -> int:
 
     s, p = _request_json(
         "POST",
-        "/patients/",
+        "/api/v1/patients/",
         {"name": "Paciente Prueba", "age": 20, "phone": "000", "diagnosis": "test"},
         headers=auth,
     )
@@ -84,7 +84,7 @@ def main() -> int:
 
     s, p2 = _request_json(
         "PUT",
-        f"/patients/{pid}",
+        f"/api/v1/patients/{pid}",
         {"name": "Paciente Editado", "age": 21},
         headers=auth,
     )
@@ -92,7 +92,7 @@ def main() -> int:
         print("FAIL update patient", s, p2)
         return 1
 
-    s, _ = _request_json("DELETE", f"/patients/{pid}", headers=auth)
+    s, _ = _request_json("DELETE", f"/api/v1/patients/{pid}", headers=auth)
     if s != 200 or not isinstance(_, dict):
         print("FAIL delete patient", s, _)
         return 1
