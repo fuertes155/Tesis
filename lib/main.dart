@@ -9,8 +9,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 // Grid:             12 columnas
 import 'router.dart';
 import 'core/theme/app_theme.dart';
-import 'providers/api_providers.dart';
-import 'core/database/local_database_service.dart';
 import 'providers/theme_provider.dart';
 
 Future<void> main() async {
@@ -20,13 +18,8 @@ Future<void> main() async {
 
   runApp(UncontrolledProviderScope(container: container, child: const MyApp()));
 
-  // Warm up services after the first frame so Lighthouse and users see the
-  // login screen without waiting for IndexedDB/local cache initialization.
-  WidgetsBinding.instance.addPostFrameCallback((_) {
-    container.read(sharedPrefsProvider.future);
-    container.read(localDatabaseProvider.future);
-    container.read(apiServiceProvider.future);
-  });
+  // Keep the first paint lean. Services that touch IndexedDB/API are initialized
+  // lazily when the user actually submits login or enters authenticated routes.
 }
 
 class MyApp extends ConsumerWidget {

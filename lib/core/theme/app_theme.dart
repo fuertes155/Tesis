@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 
 // ... (skipping to before Helpers section)
 class AppTheme {
@@ -7,57 +6,68 @@ class AppTheme {
     final bool isDark = brightness == Brightness.dark;
 
     // ── Paleta Hospital – Azul Cobalto ────────────────────────────────────────
-    const Color primaryBase     = Color(0xFF2563EB); // Azul Cobalto
-    const Color primaryDeep     = Color(0xFF1D4ED8); // Azul profundo para gradientes
-    const Color accentCyan      = Color(0xFF3B82F6); // Azul medio vibrante
+    const Color primaryBase = Color(0xFF2563EB); // Azul Cobalto
+    const Color primaryDeep = Color(
+      0xFF1D4ED8,
+    ); // Azul profundo para gradientes
+    const Color accentCyan = Color(0xFF3B82F6); // Azul medio vibrante
 
     // Superficies Dark (respaldo)
-    const Color darkBg          = Color(0xFF0F172A);
-    const Color darkSurface     = Color(0xFF1E293B);
+    const Color darkBg = Color(0xFF0F172A);
+    const Color darkSurface = Color(0xFF1E293B);
     const Color darkSurfaceHigh = Color(0xFF334155);
-    const Color darkBorder      = Color(0xFF475569);
+    const Color darkBorder = Color(0xFF475569);
 
     // Superficies Light — limpio y hospitalario
-    const Color lightBg         = Color(0xFFF8FAFC);
-    const Color lightSurface    = Color(0xFFFFFFFF);
-    const Color lightSurfaceHigh= Color(0xFFF1F5F9);
-    const Color lightBorder     = Color(0xFFE2E8F0);
+    const Color lightBg = Color(0xFFF8FAFC);
+    const Color lightSurface = Color(0xFFFFFFFF);
+    const Color lightSurfaceHigh = Color(0xFFF1F5F9);
+    const Color lightBorder = Color(0xFFE2E8F0);
 
-    final Color surface     = isDark ? darkBg          : lightBg;
+    final Color surface = isDark ? darkBg : lightBg;
     final Color surfaceHigh = isDark ? darkSurfaceHigh : lightSurfaceHigh;
-    final Color cardColor   = isDark ? darkSurface     : lightSurface;
-    final Color borderColor = isDark ? darkBorder      : lightBorder;
-    final Color bodyColor   = isDark ? const Color(0xFFCBD5E1) : const Color(0xFF334155);
-    final Color displayColor= isDark ? const Color(0xFFF1F5F9) : const Color(0xFF0F172A);
+    final Color cardColor = isDark ? darkSurface : lightSurface;
+    final Color borderColor = isDark ? darkBorder : lightBorder;
+    final Color bodyColor = isDark
+        ? const Color(0xFFCBD5E1)
+        : const Color(0xFF334155);
+    final Color displayColor = isDark
+        ? const Color(0xFFF1F5F9)
+        : const Color(0xFF0F172A);
 
     var baseTheme = ThemeData(
       useMaterial3: true,
       brightness: brightness,
-      colorScheme: ColorScheme.fromSeed(
-        seedColor: primaryBase,
-        brightness: brightness,
-        surface: surface,
-        surfaceContainerHighest: surfaceHigh,
-        primary: primaryBase,
-        secondary: const Color(0xFF64748B),
-        tertiary: accentCyan,
-        outlineVariant: borderColor,
-      ).copyWith(
-        primary: primaryBase,
-        tertiary: accentCyan,
-        surface: surface,
-        surfaceContainerLowest: cardColor,
-        outlineVariant: borderColor,
-        onSurface: displayColor,
-        onSurfaceVariant: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
-      ),
+      colorScheme:
+          ColorScheme.fromSeed(
+            seedColor: primaryBase,
+            brightness: brightness,
+            surface: surface,
+            surfaceContainerHighest: surfaceHigh,
+            primary: primaryBase,
+            secondary: const Color(0xFF64748B),
+            tertiary: accentCyan,
+            outlineVariant: borderColor,
+          ).copyWith(
+            primary: primaryBase,
+            tertiary: accentCyan,
+            surface: surface,
+            surfaceContainerLowest: cardColor,
+            outlineVariant: borderColor,
+            onSurface: displayColor,
+            onSurfaceVariant: isDark
+                ? const Color(0xFF94A3B8)
+                : const Color(0xFF64748B),
+          ),
     );
 
     final cs = baseTheme.colorScheme;
 
-    final textTheme = GoogleFonts.interTextTheme(
-      baseTheme.textTheme,
-    ).apply(bodyColor: bodyColor, displayColor: displayColor);
+    final textTheme = baseTheme.textTheme.apply(
+      bodyColor: bodyColor,
+      displayColor: displayColor,
+      fontFamily: 'Arial',
+    );
 
     // Sombras premium multicapa
     final List<BoxShadow> premiumShadow = isDark
@@ -92,21 +102,60 @@ class AppTheme {
     return baseTheme.copyWith(
       scaffoldBackgroundColor: surface,
       textTheme: textTheme.copyWith(
-        displayLarge:  textTheme.displayLarge?.copyWith(fontWeight: FontWeight.w900, letterSpacing: -1.5),
-        displayMedium: textTheme.displayMedium?.copyWith(fontWeight: FontWeight.w900, letterSpacing: -1.2),
-        displaySmall:  textTheme.displaySmall?.copyWith(fontWeight: FontWeight.w900, letterSpacing: -1.0),
-        headlineLarge: textTheme.headlineLarge?.copyWith(fontWeight: FontWeight.w800, letterSpacing: -0.8),
-        headlineMedium:textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.w800, letterSpacing: -0.6),
-        headlineSmall: textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800, letterSpacing: -0.4),
-        titleLarge:    textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800, letterSpacing: -0.3),
-        titleMedium:   textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700, letterSpacing: -0.1),
-        titleSmall:    textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
-        bodyLarge:     textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w500, height: 1.6),
-        bodyMedium:    textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w500, height: 1.5),
-        bodySmall:     textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w500),
-        labelLarge:    textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w700, letterSpacing: 0.1),
-        labelMedium:   textTheme.labelMedium?.copyWith(fontWeight: FontWeight.w700, letterSpacing: 0.3),
-        labelSmall:    textTheme.labelSmall?.copyWith(fontWeight: FontWeight.w700, letterSpacing: 0.5),
+        displayLarge: textTheme.displayLarge?.copyWith(
+          fontWeight: FontWeight.w900,
+          letterSpacing: -1.5,
+        ),
+        displayMedium: textTheme.displayMedium?.copyWith(
+          fontWeight: FontWeight.w900,
+          letterSpacing: -1.2,
+        ),
+        displaySmall: textTheme.displaySmall?.copyWith(
+          fontWeight: FontWeight.w900,
+          letterSpacing: -1.0,
+        ),
+        headlineLarge: textTheme.headlineLarge?.copyWith(
+          fontWeight: FontWeight.w800,
+          letterSpacing: -0.8,
+        ),
+        headlineMedium: textTheme.headlineMedium?.copyWith(
+          fontWeight: FontWeight.w800,
+          letterSpacing: -0.6,
+        ),
+        headlineSmall: textTheme.headlineSmall?.copyWith(
+          fontWeight: FontWeight.w800,
+          letterSpacing: -0.4,
+        ),
+        titleLarge: textTheme.titleLarge?.copyWith(
+          fontWeight: FontWeight.w800,
+          letterSpacing: -0.3,
+        ),
+        titleMedium: textTheme.titleMedium?.copyWith(
+          fontWeight: FontWeight.w700,
+          letterSpacing: -0.1,
+        ),
+        titleSmall: textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+        bodyLarge: textTheme.bodyLarge?.copyWith(
+          fontWeight: FontWeight.w500,
+          height: 1.6,
+        ),
+        bodyMedium: textTheme.bodyMedium?.copyWith(
+          fontWeight: FontWeight.w500,
+          height: 1.5,
+        ),
+        bodySmall: textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w500),
+        labelLarge: textTheme.labelLarge?.copyWith(
+          fontWeight: FontWeight.w700,
+          letterSpacing: 0.1,
+        ),
+        labelMedium: textTheme.labelMedium?.copyWith(
+          fontWeight: FontWeight.w700,
+          letterSpacing: 0.3,
+        ),
+        labelSmall: textTheme.labelSmall?.copyWith(
+          fontWeight: FontWeight.w700,
+          letterSpacing: 0.5,
+        ),
       ),
       appBarTheme: AppBarTheme(
         centerTitle: false,
@@ -114,9 +163,11 @@ class AppTheme {
         elevation: 0,
         scrolledUnderElevation: 0,
         iconTheme: IconThemeData(color: bodyColor),
-        titleTextStyle: GoogleFonts.inter(
-          fontSize: 18, fontWeight: FontWeight.w700,
-          color: displayColor, letterSpacing: -0.3,
+        titleTextStyle: TextStyle(
+          fontSize: 18,
+          fontWeight: FontWeight.w700,
+          color: displayColor,
+          letterSpacing: -0.3,
         ),
       ),
       cardTheme: CardThemeData(
@@ -139,7 +190,9 @@ class AppTheme {
             return primaryBase;
           }),
           foregroundColor: const WidgetStatePropertyAll(Colors.white),
-          overlayColor: WidgetStateProperty.all(Colors.white.withValues(alpha: 0.12)),
+          overlayColor: WidgetStateProperty.all(
+            Colors.white.withValues(alpha: 0.12),
+          ),
           minimumSize: const WidgetStatePropertyAll(Size(0, 40)),
           shape: WidgetStatePropertyAll(
             RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
@@ -148,7 +201,7 @@ class AppTheme {
             EdgeInsets.symmetric(horizontal: 16, vertical: 6),
           ),
           textStyle: WidgetStatePropertyAll(
-            GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600),
+            const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
           ),
           elevation: const WidgetStatePropertyAll(0),
         ),
@@ -161,24 +214,35 @@ class AppTheme {
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
           elevation: 0,
-          side: BorderSide(color: cs.primary.withValues(alpha: 0.25), width: 1.5),
-          textStyle: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600),
+          side: BorderSide(
+            color: cs.primary.withValues(alpha: 0.25),
+            width: 1.5,
+          ),
+          textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
         ),
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
           foregroundColor: cs.primary,
-          side: BorderSide(color: cs.primary.withValues(alpha: 0.4), width: 1.5),
+          side: BorderSide(
+            color: cs.primary.withValues(alpha: 0.4),
+            width: 1.5,
+          ),
           minimumSize: const Size(0, 40),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-          textStyle: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600),
+          textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
         ),
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: isDark ? const Color(0xFF0A1628).withValues(alpha: 0.9) : Colors.white,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+        fillColor: isDark
+            ? const Color(0xFF0A1628).withValues(alpha: 0.9)
+            : Colors.white,
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 20,
+          vertical: 18,
+        ),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(8),
           borderSide: BorderSide(color: borderColor),
@@ -199,16 +263,21 @@ class AppTheme {
           borderRadius: BorderRadius.circular(8),
           borderSide: const BorderSide(color: Color(0xFFEF4444), width: 2),
         ),
-        labelStyle: GoogleFonts.inter(
+        labelStyle: TextStyle(
           color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
-          fontSize: 14, fontWeight: FontWeight.w500,
+          fontSize: 14,
+          fontWeight: FontWeight.w500,
         ),
-        hintStyle: GoogleFonts.inter(
+        hintStyle: TextStyle(
           color: isDark ? const Color(0xFF64748B) : const Color(0xFF94A3B8),
           fontSize: 14,
         ),
-        prefixIconColor: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
-        suffixIconColor: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
+        prefixIconColor: isDark
+            ? const Color(0xFF94A3B8)
+            : const Color(0xFF64748B),
+        suffixIconColor: isDark
+            ? const Color(0xFF94A3B8)
+            : const Color(0xFF64748B),
       ),
       floatingActionButtonTheme: FloatingActionButtonThemeData(
         backgroundColor: cs.primary,
@@ -216,13 +285,18 @@ class AppTheme {
         elevation: 8,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       ),
-      dividerTheme: DividerThemeData(color: borderColor, space: 1, thickness: 1),
+      dividerTheme: DividerThemeData(
+        color: borderColor,
+        space: 1,
+        thickness: 1,
+      ),
       snackBarTheme: SnackBarThemeData(
         behavior: SnackBarBehavior.floating,
-        backgroundColor: isDark ? const Color(0xFF1E293B) : const Color(0xFF0F172A),
+        backgroundColor: isDark
+            ? const Color(0xFF1E293B)
+            : const Color(0xFF0F172A),
         contentTextStyle: TextStyle(
           color: isDark ? const Color(0xFFCCE5F5) : Colors.white,
-          fontFamily: GoogleFonts.inter().fontFamily,
           fontWeight: FontWeight.w500,
         ),
         shape: RoundedRectangleBorder(
@@ -245,13 +319,17 @@ class AppTheme {
         ),
         elevation: 24,
         shadowColor: primaryDeep.withValues(alpha: 0.2),
-        titleTextStyle: GoogleFonts.inter(
-          fontSize: 18, fontWeight: FontWeight.w700,
-          color: displayColor, letterSpacing: -0.3,
+        titleTextStyle: TextStyle(
+          fontSize: 18,
+          fontWeight: FontWeight.w700,
+          color: displayColor,
+          letterSpacing: -0.3,
         ),
-        contentTextStyle: GoogleFonts.inter(
-          fontSize: 14, fontWeight: FontWeight.w500,
-          color: bodyColor, height: 1.6,
+        contentTextStyle: TextStyle(
+          fontSize: 14,
+          fontWeight: FontWeight.w500,
+          color: bodyColor,
+          height: 1.6,
         ),
       ),
       switchTheme: SwitchThemeData(
@@ -438,11 +516,7 @@ class AppGlass extends ThemeExtension<AppGlass> {
     required this.accentGradient,
   });
 
-  factory AppGlass.forBrightness(
-    bool isDark,
-    Color primary,
-    Color border,
-  ) {
+  factory AppGlass.forBrightness(bool isDark, Color primary, Color border) {
     return AppGlass(
       cardGradient: LinearGradient(
         begin: Alignment.topLeft,
@@ -452,10 +526,7 @@ class AppGlass extends ThemeExtension<AppGlass> {
                 const Color(0xFF1E293B).withValues(alpha: 0.9),
                 const Color(0xFF0F172A).withValues(alpha: 0.8),
               ]
-            : [
-                Colors.white,
-                const Color(0xFFF8FAFC),
-              ],
+            : [Colors.white, const Color(0xFFF8FAFC)],
       ),
       overlayColor: isDark
           ? Colors.white.withValues(alpha: 0.04)
@@ -473,10 +544,7 @@ class AppGlass extends ThemeExtension<AppGlass> {
                 const Color(0xFF1D4ED8),
                 const Color(0xFF1E40AF),
               ]
-            : [
-                const Color(0xFF2563EB),
-                const Color(0xFF3B82F6),
-              ],
+            : [const Color(0xFF2563EB), const Color(0xFF3B82F6)],
         stops: isDark ? const [0.0, 0.55, 1.0] : null,
       ),
       accentGradient: const LinearGradient(
@@ -528,12 +596,19 @@ class AppGlass extends ThemeExtension<AppGlass> {
   AppGlass lerp(ThemeExtension<AppGlass>? other, double t) {
     if (other is! AppGlass) return this;
     return AppGlass(
-      cardGradient: LinearGradient.lerp(cardGradient, other.cardGradient, t) ?? cardGradient,
-      overlayColor: Color.lerp(overlayColor, other.overlayColor, t) ?? overlayColor,
+      cardGradient:
+          LinearGradient.lerp(cardGradient, other.cardGradient, t) ??
+          cardGradient,
+      overlayColor:
+          Color.lerp(overlayColor, other.overlayColor, t) ?? overlayColor,
       borderColor: Color.lerp(borderColor, other.borderColor, t) ?? borderColor,
       blurSigma: lerpDouble(blurSigma, other.blurSigma, t),
-      headerGradient: LinearGradient.lerp(headerGradient, other.headerGradient, t) ?? headerGradient,
-      accentGradient: LinearGradient.lerp(accentGradient, other.accentGradient, t) ?? accentGradient,
+      headerGradient:
+          LinearGradient.lerp(headerGradient, other.headerGradient, t) ??
+          headerGradient,
+      accentGradient:
+          LinearGradient.lerp(accentGradient, other.accentGradient, t) ??
+          accentGradient,
     );
   }
 }
@@ -557,7 +632,9 @@ class AppPremiumShadows extends ThemeExtension<AppPremiumShadows> {
   AppPremiumShadows lerp(ThemeExtension<AppPremiumShadows>? other, double t) {
     if (other is! AppPremiumShadows) return this;
     return AppPremiumShadows(
-      premiumShadow: BoxShadow.lerpList(premiumShadow, other.premiumShadow, t) ?? premiumShadow,
+      premiumShadow:
+          BoxShadow.lerpList(premiumShadow, other.premiumShadow, t) ??
+          premiumShadow,
     );
   }
 }
@@ -595,6 +672,8 @@ extension AppThemeX on BuildContext {
       Theme.of(this).extension<AppPremiumShadows>()?.premiumShadow ?? [];
 
   bool get isMobile => MediaQuery.sizeOf(this).width < 600;
-  bool get isTablet => MediaQuery.sizeOf(this).width >= 600 && MediaQuery.sizeOf(this).width < 1024;
+  bool get isTablet =>
+      MediaQuery.sizeOf(this).width >= 600 &&
+      MediaQuery.sizeOf(this).width < 1024;
   bool get isDesktop => MediaQuery.sizeOf(this).width >= 1024;
 }
