@@ -31,6 +31,7 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24
     
     DATABASE_URL: str = "sqlite:///./data/sql_app.db"
+    CORS_ORIGINS: str = "http://localhost:55912,http://127.0.0.1:55912"
     
     model_config = SettingsConfigDict(env_file=ENV_FILE)
 

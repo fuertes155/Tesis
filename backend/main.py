@@ -94,6 +94,14 @@ app = FastAPI(
 _logger = logging.getLogger("neuroapp")
 _start_time = time.time()
 
+
+def _cors_origins() -> list[str]:
+    return [
+        origin.strip()
+        for origin in settings.CORS_ORIGINS.split(",")
+        if origin.strip()
+    ]
+
 # ── Rate Limiter (in-memory, per-IP) ─────────────────────────────────────────
 _rate_limit_store: dict[str, list[float]] = defaultdict(list)
 RATE_LIMIT_WINDOW = 60   # seconds
@@ -169,6 +177,7 @@ async def security_headers_middleware(request: Request, call_next):
 # Configure CORS
 app.add_middleware(
     CORSMiddleware,
+    allow_origins=_cors_origins(),
     allow_origin_regex=r"https?://(localhost|127\.0\.0\.1)(:\d+)?",
     allow_credentials=True,
     allow_methods=["*"],

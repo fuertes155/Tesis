@@ -1,0 +1,104 @@
+﻿============================================================
+  NeuroApp360 -- Suite Completa de Pruebas
+  Servidor: http://127.0.0.1:8000
+  Fecha: 2026-05-16 21:43:35
+============================================================
+
+------------------------------------------------------------
+  1. PRUEBAS DE DISPONIBILIDAD
+------------------------------------------------------------
+  [PASS] GET /health -> 200 (21ms)
+  [PASS] Estado: healthy
+  [PASS] Uptime reportado
+  [PASS] Base de datos conectada
+  [PASS] Versi¾n: 1.0.0
+  [PASS] Timestamp: 2026-05-17T02:43:35.874586+00:00
+  [PASS] GET /readiness -> 200 (15ms)
+  [PASS] Readiness: true
+  [PASS] GET / (root) -> 200 (2ms)
+  [PASS] OpenAPI spec accesible
+
+------------------------------------------------------------
+  2. PRUEBAS DE LATENCIA Y TIEMPOS DE RESPUESTA
+------------------------------------------------------------
+  [PASS] GET /health -- avg=3ms  p95=4ms
+  [PASS] GET /readiness -- avg=14ms  p95=27ms
+  [PASS] GET / -- avg=5ms  p95=13ms
+  [PASS] GET /api/v1/users/me -- avg=5ms  p95=5ms
+  [PASS] GET /api/v1/patients/ -- avg=10ms  p95=22ms
+  [PASS] GET /api/v1/sessions/ -- avg=9ms  p95=12ms
+  [PASS] Header X-Response-Time presente en respuestas
+
+------------------------------------------------------------
+  4. PRUEBAS FUNCIONALES
+------------------------------------------------------------
+  [PASS] Login doctor exitoso
+  [PASS] Token JWT recibido
+  [PASS] Crear paciente -> 200
+  [PASS] Leer paciente creado
+  [PASS] Actualizar paciente
+  [PASS] Crear sesi¾n para paciente
+  [PASS] Idempotencia de external_id (sin duplicados)
+  [PASS] Enviar resultado de juego
+  [PASS] Obtener ultimos resultados
+  [PASS] Login con credenciales invalidas -> 401
+  [PASS] Token invalido -> 401
+  [PASS] Sin token -> rechazado
+  [PASS] Paciente inexistente -> 404
+
+------------------------------------------------------------
+  5. PRUEBAS DE SEGURIDAD B┴SICAS
+------------------------------------------------------------
+  [PASS] Header X-Content-Type-Options: nosniff
+  [PASS] Header X-Frame-Options: DENY
+  [PASS] Header X-XSS-Protection: 1; mode=block
+  [PASS] Header Referrer-Policy: strict-origin-when-cross-origin
+  [PASS] Header Permissions-Policy presente
+  [PASS] Header Cache-Control presente
+  [PASS] XSS sanitizado en nombre de paciente
+  [PASS] SQL Injection en login rechazado
+  [PASS] Password debil rechazada (< 8 chars)
+  [PASS] Password sin mayuscula/dÝgito rechazada
+  [PASS] Doctor puede listar usuarios
+  [PASS] Doctor NO puede eliminar usuarios -> 403
+
+------------------------------------------------------------
+  7. PRUEBAS EXPLORATORIAS
+------------------------------------------------------------
+  [PASS] Login con campos vacÝos rechazado
+  [PASS] Paciente con campos nulos -> 422
+  [PASS] Edad negativa -> 200
+  [PASS] Nombre 1000 chars -> 200
+  [PASS] PATCH /health -> 405 (no soportado)
+  [PASS] Ruta inexistente -> 404
+  [PASS] JSON malformado -> 422
+
+------------------------------------------------------------
+  6. PRUEBAS DE CONECTIVIDAD
+------------------------------------------------------------
+  [PASS] tracert 127.0.0.1 exitoso (3 saltos)
+      Traza a 127.0.0.1 sobre caminos de 5 saltos como máximo.
+      1    <1 ms    <1 ms    <1 ms  127.0.0.1
+      Traza completa.
+      Mínimo = 0ms, Máximo = 0ms, Media = 0ms
+  [PASS] ping 127.0.0.1 exitoso
+
+------------------------------------------------------------
+  3. PRUEBAS DE RENDIMIENTO Y CARGA
+------------------------------------------------------------
+  Ejecutando 50 requests concurrentes (20 hilos)...
+  [PASS] Tasa de exito: 100% (50/50)
+  [PASS] Promedio bajo carga: 39ms
+  [PASS] P50=45ms  P95=48ms
+
+  Verificando Rate Limiting...
+  [PASS] Rate limiting activo (429 recibido)
+
+============================================================
+  RESULTADOS FINALES
+============================================================
+  [PASS] Pasaron:      55
+  [FAIL] Fallaron:     0
+  [WARN] Advertencias: 0
+  Tasa de exito: 100.0%
+============================================================
