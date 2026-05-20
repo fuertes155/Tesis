@@ -26,3 +26,7 @@ fi
 if [ -f build/web/flutter_bootstrap.js ]; then
   perl -0pi -e 's/\n?\/\/# sourceMappingURL=flutter\.js\.map\s*/\n/g' build/web/flutter_bootstrap.js
 fi
+if [ -f build/web/main.dart.js ]; then
+  perl -0pi -e 's/\n?\/\/# sourceMappingURL=main\.dart\.js\.map\s*$//' build/web/main.dart.js
+fi
+find build/web -name "*.map" -type f -delete

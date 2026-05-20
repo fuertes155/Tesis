@@ -58,10 +58,18 @@ final routerProvider = Provider<GoRouter>((ref) {
   return GoRouter(
     initialLocation: '/',
     redirect: (context, state) {
+      final loc = state.uri.path;
+
+      // Keep the public landing/login route free of async provider startup.
+      // This prevents local web storage/IndexedDB from being initialized during
+      // Lighthouse's first paint audit.
+      if (loc == '/' || loc == '/reset_password') {
+        return null;
+      }
+
       final api = ref.read(apiServiceProvider).value;
       final role = api?.currentRole;
-      final loc = state.uri.path;
-      if (role == null && loc != '/' && loc != '/reset_password') {
+      if (role == null) {
         return '/';
       }
       if (role == 'user') {
