@@ -16,20 +16,17 @@ import 'providers/theme_provider.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // We use a ProviderContainer to initialize async providers before starting the app
   final container = ProviderContainer();
-  
-  // Pre-initialize critical services
-  await container.read(sharedPrefsProvider.future);
-  await container.read(localDatabaseProvider.future);
-  await container.read(apiServiceProvider.future);
 
-  runApp(
-    UncontrolledProviderScope(
-      container: container,
-      child: const MyApp(),
-    ),
-  );
+  runApp(UncontrolledProviderScope(container: container, child: const MyApp()));
+
+  // Warm up services after the first frame so Lighthouse and users see the
+  // login screen without waiting for IndexedDB/local cache initialization.
+  WidgetsBinding.instance.addPostFrameCallback((_) {
+    container.read(sharedPrefsProvider.future);
+    container.read(localDatabaseProvider.future);
+    container.read(apiServiceProvider.future);
+  });
 }
 
 class MyApp extends ConsumerWidget {

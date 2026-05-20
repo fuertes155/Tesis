@@ -47,7 +47,7 @@ class LoginScreenState extends ConsumerState<LoginScreen> {
 
       if (!mounted) return;
       HapticFeedback.mediumImpact();
-      
+
       final bool mfaRequired = authData['mfa_required'] ?? false;
       if (mfaRequired) {
         context.go('/mfa');
@@ -78,60 +78,57 @@ class LoginScreenState extends ConsumerState<LoginScreen> {
       backgroundColor: cs.surface,
       body: AppDecorations.meshBackground(
         child: LayoutBuilder(
-        builder: (context, constraints) {
-          final isWide = constraints.maxWidth >= 1000;
+          builder: (context, constraints) {
+            final isWide = constraints.maxWidth >= 1000;
 
-          if (isWide) {
-            return Row(
-              children: [
-                // ── Left Branding Panel ──────────────────────────────────
-                Expanded(
-                  flex: 5,
-                  child: _BrandingPanel(),
-                ),
-                // ── Right Form Panel ─────────────────────────────────────
-                Expanded(
-                  flex: 6,
-                  child: Container(
-                    color: cs.surface,
-                    child: Center(
-                      child: SingleChildScrollView(
-                        padding: EdgeInsets.symmetric(
-                          horizontal: s.x2l + s.xl,
-                        ),
-                        child: ConstrainedBox(
-                          constraints: const BoxConstraints(maxWidth: 460),
-                          child: _buildForm(context),
+            if (isWide) {
+              return Row(
+                children: [
+                  // ── Left Branding Panel ──────────────────────────────────
+                  Expanded(flex: 5, child: _BrandingPanel()),
+                  // ── Right Form Panel ─────────────────────────────────────
+                  Expanded(
+                    flex: 6,
+                    child: Container(
+                      color: cs.surface,
+                      child: Center(
+                        child: SingleChildScrollView(
+                          padding: EdgeInsets.symmetric(
+                            horizontal: s.x2l + s.xl,
+                          ),
+                          child: ConstrainedBox(
+                            constraints: const BoxConstraints(maxWidth: 460),
+                            child: _buildForm(context),
+                          ),
                         ),
                       ),
                     ),
                   ),
-                ),
-              ],
-            );
-          }
+                ],
+              );
+            }
 
-          // ── Mobile View ───────────────────────────────────────────────
-          return SingleChildScrollView(
-            child: Column(
-              children: [
-                // Hero compacto móvil
-                _MobileHero(),
-                Padding(
-                  padding: EdgeInsets.fromLTRB(s.xl, 0, s.xl, s.x2l),
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 400),
-                    child: _buildForm(context),
+            // ── Mobile View ───────────────────────────────────────────────
+            return SingleChildScrollView(
+              child: Column(
+                children: [
+                  // Hero compacto móvil
+                  _MobileHero(),
+                  Padding(
+                    padding: EdgeInsets.fromLTRB(s.xl, 0, s.xl, s.x2l),
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 400),
+                      child: _buildForm(context),
+                    ),
                   ),
-                ),
-              ],
-            ),
-          );
-        },
+                ],
+              ),
+            );
+          },
+        ),
       ),
-    ),
-  );
-}
+    );
+  }
 
   Widget _buildForm(BuildContext context) {
     final theme = Theme.of(context);
@@ -159,33 +156,51 @@ class LoginScreenState extends ConsumerState<LoginScreen> {
         SizedBox(height: s.x2l),
 
         // Campo usuario
-        TextField(
-          controller: _usernameController,
-          onSubmitted: (_) => _handleSubmit(),
-          decoration: const InputDecoration(
-            labelText: 'Usuario',
-            prefixIcon: Icon(Icons.person_outline_rounded),
+        Semantics(
+          label: 'Usuario',
+          hint: 'Ingresa tu correo o nombre de usuario',
+          textField: true,
+          child: TextField(
+            controller: _usernameController,
+            keyboardType: TextInputType.emailAddress,
+            textInputAction: TextInputAction.next,
+            autofillHints: const [AutofillHints.username, AutofillHints.email],
+            onSubmitted: (_) => FocusScope.of(context).nextFocus(),
+            decoration: const InputDecoration(
+              labelText: 'Usuario',
+              hintText: 'usuario@correo.com',
+              prefixIcon: Icon(Icons.person_outline_rounded),
+            ),
           ),
         ).animate().fadeIn(delay: 250.ms).slideX(begin: 0.05),
         SizedBox(height: s.md),
 
         // Campo contraseña
-        TextField(
-          controller: _passwordController,
-          obscureText: !_showPassword,
-          onSubmitted: (_) => _handleSubmit(),
-          decoration: InputDecoration(
-            labelText: 'Contraseña',
-            prefixIcon: const Icon(Icons.lock_outline_rounded),
-            suffixIcon: IconButton(
-              icon: Icon(
-                _showPassword
-                    ? Icons.visibility_off_outlined
-                    : Icons.visibility_outlined,
-                size: 20,
+        Semantics(
+          label: 'Contraseña',
+          hint: 'Ingresa tu contraseña',
+          textField: true,
+          child: TextField(
+            controller: _passwordController,
+            obscureText: !_showPassword,
+            textInputAction: TextInputAction.done,
+            autofillHints: const [AutofillHints.password],
+            onSubmitted: (_) => _handleSubmit(),
+            decoration: InputDecoration(
+              labelText: 'Contraseña',
+              prefixIcon: const Icon(Icons.lock_outline_rounded),
+              suffixIcon: IconButton(
+                tooltip: _showPassword
+                    ? 'Ocultar contraseña'
+                    : 'Mostrar contraseña',
+                icon: Icon(
+                  _showPassword
+                      ? Icons.visibility_off_outlined
+                      : Icons.visibility_outlined,
+                  size: 20,
+                ),
+                onPressed: () => setState(() => _showPassword = !_showPassword),
               ),
-              onPressed: () =>
-                  setState(() => _showPassword = !_showPassword),
             ),
           ),
         ).animate().fadeIn(delay: 320.ms).slideX(begin: 0.05),
@@ -208,10 +223,9 @@ class LoginScreenState extends ConsumerState<LoginScreen> {
         // Error
         if (_errorMessage != null) ...[
           SizedBox(height: s.sm),
-          _ErrorBanner(message: _errorMessage!)
-              .animate()
-              .shake(hz: 3, offset: const Offset(6, 0))
-              .fadeIn(),
+          _ErrorBanner(
+            message: _errorMessage!,
+          ).animate().shake(hz: 3, offset: const Offset(6, 0)).fadeIn(),
           SizedBox(height: s.sm),
         ] else
           SizedBox(height: s.lg),
@@ -260,7 +274,8 @@ class _BrandingPanelState extends State<_BrandingPanel>
     _orb = AnimationController(
       vsync: this,
       duration: const Duration(seconds: 8),
-    )..repeat();
+      value: 0.25,
+    );
   }
 
   @override
@@ -363,27 +378,27 @@ class _BrandingPanelState extends State<_BrandingPanel>
               children: [
                 // Logo icon con glass
                 Container(
-                  padding: EdgeInsets.all(s.md),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.10),
-                    borderRadius: BorderRadius.circular(22),
-                    border: Border.all(
-                      color: Colors.white.withValues(alpha: 0.15),
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.white.withValues(alpha: 0.05),
-                        blurRadius: 20,
-                        spreadRadius: 5,
+                      padding: EdgeInsets.all(s.md),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.10),
+                        borderRadius: BorderRadius.circular(22),
+                        border: Border.all(
+                          color: Colors.white.withValues(alpha: 0.15),
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.white.withValues(alpha: 0.05),
+                            blurRadius: 20,
+                            spreadRadius: 5,
+                          ),
+                        ],
                       ),
-                    ],
-                  ),
-                  child: const Icon(
-                    Icons.psychology_outlined,
-                    size: 56,
-                    color: Colors.white,
-                  ),
-                )
+                      child: const Icon(
+                        Icons.psychology_outlined,
+                        size: 56,
+                        color: Colors.white,
+                      ),
+                    )
                     .animate()
                     .fadeIn(duration: 700.ms)
                     .scale(curve: Curves.easeOutBack),
@@ -394,37 +409,31 @@ class _BrandingPanelState extends State<_BrandingPanel>
                 Text(
                   'NeuroApp',
                   style: Theme.of(context).textTheme.displaySmall?.copyWith(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w900,
-                        letterSpacing: -2,
-                      ),
-                )
-                    .animate()
-                    .fadeIn(delay: 200.ms)
-                    .slideX(begin: -0.1),
+                    color: Colors.white,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: -2,
+                  ),
+                ).animate().fadeIn(delay: 200.ms).slideX(begin: -0.1),
 
                 SizedBox(height: s.md),
 
                 // Divider decorativo
                 Container(
-                  width: 60,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [
-                        Colors.white.withValues(alpha: 0.8),
-                        Colors.white.withValues(alpha: 0.2),
-                      ],
-                    ),
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                )
+                      width: 60,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [
+                            Colors.white.withValues(alpha: 0.8),
+                            Colors.white.withValues(alpha: 0.2),
+                          ],
+                        ),
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    )
                     .animate()
                     .fadeIn(delay: 350.ms)
-                    .scaleX(
-                      begin: 0,
-                      alignment: Alignment.centerLeft,
-                    ),
+                    .scaleX(begin: 0, alignment: Alignment.centerLeft),
 
                 SizedBox(height: s.xl),
 
@@ -432,15 +441,12 @@ class _BrandingPanelState extends State<_BrandingPanel>
                 Text(
                   'Potenciando la\nsalud cognitiva\na través de la\ntecnología.',
                   style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                        color: Colors.white.withValues(alpha: 0.90),
-                        fontWeight: FontWeight.w300,
-                        height: 1.4,
-                        letterSpacing: -0.3,
-                      ),
-                )
-                    .animate()
-                    .fadeIn(delay: 500.ms)
-                    .slideY(begin: 0.08),
+                    color: Colors.white.withValues(alpha: 0.90),
+                    fontWeight: FontWeight.w300,
+                    height: 1.4,
+                    letterSpacing: -0.3,
+                  ),
+                ).animate().fadeIn(delay: 500.ms).slideY(begin: 0.08),
 
                 const Spacer(),
 
@@ -470,9 +476,9 @@ class _BrandingPanelState extends State<_BrandingPanel>
                 Text(
                   '© 2026 NeuroApp Systems  •  v2.5.0',
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: Colors.white.withValues(alpha: 0.4),
-                        letterSpacing: 0.5,
-                      ),
+                    color: Colors.white.withValues(alpha: 0.4),
+                    letterSpacing: 0.5,
+                  ),
                 ),
               ],
             ),
@@ -505,9 +511,7 @@ class _MobileHero extends StatelessWidget {
               decoration: BoxDecoration(
                 color: Colors.white.withValues(alpha: 0.12),
                 borderRadius: BorderRadius.circular(18),
-                border: Border.all(
-                  color: Colors.white.withValues(alpha: 0.15),
-                ),
+                border: Border.all(color: Colors.white.withValues(alpha: 0.15)),
               ),
               child: const Icon(
                 Icons.psychology_outlined,
@@ -519,18 +523,18 @@ class _MobileHero extends StatelessWidget {
             Text(
               'NeuroApp',
               style: Theme.of(context).textTheme.headlineLarge?.copyWith(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w900,
-                    letterSpacing: -1.5,
-                  ),
+                color: Colors.white,
+                fontWeight: FontWeight.w900,
+                letterSpacing: -1.5,
+              ),
             ).animate().fadeIn(delay: 200.ms).slideX(begin: -0.1),
             SizedBox(height: s.xs),
             Text(
               'Sistema de evaluación cognitiva',
               style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                    color: Colors.white.withValues(alpha: 0.75),
-                    fontWeight: FontWeight.w400,
-                  ),
+                color: Colors.white.withValues(alpha: 0.75),
+                fontWeight: FontWeight.w400,
+              ),
             ).animate().fadeIn(delay: 350.ms),
             SizedBox(height: s.xl),
           ],
@@ -554,8 +558,10 @@ class _FeatureChip extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(20),
-        border:
-            Border.all(color: Colors.white.withValues(alpha: 0.12), width: 1),
+        border: Border.all(
+          color: Colors.white.withValues(alpha: 0.12),
+          width: 1,
+        ),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,

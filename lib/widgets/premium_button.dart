@@ -50,9 +50,10 @@ class _PremiumButtonState extends State<PremiumButton>
       vsync: this,
       duration: const Duration(milliseconds: 120),
     );
-    _scale = Tween<double>(begin: 1.0, end: 0.97).animate(
-      CurvedAnimation(parent: _ctrl, curve: Curves.easeInOut),
-    );
+    _scale = Tween<double>(
+      begin: 1.0,
+      end: 0.97,
+    ).animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeInOut));
   }
 
   @override
@@ -83,7 +84,8 @@ class _PremiumButtonState extends State<PremiumButton>
     final cs = Theme.of(context).colorScheme;
     final isDisabled = widget.onPressed == null || widget.isLoading;
 
-    final gradient = widget.gradient ??
+    final gradient =
+        widget.gradient ??
         (isDisabled
             ? LinearGradient(
                 colors: [
@@ -98,68 +100,71 @@ class _PremiumButtonState extends State<PremiumButton>
     final shadowOffset = _pressed ? const Offset(0, 4) : const Offset(0, 8);
     final shadowSpread = _pressed ? -2.0 : -4.0;
 
-    return GestureDetector(
-      onTapDown: _onTapDown,
-      onTapUp: _onTapUp,
-      onTapCancel: _onTapCancel,
-      onTap: isDisabled ? null : widget.onPressed,
-      child: AnimatedBuilder(
-        animation: _scale,
-        builder: (context, child) => Transform.scale(
-          scale: _scale.value,
-          child: child,
-        ),
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 150),
-          height: widget.height,
-          decoration: BoxDecoration(
-            gradient: gradient,
-            borderRadius: BorderRadius.circular(widget.radius),
-            boxShadow: isDisabled
-                ? []
-                : [
-                    BoxShadow(
-                      color: shadowColor,
-                      blurRadius: shadowBlur,
-                      spreadRadius: shadowSpread,
-                      offset: shadowOffset,
-                    ),
-                  ],
-          ),
-          child: Material(
-            color: Colors.transparent,
-            child: Center(
-              child: widget.isLoading
-                  ? SizedBox(
-                      width: 24,
-                      height: 24,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2.5,
-                        color: Colors.white.withValues(alpha: 0.9),
+    return Semantics(
+      button: true,
+      enabled: !isDisabled,
+      label: widget.label,
+      child: GestureDetector(
+        onTapDown: _onTapDown,
+        onTapUp: _onTapUp,
+        onTapCancel: _onTapCancel,
+        onTap: isDisabled ? null : widget.onPressed,
+        child: AnimatedBuilder(
+          animation: _scale,
+          builder: (context, child) =>
+              Transform.scale(scale: _scale.value, child: child),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 150),
+            height: widget.height,
+            decoration: BoxDecoration(
+              gradient: gradient,
+              borderRadius: BorderRadius.circular(widget.radius),
+              boxShadow: isDisabled
+                  ? []
+                  : [
+                      BoxShadow(
+                        color: shadowColor,
+                        blurRadius: shadowBlur,
+                        spreadRadius: shadowSpread,
+                        offset: shadowOffset,
                       ),
-                    )
-                  : Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        if (widget.icon != null) ...[
-                          Icon(
-                            widget.icon,
-                            color: Colors.white,
-                            size: widget.fontSize + 4,
-                          ),
-                          const SizedBox(width: 10),
-                        ],
-                        Text(
-                          widget.label,
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: widget.fontSize,
-                            fontWeight: FontWeight.w600,
-                            letterSpacing: 0.1,
-                          ),
+                    ],
+            ),
+            child: Material(
+              color: Colors.transparent,
+              child: Center(
+                child: widget.isLoading
+                    ? SizedBox(
+                        width: 24,
+                        height: 24,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2.5,
+                          color: Colors.white.withValues(alpha: 0.9),
                         ),
-                      ],
-                    ),
+                      )
+                    : Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          if (widget.icon != null) ...[
+                            Icon(
+                              widget.icon,
+                              color: Colors.white,
+                              size: widget.fontSize + 4,
+                            ),
+                            const SizedBox(width: 10),
+                          ],
+                          Text(
+                            widget.label,
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: widget.fontSize,
+                              fontWeight: FontWeight.w600,
+                              letterSpacing: 0.1,
+                            ),
+                          ),
+                        ],
+                      ),
+              ),
             ),
           ),
         ),
