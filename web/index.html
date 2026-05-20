@@ -22,11 +22,10 @@
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="NeuroApp360">
   <meta name="robots" content="index, follow">
-  <link rel="canonical" href="/">
+  <link rel="canonical" href="https://despliegu.netlify.app/">
 
   <!-- iOS meta tags & icons -->
   <meta name="mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="NeuroApp360">
   <link rel="apple-touch-icon" href="icons/Icon-192.png">
@@ -60,13 +59,7 @@
     <p>Cargando NeuroApp360…</p>
   </div>
 
-  <script>
-    // Remove loading indicator once Flutter has rendered
-    window.addEventListener('flutter-first-frame', function () {
-      var loading = document.getElementById('loading');
-      if (loading) loading.remove();
-    });
-  </script>
+  <script src="loading.js" defer></script>
   <script src="flutter_bootstrap.js" async></script>
 </body>
 </html>

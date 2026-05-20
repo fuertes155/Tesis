@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://despliegu.netlify.app/sitemap.xml

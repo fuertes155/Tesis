@@ -13,7 +13,16 @@ flutter config --enable-web
 flutter pub get
 
 if [ -n "${API_BASE_URL:-}" ]; then
-  flutter build web --release --base-href / --dart-define=API_BASE_URL="$API_BASE_URL"
+  flutter build web --release --base-href / -O4 --source-maps --no-wasm-dry-run --dart-define=API_BASE_URL="$API_BASE_URL"
 else
-  flutter build web --release --base-href /
+  flutter build web --release --base-href / -O4 --source-maps --no-wasm-dry-run
+fi
+
+# Flutter emits a sourceMappingURL for flutter.js without shipping flutter.js.map.
+# Removing that reference prevents Lighthouse from reporting a missing source map.
+if [ -f build/web/flutter.js ]; then
+  perl -0pi -e 's/\n?\/\/# sourceMappingURL=flutter\.js\.map\s*$//' build/web/flutter.js
+fi
+if [ -f build/web/flutter_bootstrap.js ]; then
+  perl -0pi -e 's/\n?\/\/# sourceMappingURL=flutter\.js\.map\s*/\n/g' build/web/flutter_bootstrap.js
 fi
