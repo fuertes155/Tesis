@@ -2,9 +2,6 @@
   command = "bash scripts/netlify-build.sh"
   publish = "build/web"
 
-[build.environment]
-  API_BASE_URL = "https://tesis-1-pq9m.onrender.com"
-
 [[headers]]
   for = "/*"
   [headers.values]
@@ -13,7 +10,7 @@
     Referrer-Policy = "strict-origin-when-cross-origin"
     Permissions-Policy = "camera=(), microphone=(self), geolocation=()"
     Cross-Origin-Opener-Policy = "same-origin"
-    Content-Security-Policy = "default-src 'self'; script-src 'self' https://www.gstatic.com 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob:; connect-src 'self' https://www.gstatic.com https://fonts.gstatic.com https://tesis-1-pq9m.onrender.com https://*.onrender.com; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'; upgrade-insecure-requests"
+    Content-Security-Policy = "default-src 'self'; script-src 'self' https://www.gstatic.com 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob:; connect-src 'self' https://www.gstatic.com https://fonts.gstatic.com http://127.0.0.1:8000 http://localhost:8000; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'; upgrade-insecure-requests"
 
 [[redirects]]
   from = "/*"

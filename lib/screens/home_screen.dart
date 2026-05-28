@@ -69,6 +69,7 @@ class HomeScreenState extends ConsumerState<HomeScreen> {
   }
 
   Future<void> _fetch() async {
+    if (!mounted) return;
     setState(() => _loading = true);
     try {
       final pList = await ref.read(patientsProvider.future);
@@ -153,6 +154,7 @@ class HomeScreenState extends ConsumerState<HomeScreen> {
         return b.date.compareTo(a.date);
       });
 
+      if (!mounted) return;
       setState(() {
         _patientsCount = pList.length;
         _sessionsToday = todayCount;
@@ -169,14 +171,13 @@ class HomeScreenState extends ConsumerState<HomeScreen> {
         _loading = false;
       });
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error al cargar datos: $e'),
-            backgroundColor: context.sem.danger,
-          ),
-        );
-      }
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error al cargar datos: $e'),
+          backgroundColor: context.sem.danger,
+        ),
+      );
       setState(() => _loading = false);
     }
   }
