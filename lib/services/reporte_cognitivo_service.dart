@@ -12,7 +12,7 @@ class ReporteCognitivoService {
                   defaultValue: 'http://10.0.2.2:8000',
                 ),
                 connectTimeout: const Duration(seconds: 20),
-                receiveTimeout: const Duration(seconds: 120),
+                receiveTimeout: const Duration(seconds: 300),
                 sendTimeout: const Duration(seconds: 20),
                 contentType: 'application/json',
               ),
@@ -44,7 +44,7 @@ class ReporteCognitivoService {
           error.type == DioExceptionType.receiveTimeout ||
           error.type == DioExceptionType.sendTimeout) {
         throw Exception(
-          'La generación del reporte tardó demasiado. Verifica Ollama e intenta nuevamente.',
+          'La generación del reporte tardó más de 5 minutos. Verifica Ollama e intenta nuevamente.',
         );
       }
       if (error.type == DioExceptionType.connectionError) {

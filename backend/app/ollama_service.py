@@ -1,14 +1,16 @@
 from __future__ import annotations
 
 import json
+import os
 from typing import Any
 
 import httpx
 
 
-OLLAMA_URL = "http://localhost:11434/api/generate"
-MODELO_OLLAMA = "llama3"
-TIMEOUT_SEGUNDOS = 120.0
+OLLAMA_URL = os.getenv("OLLAMA_URL", "http://localhost:11434/api/generate")
+MODELO_OLLAMA = os.getenv("OLLAMA_MODEL", "llama3")
+TIMEOUT_SEGUNDOS = float(os.getenv("OLLAMA_TIMEOUT_SECONDS", "300"))
+MAX_TOKENS_REPORTE = int(os.getenv("OLLAMA_NUM_PREDICT", "1600"))
 
 DOMINIOS_PRUEBAS = {
     "memoria visual": "Memoria",
@@ -130,12 +132,19 @@ async def generar_reporte_cognitivo(datos: dict[str, Any]) -> str:
         "options": {
             "temperature": 0.35,
             "top_p": 0.85,
-            "num_predict": 2200,
+            "num_predict": MAX_TOKENS_REPORTE,
         },
     }
 
     try:
-        async with httpx.AsyncClient(timeout=TIMEOUT_SEGUNDOS) as client:
+        timeout = httpx.Timeout(
+            TIMEOUT_SEGUNDOS,
+            connect=20.0,
+            read=TIMEOUT_SEGUNDOS,
+            write=20.0,
+            pool=20.0,
+        )
+        async with httpx.AsyncClient(timeout=timeout) as client:
             respuesta = await client.post(OLLAMA_URL, json=payload)
             respuesta.raise_for_status()
     except httpx.ConnectError as exc:
@@ -145,7 +154,8 @@ async def generar_reporte_cognitivo(datos: dict[str, Any]) -> str:
         ) from exc
     except httpx.TimeoutException as exc:
         raise OllamaNoDisponibleError(
-            "Ollama tardó demasiado en generar el reporte. Intenta nuevamente o revisa el rendimiento del equipo."
+            f"Ollama tardó más de {int(TIMEOUT_SEGUNDOS)} segundos en generar el reporte. "
+            "Intenta nuevamente o reduce el tamaño del reporte/modelo configurando OLLAMA_NUM_PREDICT."
         ) from exc
     except httpx.HTTPStatusError as exc:
         raise OllamaNoDisponibleError(
