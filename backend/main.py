@@ -102,7 +102,7 @@ def _cors_origins() -> list[str]:
         if origin.strip()
     ]
 
-# ── Rate Limiter (in-memory, per-IP) ─────────────────────────────────────────
+# ── Rate Limiter (in-memory, per-IP and route) ───────────────────────────────
 _rate_limit_store: dict[str, list[float]] = defaultdict(list)
 RATE_LIMIT_WINDOW = 60   # seconds
 RATE_LIMIT_MAX = 200     # max requests per window
@@ -113,12 +113,13 @@ async def security_headers_middleware(request: Request, call_next):
     """Add security headers, timing headers, and basic rate limiting."""
     # ── Rate Limiting ─────────────────────────────────────────────────────────
     client_ip = request.client.host if request.client else "unknown"
+    rate_limit_key = f"{client_ip}:{request.method}:{request.url.path}"
     now = time.time()
     # Clean old entries
-    _rate_limit_store[client_ip] = [
-        t for t in _rate_limit_store[client_ip] if now - t < RATE_LIMIT_WINDOW
+    _rate_limit_store[rate_limit_key] = [
+        t for t in _rate_limit_store[rate_limit_key] if now - t < RATE_LIMIT_WINDOW
     ]
-    if len(_rate_limit_store[client_ip]) >= RATE_LIMIT_MAX:
+    if len(_rate_limit_store[rate_limit_key]) >= RATE_LIMIT_MAX:
         return Response(
             content='{"detail":"Too many requests. Try again later."}',
             status_code=429,
@@ -129,7 +130,7 @@ async def security_headers_middleware(request: Request, call_next):
                 "X-RateLimit-Remaining": "0",
             },
         )
-    _rate_limit_store[client_ip].append(now)
+    _rate_limit_store[rate_limit_key].append(now)
 
     # ── Execute Request & Measure Latency ─────────────────────────────────────
     start = time.perf_counter()
@@ -151,7 +152,7 @@ async def security_headers_middleware(request: Request, call_next):
     response.headers["X-Request-Id"] = f"{int(now * 1000)}"
 
     # ── Rate Limit Info Headers ───────────────────────────────────────────────
-    remaining = RATE_LIMIT_MAX - len(_rate_limit_store[client_ip])
+    remaining = RATE_LIMIT_MAX - len(_rate_limit_store[rate_limit_key])
     response.headers["X-RateLimit-Limit"] = str(RATE_LIMIT_MAX)
     response.headers["X-RateLimit-Remaining"] = str(max(remaining, 0))
 

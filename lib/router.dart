@@ -30,7 +30,7 @@ import 'games/common/game_flow.dart' deferred as game_flow;
 
 typedef DeferredWidgetBuilder = Widget Function();
 
-class DeferredRouteView extends StatelessWidget {
+class DeferredRouteView extends StatefulWidget {
   const DeferredRouteView({
     super.key,
     required this.loadLibrary,
@@ -41,12 +41,25 @@ class DeferredRouteView extends StatelessWidget {
   final DeferredWidgetBuilder builder;
 
   @override
+  State<DeferredRouteView> createState() => _DeferredRouteViewState();
+}
+
+class _DeferredRouteViewState extends State<DeferredRouteView> {
+  late final Future<void> _loadFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadFuture = widget.loadLibrary();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return FutureBuilder<void>(
-      future: loadLibrary(),
+      future: _loadFuture,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.done) {
-          return builder();
+          return widget.builder();
         }
         return const Scaffold(body: Center(child: CircularProgressIndicator()));
       },
