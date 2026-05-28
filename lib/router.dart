@@ -22,6 +22,8 @@ import 'screens/test_placeholder_screen.dart'
 import 'screens/results_screen.dart' deferred as results_screen;
 import 'screens/history_screen.dart' deferred as history_screen;
 import 'screens/report_preview_screen.dart' deferred as report_preview_screen;
+import 'screens/reporte_cognitivo_screen.dart' deferred as reporte_cognitivo_screen;
+import 'models/reporte_cognitivo_model.dart';
 import 'games/visual_memory_game.dart' deferred as visual_memory_game;
 import 'games/reaction_game.dart' deferred as reaction_game;
 import 'games/fluency_game.dart' deferred as fluency_game;
@@ -292,6 +294,24 @@ final routerProvider = Provider<GoRouter>((ref) {
           report_preview_screen.loadLibrary,
           () => report_preview_screen.ReportPreviewScreen(),
         ),
+      ),
+      GoRoute(
+        path: '/reporte_cognitivo',
+        pageBuilder: (context, state) {
+          final extra = state.extra;
+          final solicitud = extra is SolicitudReporteCognitivoModel
+              ? extra
+              : SolicitudReporteCognitivoModel.fromJson(
+                  extra as Map<String, dynamic>,
+                );
+          return _deferredPage(
+            state,
+            reporte_cognitivo_screen.loadLibrary,
+            () => reporte_cognitivo_screen.ReporteCognitivoScreen(
+              solicitud: solicitud,
+            ),
+          );
+        },
       ),
       GoRoute(
         path: '/game_memory',

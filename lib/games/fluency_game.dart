@@ -251,8 +251,10 @@ class _FluencyGameState extends ConsumerState<FluencyGame> {
                     'completed': true,
                     'result': {
                       'title': 'Resultados - Lenguaje',
+                      'nombre_prueba': 'Fluidez Verbal',
                       'score': score,
                       'details': details,
+                      'duration_ms': durationMs,
                     },
                   });
                 },

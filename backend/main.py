@@ -1,6 +1,7 @@
 from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from app.api.v1 import users, patients, sessions
+from app.routers import reportes
 from app.infrastructure.database import engine, Base, SessionLocal
 from app.infrastructure import models
 from app.core.security import get_password_hash
@@ -191,6 +192,7 @@ app.add_middleware(
 app.include_router(users.router, prefix=f"{settings.API_V1_STR}/users", tags=["users"])
 app.include_router(patients.router, prefix=f"{settings.API_V1_STR}/patients", tags=["patients"])
 app.include_router(sessions.router, prefix=f"{settings.API_V1_STR}/sessions", tags=["sessions"])
+app.include_router(reportes.router, tags=["reportes"])
 
 @app.get("/")
 def read_root():

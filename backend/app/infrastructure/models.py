@@ -66,6 +66,22 @@ class Result(Base):
     session: Mapped[Optional["Session"]] = relationship("Session")
     patient: Mapped["Patient"] = relationship("Patient")
 
+class CognitiveReport(Base):
+    __tablename__ = "cognitive_reports"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    patient_db_id: Mapped[Optional[int]] = mapped_column(Integer, ForeignKey("patients.id", ondelete="SET NULL"), nullable=True)
+    paciente_id: Mapped[str] = mapped_column(String, index=True)
+    nombre_paciente: Mapped[str] = mapped_column(String, index=True)
+    edad_paciente: Mapped[int] = mapped_column(Integer)
+    fecha_evaluacion: Mapped[str] = mapped_column(String, index=True)
+    profesional: Mapped[str] = mapped_column(String)
+    pruebas: Mapped[Any] = mapped_column(JSON)
+    reporte: Mapped[str] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc))
+
+    patient: Mapped[Optional["Patient"]] = relationship("Patient")
+
 class Doctor(Base):
     __tablename__ = "doctors"
 
@@ -96,5 +112,4 @@ class AuditLog(Base):
     old_value: Mapped[Optional[str]] = mapped_column(Text, nullable=True)  # JSON-stringified old state
     new_value: Mapped[Optional[str]] = mapped_column(Text, nullable=True)  # JSON-stringified new state
     timestamp: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc))
-
 

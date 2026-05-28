@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../models/reporte_cognitivo_model.dart';
 import '../../providers/api_providers.dart';
 import 'game_results.dart';
 
@@ -17,13 +18,21 @@ class GameFlow extends ConsumerStatefulWidget {
 class _GameFlowState extends ConsumerState<GameFlow> {
   int _currentIndex = 0;
   int? _age;
+  String _patientName = 'Paciente';
+  String _patientExternalId = 'PAC-000';
   late DateTime _startTime;
+  final List<Map<String, dynamic>> _results = [];
 
   @override
   void initState() {
     super.initState();
     _startTime = DateTime.now();
-    _loadPatientInfo();
+    _iniciarFlujo();
+  }
+
+  Future<void> _iniciarFlujo() async {
+    await _loadPatientInfo();
+    if (!mounted) return;
     _startNext();
   }
 
@@ -33,6 +42,8 @@ class _GameFlowState extends ConsumerState<GameFlow> {
       final pid = api.currentPatientId;
       final patient = await api.getPatient(pid);
       _age = patient.age;
+      _patientName = patient.name;
+      _patientExternalId = patient.documentId ?? 'PAC-${patient.id}';
     } catch (e) {
       _age = 30;
     }
@@ -48,10 +59,35 @@ class _GameFlowState extends ConsumerState<GameFlow> {
     Timer(const Duration(milliseconds: 1500), () {
       if (!mounted) return;
       final route = widget.gameRoutes[_currentIndex];
+      final flowIndex = _currentIndex;
       _currentIndex++;
-      context.push(route).then((_) => _startNext());
+      context
+          .push(
+            route,
+            extra: {
+              'flow': true,
+              'index': flowIndex,
+              'total': widget.gameRoutes.length,
+              'age': _age,
+            },
+          )
+          .then((resultado) {
+            _registrarResultado(resultado);
+            _startNext();
+          });
     });
   }
+
+  void _registrarResultado(Object? resultado) {
+    if (resultado is! Map) return;
+    final result = resultado['result'];
+    if (result is Map<String, dynamic>) {
+      _results.add(result);
+    } else if (result is Map) {
+      _results.add(Map<String, dynamic>.from(result));
+    }
+  }
+
   Future<void> _complete() async {
     final endTime = DateTime.now();
     final durationMs = endTime.difference(_startTime).inMilliseconds;
@@ -63,7 +99,63 @@ class _GameFlowState extends ConsumerState<GameFlow> {
       durationMs: durationMs,
     );
     if (!mounted) return;
-    context.go('/home');
+
+    if (_results.isEmpty) {
+      context.go('/home');
+      return;
+    }
+
+    final solicitud = SolicitudReporteCognitivoModel(
+      pacienteId: _patientExternalId,
+      nombrePaciente: _patientName,
+      edadPaciente: _age ?? 30,
+      fechaEvaluacion: _fechaActualIso(),
+      profesional: api.currentUsername ?? 'Profesional evaluador',
+      pruebas: _results.map(_pruebaDesdeResultado).toList(),
+    );
+
+    context.go('/reporte_cognitivo', extra: solicitud);
+  }
+
+  PruebaCognitivaModel _pruebaDesdeResultado(Map<String, dynamic> resultado) {
+    final nombrePrueba =
+        resultado['nombre_prueba']?.toString() ??
+        _nombrePruebaDesdeTitulo(resultado['title']?.toString() ?? '');
+    final porcentaje = resultado['score'] is num
+        ? (resultado['score'] as num).toDouble()
+        : double.tryParse(resultado['score']?.toString() ?? '') ?? 0;
+    final tiempoMs = resultado['duration_ms'] is num
+        ? (resultado['duration_ms'] as num).toInt()
+        : int.tryParse(resultado['duration_ms']?.toString() ?? '') ?? 0;
+
+    return PruebaCognitivaModel(
+      nombrePrueba: nombrePrueba,
+      porcentajeObtenido: porcentaje.clamp(0, 100).toDouble(),
+      tiempoSegundos: (tiempoMs / 1000).round(),
+    );
+  }
+
+  String _nombrePruebaDesdeTitulo(String titulo) {
+    final t = titulo.toLowerCase();
+    if (t.contains('memoria')) return 'Memoria Visual';
+    if (t.contains('atención') || t.contains('atencion')) {
+      return 'Atención Sostenida';
+    }
+    if (t.contains('lenguaje') || t.contains('fluidez')) {
+      return 'Fluidez Verbal';
+    }
+    if (t.contains('funciones') || t.contains('stroop')) {
+      return 'Funciones Ejecutivas (Stroop)';
+    }
+    return titulo.isEmpty ? 'Prueba Cognitiva' : titulo;
+  }
+
+  String _fechaActualIso() {
+    final ahora = DateTime.now();
+    final year = ahora.year.toString().padLeft(4, '0');
+    final month = ahora.month.toString().padLeft(2, '0');
+    final day = ahora.day.toString().padLeft(2, '0');
+    return '$year-$month-$day';
   }
 
   @override
