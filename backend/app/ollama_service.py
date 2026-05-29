@@ -1,16 +1,19 @@
 from __future__ import annotations
 
 import json
+import logging
 import os
 from typing import Any
 
 import httpx
 
 
+logger = logging.getLogger(__name__)
+
 OLLAMA_URL = os.getenv("OLLAMA_URL", "http://localhost:11434/api/generate")
 MODELO_OLLAMA = os.getenv("OLLAMA_MODEL", "llama3")
 TIMEOUT_SEGUNDOS = float(os.getenv("OLLAMA_TIMEOUT_SECONDS", "300"))
-MAX_TOKENS_REPORTE = int(os.getenv("OLLAMA_NUM_PREDICT", "1600"))
+MAX_TOKENS_REPORTE = int(os.getenv("OLLAMA_NUM_PREDICT", "600"))
 
 DOMINIOS_PRUEBAS = {
     "memoria visual": "Memoria",
@@ -64,67 +67,33 @@ def construir_prompt(datos: dict[str, Any]) -> str:
     pruebas_json = json.dumps(pruebas, ensure_ascii=False, indent=2)
 
     return f"""
-Actúa como un neuropsicólogo clínico experto en evaluación cognitiva de adultos.
-Redacta un reporte neuropsicológico profesional, claro, sobrio y clínicamente útil.
+Genera un reporte neuropsicológico breve y clínicamente prudente en español.
+Usa encabezados claros, una tabla de resultados y recomendaciones funcionales.
+No inventes diagnósticos definitivos; describe hallazgos como hipótesis clínicas cuando corresponda.
 
-No digas que eres una IA. No inventes diagnósticos médicos definitivos. Si hay signos
-de bajo rendimiento, plantea hipótesis clínicas prudentes y recomienda valoración
-complementaria cuando corresponda.
+Paciente: {datos["nombre_paciente"]} (ID {datos["paciente_id"]}), {datos["edad_paciente"]} años.
+Evaluador: {datos["profesional"]}
+Fecha: {datos["fecha_evaluacion"]}
 
-CRITERIO DE INTERPRETACIÓN OBLIGATORIO:
-- 0% a 40%: Rendimiento BAJO, posible déficit cognitivo.
-- 41% a 69%: Rendimiento MEDIO, área a fortalecer.
-- 70% a 100%: Rendimiento ALTO, funcionamiento adecuado.
-
-DATOS DEL PACIENTE:
-- ID: {datos["paciente_id"]}
-- Nombre: {datos["nombre_paciente"]}
-- Edad: {datos["edad_paciente"]} años
-- Fecha de evaluación: {datos["fecha_evaluacion"]}
-- Profesional evaluador: {datos["profesional"]}
-
-PRUEBAS REALIZADAS:
+Pruebas realizadas:
 {pruebas_json}
 
-INSTRUCCIONES CLÍNICAS:
-1. Interpreta únicamente las pruebas realizadas. Si faltan pruebas, adapta el reporte
-   y menciona que el perfil corresponde a una batería parcial.
-2. Relaciona los dominios entre sí. Por ejemplo: bajo desempeño en memoria junto con
-   atención reducida puede afectar codificación y recuperación de información; bajo
-   desempeño ejecutivo puede interferir con control inhibitorio, flexibilidad mental
-   y organización de estrategias.
-3. Personaliza conclusiones y recomendaciones según el perfil completo del paciente,
-   su edad y los porcentajes obtenidos.
-4. Usa lenguaje de neuropsicología clínica real, sin frases genéricas ni tono comercial.
-5. Mantén formato Markdown, con títulos exactamente como se indican.
-
-ESTRUCTURA OBLIGATORIA DEL REPORTE:
-
-# DATOS DE LA EVALUACIÓN
-
-# PERFIL COGNITIVO
-Incluye una tabla con columnas: Prueba, Dominio cognitivo, Porcentaje, Tiempo, Nivel.
-
-# ANÁLISIS POR DOMINIO COGNITIVO
-Incluye subsecciones solo para los dominios/pruebas realizadas:
-## Memoria Visual
-## Atención Sostenida
-## Fluidez Verbal
-## Funciones Ejecutivas
-
-# INTERPRETACIÓN INTEGRAL
-Describe las relaciones entre dominios preservados y afectados.
-
-# CONCLUSIONES Y RECOMENDACIONES
-Incluye recomendaciones clínicas, funcionales y de seguimiento.
-
-# FIRMA DEL PROFESIONAL
-Incluye el nombre del profesional evaluador y un espacio de firma.
+Incluye:
+1. Resumen clínico inicial.
+2. Tabla de resultados con Prueba, Dominio cognitivo, Porcentaje, Tiempo y Nivel.
+3. Interpretación de relaciones entre dominios afectados y preservados.
+4. Conclusiones, recomendaciones de seguimiento y una firma con el profesional evaluador.
 """.strip()
 
 
 async def generar_reporte_cognitivo(datos: dict[str, Any]) -> str:
     prompt = construir_prompt(datos)
+    logger.info(
+        "Generando reporte cognitivo con modelo=%s, prompt_chars=%d, max_tokens=%d",
+        MODELO_OLLAMA,
+        len(prompt),
+        MAX_TOKENS_REPORTE,
+    )
     payload = {
         "model": MODELO_OLLAMA,
         "prompt": prompt,
@@ -148,20 +117,24 @@ async def generar_reporte_cognitivo(datos: dict[str, Any]) -> str:
             respuesta = await client.post(OLLAMA_URL, json=payload)
             respuesta.raise_for_status()
     except httpx.ConnectError as exc:
+        logger.exception("Error de conexión con Ollama")
         raise OllamaNoDisponibleError(
             "No fue posible conectar con Ollama en localhost:11434. "
             "Verifica que Ollama esté iniciado y que el modelo llama3 esté disponible."
         ) from exc
     except httpx.TimeoutException as exc:
+        logger.exception("Ollama excedió el tiempo de espera")
         raise OllamaNoDisponibleError(
             f"Ollama tardó más de {int(TIMEOUT_SEGUNDOS)} segundos en generar el reporte. "
             "Intenta nuevamente o reduce el tamaño del reporte/modelo configurando OLLAMA_NUM_PREDICT."
         ) from exc
     except httpx.HTTPStatusError as exc:
+        logger.exception("Ollama respondió con error HTTP %s", exc.response.status_code)
         raise OllamaNoDisponibleError(
             f"Ollama respondió con estado HTTP {exc.response.status_code}."
         ) from exc
     except httpx.HTTPError as exc:
+        logger.exception("Error de comunicación con Ollama")
         raise OllamaNoDisponibleError(
             "Ocurrió un error de comunicación con Ollama."
         ) from exc
