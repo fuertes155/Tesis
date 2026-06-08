@@ -1,33 +1,129 @@
 {
-  "version": "2.0.0",
-  "tasks": [
-    {
-      "label": "backend: run",
-      "type": "shell",
-      "command": "python -B -m uvicorn main:app --reload --host 127.0.0.1 --port 8000",
-      "options": {
-        "cwd": "${workspaceFolder}/backend"
-      },
-      "problemMatcher": []
-    },
-    {
-      "label": "frontend: run web",
-      "type": "shell",
-      "command": "flutter run -d chrome --web-hostname 127.0.0.1 --web-port 55912 --dart-define=API_BASE_URL=http://127.0.0.1:8000",
-      "options": {
-        "cwd": "${workspaceFolder}"
-      },
-      "problemMatcher": []
-    },
-    {
-      "label": "dev: fullstack",
-      "dependsOrder": "parallel",
-      "dependsOn": [
-        "backend: run",
-        "frontend: run web"
-      ],
-      "problemMatcher": []
-    }
-  ]
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "backend: run",
+			"type": "shell",
+			"command": "python -B -m uvicorn main:app --reload --host 127.0.0.1 --port 8000",
+			"options": {
+				"cwd": "${workspaceFolder}/backend"
+			},
+			"problemMatcher": []
+		},
+		{
+			"label": "frontend: run web",
+			"type": "shell",
+			"command": "flutter run -d chrome --web-hostname 127.0.0.1 --web-port 55912 --dart-define=REPORTE_API_BASE_URL=http://127.0.0.1:8000",
+			"options": {
+				"cwd": "${workspaceFolder}"
+			},
+			"problemMatcher": []
+		},
+		{
+			"label": "dev: fullstack",
+			"dependsOrder": "parallel",
+			"dependsOn": [
+				"backend: run",
+				"frontend: run web"
+			],
+			"problemMatcher": []
+		},
+		{
+			"label": "backend: pytest ollama",
+			"type": "shell",
+			"command": "python -B -m pytest tests/test_ollama_service.py -q",
+			"problemMatcher": [],
+			"group": "test"
+		},
+		{
+			"label": "backend: pwd",
+			"type": "shell",
+			"command": "pwd && ls -la && find . -maxdepth 2 -name 'test_ollama_service.py'",
+			"problemMatcher": []
+		},
+		{
+			"label": "backend: py cwd",
+			"type": "shell",
+			"command": "python -c \"import os; print(os.getcwd())\"",
+			"problemMatcher": []
+		},
+		{
+			"label": "backend: pytest ollama",
+			"type": "shell",
+			"command": "cd backend && python -B -m pytest tests/test_ollama_service.py -q",
+			"problemMatcher": []
+		},
+		{
+			"label": "backend: dir test",
+			"type": "shell",
+			"command": "cd backend && dir && dir tests",
+			"problemMatcher": []
+		},
+		{
+			"label": "backend: pytest ollama",
+			"type": "shell",
+			"command": "cd backend && python -B -m pytest -q tests/test_ollama_service.py",
+			"problemMatcher": []
+		},
+		{
+			"label": "backend: py list tests",
+			"type": "shell",
+			"command": "cd backend && python -c \"import os; print(os.listdir('tests')[:5])\"",
+			"problemMatcher": []
+		},
+		{
+			"label": "backend: pytest version",
+			"type": "shell",
+			"command": "cd backend && python -B -m pytest --version",
+			"problemMatcher": []
+		},
+		{
+			"label": "backend: check file",
+			"type": "shell",
+			"command": "cd backend && python -c \"import os; print(os.path.exists('tests/test_ollama_service.py'))\"",
+			"problemMatcher": []
+		},
+		{
+			"label": "backend: pytest via main",
+			"type": "shell",
+			"command": "cd backend && python -B -c \"import pytest, sys; raise SystemExit(pytest.main(['-q', 'tests/test_ollama_service.py']))\"",
+			"problemMatcher": []
+		},
+		{
+			"label": "backend: repro report",
+			"type": "shell",
+			"command": "cd backend && python -c \"import asyncio; from app.ollama_service import generar_reporte_cognitivo; sample = {'paciente_id': 'P001', 'nombre_paciente': 'Ana', 'edad_paciente': 45, 'fecha_evaluacion': '2026-05-28', 'profesional': 'Dr. Test', 'pruebas': [{'nombre_prueba': f'Prueba {i}', 'porcentaje_obtenido': float(50+i), 'tiempo_segundos': 60+i} for i in range(8)]}; print('inicio'); reporte = asyncio.run(generar_reporte_cognitivo(sample)); print('len', len(reporte)); print(reporte[:250])\"",
+			"problemMatcher": []
+		},
+		{
+			"label": "backend: pytest ollama",
+			"type": "shell",
+			"command": "cd backend && python -B -c \"import pytest; raise SystemExit(pytest.main(['-q', 'tests/test_ollama_service.py']))\"",
+			"problemMatcher": []
+		},
+		{
+			"label": "backend: pytest via main new",
+			"type": "shell",
+			"command": "cd backend && python -B -c \"import pytest; raise SystemExit(pytest.main(['-q', 'tests/test_ollama_service.py']))\"",
+			"problemMatcher": []
+		},
+		{
+			"label": "backend: repro report new",
+			"type": "shell",
+			"command": "cd backend && python -c \"import asyncio; from app.ollama_service import generar_reporte_cognitivo; sample = {'paciente_id': 'P001', 'nombre_paciente': 'Ana', 'edad_paciente': 45, 'fecha_evaluacion': '2026-05-28', 'profesional': 'Dr. Test', 'pruebas': [{'nombre_prueba': f'Prueba {i}', 'porcentaje_obtenido': float(50+i), 'tiempo_segundos': 60+i} for i in range(8)]}; print('inicio'); reporte = asyncio.run(generar_reporte_cognitivo(sample)); print('len', len(reporte)); print(reporte[:250])\"",
+			"problemMatcher": []
+		},
+		{
+			"label": "backend: pytest via main new",
+			"type": "shell",
+			"command": "cd backend && python -B -c \"import pytest; raise SystemExit(pytest.main(['-q', 'tests/test_ollama_service.py']))\"",
+			"problemMatcher": []
+		},
+		{
+			"label": "backend: repro report new2",
+			"type": "shell",
+			"command": "cd backend && python -c \"import asyncio; from app.ollama_service import generar_reporte_cognitivo; sample = {'paciente_id': 'P001', 'nombre_paciente': 'Ana', 'edad_paciente': 45, 'fecha_evaluacion': '2026-05-28', 'profesional': 'Dr. Test', 'pruebas': [{'nombre_prueba': f'Prueba {i}', 'porcentaje_obtenido': float(50+i), 'tiempo_segundos': 60+i} for i in range(8)]}; print('inicio'); reporte = asyncio.run(generar_reporte_cognitivo(sample)); print('len', len(reporte)); print(reporte[:250])\"",
+			"problemMatcher": []
+		}
+	]
 }
-

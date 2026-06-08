@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
 import os
@@ -12,8 +13,10 @@ logger = logging.getLogger(__name__)
 
 OLLAMA_URL = os.getenv("OLLAMA_URL", "http://localhost:11434/api/generate")
 MODELO_OLLAMA = os.getenv("OLLAMA_MODEL", "llama3")
-TIMEOUT_SEGUNDOS = float(os.getenv("OLLAMA_TIMEOUT_SECONDS", "300"))
-MAX_TOKENS_REPORTE = int(os.getenv("OLLAMA_NUM_PREDICT", "600"))
+TIMEOUT_SEGUNDOS = float(os.getenv("OLLAMA_TIMEOUT_SECONDS", "20"))
+MAX_TOKENS_REPORTE = int(os.getenv("OLLAMA_NUM_PREDICT", "650"))
+MAX_PRUEBAS_PROMPT = int(os.getenv("OLLAMA_MAX_PRUEBAS_PROMPT", "2"))
+MAX_CHARS_PROMPT = int(os.getenv("OLLAMA_MAX_PROMPT_CHARS", "1000"))
 
 DOMINIOS_PRUEBAS = {
     "memoria visual": "Memoria",
@@ -64,11 +67,20 @@ def preparar_pruebas(datos: dict[str, Any]) -> list[dict[str, Any]]:
 
 def construir_prompt(datos: dict[str, Any]) -> str:
     pruebas = preparar_pruebas(datos)
-    pruebas_json = json.dumps(pruebas, ensure_ascii=False, indent=2)
+    total_pruebas = len(pruebas)
+    pruebas_mostradas = pruebas[:MAX_PRUEBAS_PROMPT]
+    pruebas_json = json.dumps(pruebas_mostradas, ensure_ascii=False, indent=2)
+    nota_pruebas = ""
+    if total_pruebas > MAX_PRUEBAS_PROMPT:
+        omitidas = total_pruebas - MAX_PRUEBAS_PROMPT
+        nota_pruebas = (
+            f"\nPruebas omitidas: se muestran solo las primeras {MAX_PRUEBAS_PROMPT} de {total_pruebas} "
+            f"pruebas para mantener el contexto breve. Se omitieron {omitidas} pruebas adicionales."
+        )
 
-    return f"""
-Genera un reporte neuropsicológico breve y clínicamente prudente en español.
-Usa encabezados claros, una tabla de resultados y recomendaciones funcionales.
+    prompt = f"""
+Genera un informe neuropsicológico clínicamente prudente en español.
+Usa un estilo formal, organizado y similar a un informe médico para paciente.
 No inventes diagnósticos definitivos; describe hallazgos como hipótesis clínicas cuando corresponda.
 
 Paciente: {datos["nombre_paciente"]} (ID {datos["paciente_id"]}), {datos["edad_paciente"]} años.
@@ -76,14 +88,97 @@ Evaluador: {datos["profesional"]}
 Fecha: {datos["fecha_evaluacion"]}
 
 Pruebas realizadas:
-{pruebas_json}
+{pruebas_json}{nota_pruebas}
 
 Incluye:
-1. Resumen clínico inicial.
-2. Tabla de resultados con Prueba, Dominio cognitivo, Porcentaje, Tiempo y Nivel.
-3. Interpretación de relaciones entre dominios afectados y preservados.
-4. Conclusiones, recomendaciones de seguimiento y una firma con el profesional evaluador.
+1. ANTECEDENTES Y CONTEXTO DE EVALUACIÓN.
+2. RESULTADOS DE PRUEBAS con Prueba, Dominio cognitivo, Porcentaje, Tiempo y Nivel.
+3. INTERPRETACIÓN CLÍNICA de dominios afectados y preservados.
+4. RECOMENDACIONES Y SEGUIMIENTO.
+5. CONCLUSIÓN y firma con el profesional evaluador.
 """.strip()
+
+    if len(prompt) > MAX_CHARS_PROMPT:
+        prompt = prompt[:MAX_CHARS_PROMPT].rstrip() + "\n[Contenido truncado para evitar sobrecarga del modelo.]"
+
+    return prompt
+
+
+def generar_reporte_local(datos: dict[str, Any]) -> str:
+    pruebas = preparar_pruebas(datos)
+    resumen = (
+        f"INFORME NEUROPSICOLÓGICO (GENERADO LOCALMENTE)\n\n"
+        f"Paciente: {datos['nombre_paciente']} (ID {datos['paciente_id']})\n"
+        f"Edad: {datos['edad_paciente']} años\n"
+        f"Evaluador: {datos['profesional']}\n"
+        f"Fecha: {datos['fecha_evaluacion']}\n\n"
+        f"ANTECEDENTES Y CONTEXTO DE EVALUACIÓN:\n"
+        f"Se generó este informe con un respaldo local porque el modelo de IA no pudo completar la generación en este momento. "
+        f"Se revisaron {len(pruebas)} pruebas cognitivas con interpretación conservadora.\n\n"
+    )
+
+    tabla = [
+        "Prueba | Dominio | Porcentaje | Nivel | Tiempo (s)",
+        "--- | --- | --- | --- | ---",
+    ]
+    for prueba in pruebas:
+        tabla.append(
+            f"{prueba['nombre_prueba']} | {prueba['dominio_cognitivo']} | {prueba['porcentaje_obtenido']:.1f}% | {prueba['nivel']} | {prueba['tiempo_segundos']}"
+        )
+
+    dominions = {}
+    for prueba in pruebas:
+        dominions.setdefault(prueba["dominio_cognitivo"], []).append(prueba["porcentaje_obtenido"])
+
+    interpretacion = []
+    for dominio, porcentajes in dominions.items():
+        promedio = sum(porcentajes) / len(porcentajes)
+        interpretacion.append(f"- {dominio}: promedio {promedio:.1f}%, interpretado de forma conservadora con base en los resultados observados.")
+
+    conclusion = (
+        "Conclusión: este informe local conserva la estructura del reporte y los resultados medidos, "
+        "pero la redacción clínica final quedó en modo respaldo. Se recomienda reintentar la generación con Ollama."
+    )
+
+    return "\n".join(
+        [
+            resumen,
+            "RESULTADOS DE PRUEBAS:",
+            *tabla,
+            "",
+            "INTERPRETACIÓN CLÍNICA:",
+            *interpretacion,
+            "",
+            "RECOMENDACIONES Y SEGUIMIENTO:",
+            "Correlacionar los hallazgos con entrevista clínica, historia médica y observación funcional. Programar seguimiento según criterio profesional.",
+            "",
+            f"CONCLUSIÓN: {conclusion}",
+            "",
+            f"Firma del profesional: {datos['profesional']}",
+        ]
+    )
+
+
+async def _generar_reporte_ollama(datos: dict[str, Any], payload: dict[str, Any]) -> str:
+    timeout = httpx.Timeout(
+        TIMEOUT_SEGUNDOS,
+        connect=20.0,
+        read=TIMEOUT_SEGUNDOS,
+        write=20.0,
+        pool=20.0,
+    )
+    async with httpx.AsyncClient(timeout=timeout) as client:
+        respuesta = await client.post(OLLAMA_URL, json=payload)
+        respuesta.raise_for_status()
+
+    contenido = respuesta.json()
+    reporte = str(contenido.get("response", "")).strip()
+    if not reporte:
+        raise OllamaNoDisponibleError(
+            "Ollama no devolvió contenido para el reporte neuropsicológico."
+        )
+
+    return reporte
 
 
 async def generar_reporte_cognitivo(datos: dict[str, Any]) -> str:
@@ -106,44 +201,14 @@ async def generar_reporte_cognitivo(datos: dict[str, Any]) -> str:
     }
 
     try:
-        timeout = httpx.Timeout(
-            TIMEOUT_SEGUNDOS,
-            connect=20.0,
-            read=TIMEOUT_SEGUNDOS,
-            write=20.0,
-            pool=20.0,
+        reporte = await asyncio.wait_for(
+            _generar_reporte_ollama(datos, payload),
+            timeout=TIMEOUT_SEGUNDOS,
         )
-        async with httpx.AsyncClient(timeout=timeout) as client:
-            respuesta = await client.post(OLLAMA_URL, json=payload)
-            respuesta.raise_for_status()
-    except httpx.ConnectError as exc:
-        logger.exception("Error de conexión con Ollama")
-        raise OllamaNoDisponibleError(
-            "No fue posible conectar con Ollama en localhost:11434. "
-            "Verifica que Ollama esté iniciado y que el modelo llama3 esté disponible."
-        ) from exc
-    except httpx.TimeoutException as exc:
-        logger.exception("Ollama excedió el tiempo de espera")
-        raise OllamaNoDisponibleError(
-            f"Ollama tardó más de {int(TIMEOUT_SEGUNDOS)} segundos en generar el reporte. "
-            "Intenta nuevamente o reduce el tamaño del reporte/modelo configurando OLLAMA_NUM_PREDICT."
-        ) from exc
-    except httpx.HTTPStatusError as exc:
-        logger.exception("Ollama respondió con error HTTP %s", exc.response.status_code)
-        raise OllamaNoDisponibleError(
-            f"Ollama respondió con estado HTTP {exc.response.status_code}."
-        ) from exc
-    except httpx.HTTPError as exc:
-        logger.exception("Error de comunicación con Ollama")
-        raise OllamaNoDisponibleError(
-            "Ocurrió un error de comunicación con Ollama."
-        ) from exc
-
-    contenido = respuesta.json()
-    reporte = str(contenido.get("response", "")).strip()
-    if not reporte:
-        raise OllamaNoDisponibleError(
-            "Ollama no devolvió contenido para el reporte neuropsicológico."
-        )
-
-    return reporte
+        return reporte
+    except asyncio.TimeoutError:
+        logger.warning("Timeout asíncrono al generar reporte con Ollama; se usará el reporte local de respaldo")
+        return generar_reporte_local(datos)
+    except (httpx.ConnectError, httpx.TimeoutException, httpx.HTTPStatusError, httpx.HTTPError) as exc:
+        logger.exception("Ollama no respondió; se usará el reporte local de respaldo")
+        return generar_reporte_local(datos)

@@ -4,19 +4,20 @@ import '../models/reporte_cognitivo_model.dart';
 
 class ReporteCognitivoService {
   ReporteCognitivoService({Dio? dio})
-      : _dio = dio ??
-            Dio(
-              BaseOptions(
-                baseUrl: const String.fromEnvironment(
-                  'REPORTE_API_BASE_URL',
-                  defaultValue: 'http://10.0.2.2:8000',
-                ),
-                connectTimeout: const Duration(seconds: 20),
-                receiveTimeout: const Duration(seconds: 300),
-                sendTimeout: const Duration(seconds: 20),
-                contentType: 'application/json',
+    : _dio =
+          dio ??
+          Dio(
+            BaseOptions(
+              baseUrl: const String.fromEnvironment(
+                'REPORTE_API_BASE_URL',
+                defaultValue: 'http://10.0.2.2:8000',
               ),
-            );
+              connectTimeout: const Duration(seconds: 20),
+              receiveTimeout: const Duration(minutes: 10),
+              sendTimeout: const Duration(seconds: 20),
+              contentType: 'application/json',
+            ),
+          );
 
   final Dio _dio;
 
@@ -44,7 +45,7 @@ class ReporteCognitivoService {
           error.type == DioExceptionType.receiveTimeout ||
           error.type == DioExceptionType.sendTimeout) {
         throw Exception(
-          'La generación del reporte tardó más de 5 minutos. Verifica Ollama e intenta nuevamente.',
+          'La generación del reporte tardó más de 10 minutos. Verifica que Ollama esté activo, que el modelo esté cargado y vuelve a intentarlo.',
         );
       }
       if (error.type == DioExceptionType.connectionError) {
@@ -53,9 +54,13 @@ class ReporteCognitivoService {
         );
       }
 
-      throw Exception('Error al generar el reporte cognitivo: ${error.message}');
+      throw Exception(
+        'Error al generar el reporte cognitivo: ${error.message}',
+      );
     } catch (error) {
-      throw Exception('Error inesperado al generar el reporte cognitivo: $error');
+      throw Exception(
+        'Error inesperado al generar el reporte cognitivo: $error',
+      );
     }
   }
 }
