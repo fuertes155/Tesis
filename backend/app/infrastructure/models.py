@@ -31,6 +31,7 @@ class Patient(Base):
     email: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     doctor_id: Mapped[Optional[int]] = mapped_column(Integer, ForeignKey("users.id"), nullable=True)
     user_id: Mapped[Optional[int]] = mapped_column(Integer, ForeignKey("users.id"), nullable=True, unique=True)
+    external_id: Mapped[Optional[str]] = mapped_column(String, unique=True, index=True, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc))
 
     user: Mapped[Optional["User"]] = relationship("User", foreign_keys=[user_id])

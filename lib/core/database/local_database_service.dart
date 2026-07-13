@@ -122,4 +122,8 @@ class LocalDatabaseService {
   Future<void> deletePendingAction(int key) async {
     await _pendingStore.record(key).delete(_db);
   }
+
+  Future<void> updatePendingAction(int key, Map<String, dynamic> data) async {
+    await _pendingStore.record(key).update(_db, {'data': data});
+  }
 }

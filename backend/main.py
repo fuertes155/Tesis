@@ -44,6 +44,9 @@ def _ensure_db_schema() -> None:
             conn.execute(text("ALTER TABLE patients ADD COLUMN user_id INTEGER"))
         if "email" not in cols_p:
             conn.execute(text("ALTER TABLE patients ADD COLUMN email TEXT"))
+        if "external_id" not in cols_p:
+            conn.execute(text("ALTER TABLE patients ADD COLUMN external_id TEXT"))
+            conn.execute(text("CREATE UNIQUE INDEX IF NOT EXISTS ix_patients_external_id ON patients(external_id)"))
         if "created_at" not in cols_p:
             conn.execute(text("ALTER TABLE patients ADD COLUMN created_at DATETIME"))
             if "registration_date" in cols_p:
@@ -59,7 +62,7 @@ def _ensure_seed_users() -> None:
             {"username": "samuel@gmail.com", "role": "doctor", "is_available": True},
             {"username": "samuel1@gmail.com", "role": "gestor", "is_available": True},
         ]
-        default_password = "Password123!"
+        default_password = settings.DEFAULT_ADMIN_PASSWORD
         for s in seeds:
             uname = str(s["username"]).strip().lower()
             u = db.query(models.User).filter(models.User.username == uname).first()
@@ -113,7 +116,12 @@ RATE_LIMIT_MAX = 200     # max requests per window
 async def security_headers_middleware(request: Request, call_next):
     """Add security headers, timing headers, and basic rate limiting."""
     # ── Rate Limiting ─────────────────────────────────────────────────────────
-    client_ip = request.client.host if request.client else "unknown"
+    forwarded = request.headers.get("X-Forwarded-For")
+    if forwarded:
+        client_ip = forwarded.split(",")[0].strip()
+    else:
+        client_ip = request.headers.get("X-Real-IP", request.client.host if request.client else "unknown")
+    
     rate_limit_key = f"{client_ip}:{request.method}:{request.url.path}"
     now = time.time()
     # Clean old entries

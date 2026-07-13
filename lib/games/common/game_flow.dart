@@ -20,6 +20,9 @@ class _GameFlowState extends ConsumerState<GameFlow> {
   int? _age;
   String _patientName = 'Paciente';
   String _patientExternalId = 'PAC-000';
+  String? _patientDocument;
+  String? _patientPhone;
+  String? _patientDiagnosis;
   late DateTime _startTime;
   final List<Map<String, dynamic>> _results = [];
 
@@ -44,6 +47,9 @@ class _GameFlowState extends ConsumerState<GameFlow> {
       _age = patient.age;
       _patientName = patient.name;
       _patientExternalId = patient.documentId ?? 'PAC-${patient.id}';
+      _patientDocument = patient.documentId;
+      _patientPhone = patient.phone;
+      _patientDiagnosis = patient.diagnosis;
     } catch (e) {
       _age = 30;
     }
@@ -111,6 +117,10 @@ class _GameFlowState extends ConsumerState<GameFlow> {
       edadPaciente: _age ?? 30,
       fechaEvaluacion: _fechaActualIso(),
       profesional: api.currentUsername ?? 'Profesional evaluador',
+      documentoPaciente: _patientDocument,
+      telefonoPaciente: _patientPhone,
+      diagnosticoPaciente: _patientDiagnosis,
+      institucion: 'NeuroApp360',
       pruebas: _results.map(_pruebaDesdeResultado).toList(),
     );
 
@@ -127,11 +137,15 @@ class _GameFlowState extends ConsumerState<GameFlow> {
     final tiempoMs = resultado['duration_ms'] is num
         ? (resultado['duration_ms'] as num).toInt()
         : int.tryParse(resultado['duration_ms']?.toString() ?? '') ?? 0;
+    final detalles = resultado['details'] as Map<String, dynamic>?;
+    final metricas = resultado['metrics'] as Map<String, dynamic>?;
 
     return PruebaCognitivaModel(
       nombrePrueba: nombrePrueba,
       porcentajeObtenido: porcentaje.clamp(0, 100).toDouble(),
       tiempoSegundos: (tiempoMs / 1000).round(),
+      detalles: detalles,
+      metricas: metricas,
     );
   }
 

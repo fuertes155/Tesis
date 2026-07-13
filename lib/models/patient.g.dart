@@ -21,6 +21,7 @@ _$PatientImpl _$$PatientImplFromJson(Map<String, dynamic> json) =>
       createdAt: json['created_at'] == null
           ? null
           : DateTime.parse(json['created_at'] as String),
+      externalId: json['external_id'] as String?,
     );
 
 Map<String, dynamic> _$$PatientImplToJson(_$PatientImpl instance) =>
@@ -34,4 +35,5 @@ Map<String, dynamic> _$$PatientImplToJson(_$PatientImpl instance) =>
       'diagnosis': instance.diagnosis,
       'doctor_id': instance.doctorId,
       'created_at': instance.createdAt?.toIso8601String(),
+      'external_id': instance.externalId,
     };

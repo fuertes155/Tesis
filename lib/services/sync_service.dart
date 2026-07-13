@@ -56,8 +56,22 @@ class SyncService extends _$SyncService {
           bool success = false;
           if (entity == 'patients') {
             if (action == 'CREATE') {
-              await api.createPatient(payload, skipOffline: true);
+              final newPatient = await api.createPatient(payload, skipOffline: true);
               success = true;
+
+              // Rewrite local IDs for any pending actions that used this offline patient's ID
+              final offlineId = payload['id'];
+              final realId = newPatient.id;
+              if (offlineId != null && realId != offlineId) {
+                for (var i = 0; i < pendingRaw.length; i++) {
+                  final memData = pendingRaw[i].value;
+                  final memPayload = memData['data'] as Map<String, dynamic>?;
+                  if (memPayload != null && memPayload['patient_id'] == offlineId) {
+                    memPayload['patient_id'] = realId;
+                    await localDb.updatePendingAction(pendingRaw[i].key, memPayload);
+                  }
+                }
+              }
             } else if (action == 'UPDATE') {
               final id = payload['id'] as int;
               await api.updatePatient(id, payload, skipOffline: true);

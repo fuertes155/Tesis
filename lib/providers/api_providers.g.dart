@@ -6,7 +6,7 @@ part of 'api_providers.dart';
 // RiverpodGenerator
 // **************************************************************************
 
-String _$sharedPrefsHash() => r'fed4dca864642604d0f2ec7cd1c0cdf906becb54';
+String _$sharedPrefsHash() => r'8f41e1b9ffdac2ec7f37063dd728977984e3fa5d';
 
 /// See also [sharedPrefs].
 @ProviderFor(sharedPrefs)
@@ -23,7 +23,7 @@ final sharedPrefsProvider = FutureProvider<SharedPreferences>.internal(
 @Deprecated('Will be removed in 3.0. Use Ref instead')
 // ignore: unused_element
 typedef SharedPrefsRef = FutureProviderRef<SharedPreferences>;
-String _$dioHash() => r'ee49e2177bbce0372bd3939294954efac70de31b';
+String _$dioHash() => r'c7b4ac8451e7e575a789303b594fd10e143ab570';
 
 /// See also [dio].
 @ProviderFor(dio)
@@ -40,7 +40,7 @@ final dioProvider = Provider<Dio>.internal(
 @Deprecated('Will be removed in 3.0. Use Ref instead')
 // ignore: unused_element
 typedef DioRef = ProviderRef<Dio>;
-String _$authServiceHash() => r'7c6306980935128b088e40bc7e67898e2cedd725';
+String _$authServiceHash() => r'5e2a541cb2f5fb8fc4700ef68a786eab01b93526';
 
 /// See also [authService].
 @ProviderFor(authService)
@@ -57,7 +57,7 @@ final authServiceProvider = FutureProvider<AuthService>.internal(
 @Deprecated('Will be removed in 3.0. Use Ref instead')
 // ignore: unused_element
 typedef AuthServiceRef = FutureProviderRef<AuthService>;
-String _$patientServiceHash() => r'4f2031ca258dc8bb68bfc435d030e4a535d223d0';
+String _$patientServiceHash() => r'1a87af67523ca1911d476e80c9785cfe99d73a21';
 
 /// See also [patientService].
 @ProviderFor(patientService)
@@ -74,7 +74,7 @@ final patientServiceProvider = FutureProvider<PatientService>.internal(
 @Deprecated('Will be removed in 3.0. Use Ref instead')
 // ignore: unused_element
 typedef PatientServiceRef = FutureProviderRef<PatientService>;
-String _$sessionServiceHash() => r'181c852c80a412db8d8ff38a2d8eea09811366b3';
+String _$sessionServiceHash() => r'babe5fbced6ac33e742873a82ce477d19d43f7df';
 
 /// See also [sessionService].
 @ProviderFor(sessionService)
@@ -91,7 +91,7 @@ final sessionServiceProvider = FutureProvider<SessionService>.internal(
 @Deprecated('Will be removed in 3.0. Use Ref instead')
 // ignore: unused_element
 typedef SessionServiceRef = FutureProviderRef<SessionService>;
-String _$apiServiceHash() => r'60858d2b29a0bce02ab5a79c7fda019bbd3c23a4';
+String _$apiServiceHash() => r'c7c168f16558157267d551037a4c15b72ad8e7e0';
 
 /// See also [apiService].
 @ProviderFor(apiService)

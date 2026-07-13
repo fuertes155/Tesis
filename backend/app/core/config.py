@@ -29,6 +29,7 @@ class Settings(BaseSettings):
     SECRET_KEY: str = "dev-secret-change-me"
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24
+    DEFAULT_ADMIN_PASSWORD: str = "ChangeMeNow123!"
     
     DATABASE_URL: str = "sqlite:///./data/sql_app.db"
     CORS_ORIGINS: str = "http://localhost:55912,http://127.0.0.1:55912"

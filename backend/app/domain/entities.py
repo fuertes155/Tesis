@@ -108,6 +108,7 @@ class PatientBase(BaseModel):
     email: Optional[str] = None
     doctor_id: Optional[int] = None
     has_consent: bool = False
+    external_id: Optional[str] = None
 
     @field_validator("name", "document_id", "phone", "diagnosis", "email", mode='before')
     @classmethod

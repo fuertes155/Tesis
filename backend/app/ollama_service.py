@@ -14,9 +14,9 @@ logger = logging.getLogger(__name__)
 OLLAMA_URL = os.getenv("OLLAMA_URL", "http://localhost:11434/api/generate")
 MODELO_OLLAMA = os.getenv("OLLAMA_MODEL", "llama3")
 TIMEOUT_SEGUNDOS = float(os.getenv("OLLAMA_TIMEOUT_SECONDS", "20"))
-MAX_TOKENS_REPORTE = int(os.getenv("OLLAMA_NUM_PREDICT", "650"))
-MAX_PRUEBAS_PROMPT = int(os.getenv("OLLAMA_MAX_PRUEBAS_PROMPT", "2"))
-MAX_CHARS_PROMPT = int(os.getenv("OLLAMA_MAX_PROMPT_CHARS", "1000"))
+MAX_TOKENS_REPORTE = int(os.getenv("OLLAMA_NUM_PREDICT", "1000"))
+MAX_PRUEBAS_PROMPT = int(os.getenv("OLLAMA_MAX_PRUEBAS_PROMPT", "3"))
+MAX_CHARS_PROMPT = int(os.getenv("OLLAMA_MAX_PROMPT_CHARS", "4000"))
 
 DOMINIOS_PRUEBAS = {
     "memoria visual": "Memoria",
@@ -60,6 +60,7 @@ def preparar_pruebas(datos: dict[str, Any]) -> list[dict[str, Any]]:
                 "porcentaje_obtenido": porcentaje,
                 "nivel": interpretar_nivel(porcentaje),
                 "tiempo_segundos": prueba["tiempo_segundos"],
+                "metricas_detalladas": prueba.get("metricas") or prueba.get("detalles"),
             }
         )
     return pruebas_preparadas
@@ -80,22 +81,31 @@ def construir_prompt(datos: dict[str, Any]) -> str:
 
     prompt = f"""
 Genera un informe neuropsicológico clínicamente prudente en español.
-Usa un estilo formal, organizado y similar a un informe médico para paciente.
+Eres un Neuropsicólogo clínico experto. Usa un estilo formal, organizado y médico.
 No inventes diagnósticos definitivos; describe hallazgos como hipótesis clínicas cuando corresponda.
+Tus interpretaciones DEBEN basarse en las métricas detalladas (tiempos de reacción, errores, omisiones, precisión) si están disponibles en los datos adjuntos.
 
 Paciente: {datos["nombre_paciente"]} (ID {datos["paciente_id"]}), {datos["edad_paciente"]} años.
+Documento: {datos.get("documento_paciente") or "No registrado"}.
+Teléfono: {datos.get("telefono_paciente") or "No registrado"}.
+Diagnóstico/antecedente registrado: {datos.get("diagnostico_paciente") or "No registrado"}.
+Institución: {datos.get("institucion") or "NeuroApp360"}.
 Evaluador: {datos["profesional"]}
 Fecha: {datos["fecha_evaluacion"]}
 
-Pruebas realizadas:
+Pruebas realizadas (incluyendo métricas detalladas de desempeño):
 {pruebas_json}{nota_pruebas}
 
-Incluye:
-1. ANTECEDENTES Y CONTEXTO DE EVALUACIÓN.
-2. RESULTADOS DE PRUEBAS con Prueba, Dominio cognitivo, Porcentaje, Tiempo y Nivel.
-3. INTERPRETACIÓN CLÍNICA de dominios afectados y preservados.
-4. RECOMENDACIONES Y SEGUIMIENTO.
-5. CONCLUSIÓN y firma con el profesional evaluador.
+Instrucciones de Redacción:
+1. RESUMEN CUANTITATIVO breve del desempeño global.
+2. ANTECEDENTES Y CONTEXTO DE EVALUACIÓN.
+3. RESULTADOS DE PRUEBAS: Analiza cualitativa y cuantitativamente cada prueba, integrando las "metricas_detalladas" (como errores o tiempos de reacción altos/bajos) para justificar el nivel (BAJO/MEDIO/ALTO).
+4. INTERPRETACIÓN CLÍNICA: Discute los dominios afectados y preservados. Argumenta como un especialista por qué las métricas sugieren esto.
+5. RECOMENDACIONES Y SEGUIMIENTO.
+6. CONCLUSIÓN y firma con el profesional evaluador.
+
+Mantén las secciones separadas con títulos en mayúscula seguidos de dos puntos.
+Incluye una nota ética indicando que el informe no reemplaza una valoración médica integral.
 """.strip()
 
     if len(prompt) > MAX_CHARS_PROMPT:
@@ -109,6 +119,9 @@ def generar_reporte_local(datos: dict[str, Any]) -> str:
     resumen = (
         f"INFORME NEUROPSICOLÓGICO (GENERADO LOCALMENTE)\n\n"
         f"Paciente: {datos['nombre_paciente']} (ID {datos['paciente_id']})\n"
+        f"Documento: {datos.get('documento_paciente') or 'No registrado'}\n"
+        f"Teléfono: {datos.get('telefono_paciente') or 'No registrado'}\n"
+        f"Institución: {datos.get('institucion') or 'NeuroApp360'}\n"
         f"Edad: {datos['edad_paciente']} años\n"
         f"Evaluador: {datos['profesional']}\n"
         f"Fecha: {datos['fecha_evaluacion']}\n\n"
@@ -143,6 +156,9 @@ def generar_reporte_local(datos: dict[str, Any]) -> str:
     return "\n".join(
         [
             resumen,
+            "RESUMEN CUANTITATIVO:",
+            f"Total de pruebas aplicadas: {len(pruebas)}.",
+            "",
             "RESULTADOS DE PRUEBAS:",
             *tabla,
             "",
@@ -151,6 +167,9 @@ def generar_reporte_local(datos: dict[str, Any]) -> str:
             "",
             "RECOMENDACIONES Y SEGUIMIENTO:",
             "Correlacionar los hallazgos con entrevista clínica, historia médica y observación funcional. Programar seguimiento según criterio profesional.",
+            "",
+            "NOTA ÉTICA Y ALCANCE:",
+            "Este informe no reemplaza una valoración médica integral. Debe interpretarse junto con la historia clínica, entrevista y criterio profesional.",
             "",
             f"CONCLUSIÓN: {conclusion}",
             "",

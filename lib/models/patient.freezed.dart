@@ -34,6 +34,8 @@ mixin _$Patient {
   int? get doctorId => throw _privateConstructorUsedError;
   @JsonKey(name: 'created_at')
   DateTime? get createdAt => throw _privateConstructorUsedError;
+  @JsonKey(name: 'external_id')
+  String? get externalId => throw _privateConstructorUsedError;
 
   /// Serializes this Patient to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
@@ -59,6 +61,7 @@ abstract class $PatientCopyWith<$Res> {
     String? diagnosis,
     @JsonKey(name: 'doctor_id') int? doctorId,
     @JsonKey(name: 'created_at') DateTime? createdAt,
+    @JsonKey(name: 'external_id') String? externalId,
   });
 }
 
@@ -86,6 +89,7 @@ class _$PatientCopyWithImpl<$Res, $Val extends Patient>
     Object? diagnosis = freezed,
     Object? doctorId = freezed,
     Object? createdAt = freezed,
+    Object? externalId = freezed,
   }) {
     return _then(
       _value.copyWith(
@@ -125,6 +129,10 @@ class _$PatientCopyWithImpl<$Res, $Val extends Patient>
                 ? _value.createdAt
                 : createdAt // ignore: cast_nullable_to_non_nullable
                       as DateTime?,
+            externalId: freezed == externalId
+                ? _value.externalId
+                : externalId // ignore: cast_nullable_to_non_nullable
+                      as String?,
           )
           as $Val,
     );
@@ -149,6 +157,7 @@ abstract class _$$PatientImplCopyWith<$Res> implements $PatientCopyWith<$Res> {
     String? diagnosis,
     @JsonKey(name: 'doctor_id') int? doctorId,
     @JsonKey(name: 'created_at') DateTime? createdAt,
+    @JsonKey(name: 'external_id') String? externalId,
   });
 }
 
@@ -175,6 +184,7 @@ class __$$PatientImplCopyWithImpl<$Res>
     Object? diagnosis = freezed,
     Object? doctorId = freezed,
     Object? createdAt = freezed,
+    Object? externalId = freezed,
   }) {
     return _then(
       _$PatientImpl(
@@ -214,6 +224,10 @@ class __$$PatientImplCopyWithImpl<$Res>
             ? _value.createdAt
             : createdAt // ignore: cast_nullable_to_non_nullable
                   as DateTime?,
+        externalId: freezed == externalId
+            ? _value.externalId
+            : externalId // ignore: cast_nullable_to_non_nullable
+                  as String?,
       ),
     );
   }
@@ -232,6 +246,7 @@ class _$PatientImpl implements _Patient {
     this.diagnosis,
     @JsonKey(name: 'doctor_id') this.doctorId,
     @JsonKey(name: 'created_at') this.createdAt,
+    @JsonKey(name: 'external_id') this.externalId,
   });
 
   factory _$PatientImpl.fromJson(Map<String, dynamic> json) =>
@@ -259,10 +274,13 @@ class _$PatientImpl implements _Patient {
   @override
   @JsonKey(name: 'created_at')
   final DateTime? createdAt;
+  @override
+  @JsonKey(name: 'external_id')
+  final String? externalId;
 
   @override
   String toString() {
-    return 'Patient(id: $id, name: $name, age: $age, birthDate: $birthDate, documentId: $documentId, phone: $phone, diagnosis: $diagnosis, doctorId: $doctorId, createdAt: $createdAt)';
+    return 'Patient(id: $id, name: $name, age: $age, birthDate: $birthDate, documentId: $documentId, phone: $phone, diagnosis: $diagnosis, doctorId: $doctorId, createdAt: $createdAt, externalId: $externalId)';
   }
 
   @override
@@ -283,7 +301,9 @@ class _$PatientImpl implements _Patient {
             (identical(other.doctorId, doctorId) ||
                 other.doctorId == doctorId) &&
             (identical(other.createdAt, createdAt) ||
-                other.createdAt == createdAt));
+                other.createdAt == createdAt) &&
+            (identical(other.externalId, externalId) ||
+                other.externalId == externalId));
   }
 
   @JsonKey(includeFromJson: false, includeToJson: false)
@@ -299,6 +319,7 @@ class _$PatientImpl implements _Patient {
     diagnosis,
     doctorId,
     createdAt,
+    externalId,
   );
 
   /// Create a copy of Patient
@@ -326,6 +347,7 @@ abstract class _Patient implements Patient {
     final String? diagnosis,
     @JsonKey(name: 'doctor_id') final int? doctorId,
     @JsonKey(name: 'created_at') final DateTime? createdAt,
+    @JsonKey(name: 'external_id') final String? externalId,
   }) = _$PatientImpl;
 
   factory _Patient.fromJson(Map<String, dynamic> json) = _$PatientImpl.fromJson;
@@ -352,6 +374,9 @@ abstract class _Patient implements Patient {
   @override
   @JsonKey(name: 'created_at')
   DateTime? get createdAt;
+  @override
+  @JsonKey(name: 'external_id')
+  String? get externalId;
 
   /// Create a copy of Patient
   /// with the given fields replaced by the non-null parameter values.

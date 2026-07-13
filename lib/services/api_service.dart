@@ -250,9 +250,11 @@ class ApiService {
       final detail = e.response?.data?['detail'];
       if (detail != null) throw Exception(detail);
       if (!skipOffline && _localDb != null) {
+        final extId = 'p-${DateTime.now().microsecondsSinceEpoch}-${Random().nextInt(10000)}';
+        patientData['external_id'] = extId;
         await _localDb.addPendingAction('CREATE', 'patients', patientData);
         // Return a mock patient or throw a specific 'queued' exception
-        return Patient.fromJson({...patientData, 'id': -1}); 
+        return Patient.fromJson({...patientData, 'id': -1, 'external_id': extId}); 
       }
       throw Exception('Error al crear paciente: ${e.message}');
     }

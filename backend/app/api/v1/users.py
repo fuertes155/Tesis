@@ -1,5 +1,6 @@
 import logging
 import re
+import time
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
@@ -14,6 +15,8 @@ from app.api.deps import get_current_user, require_roles
 from app.core.audit import log_action
 
 router = APIRouter()
+
+_2fa_failed_attempts: dict[str, dict] = {}
 
 
 def _is_strong_password(p: str) -> bool:
@@ -115,6 +118,12 @@ def auth_login(payload: entities.UserLogin, db: Session = Depends(get_db)):
 @router.post("/auth/register", response_model=entities.Token, status_code=status.HTTP_201_CREATED)
 def auth_register(payload: entities.UserCreate, db: Session = Depends(get_db)):
     """Public self-registration. Returns JWT token."""
+    if payload.role in ["gestor", "admin", "administrator"]:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Rol no permitido para registro publico",
+        )
+        
     if not _is_strong_password(payload.password):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -413,8 +422,25 @@ def verify_2fa(payload: dict, db: Session = Depends(get_db)):
     if not db_user.totp_secret:
         raise HTTPException(status_code=400, detail="2FA secret not configured")
 
+    username_clean = username.strip().lower()
+    now = time.time()
+    
+    lock_info = _2fa_failed_attempts.get(username_clean)
+    if lock_info:
+        if lock_info["lockout_until"] > now:
+            raise HTTPException(status_code=429, detail="Demasiados intentos fallidos. Intente en 15 minutos.")
+        elif lock_info["lockout_until"] > 0 and lock_info["lockout_until"] <= now:
+            _2fa_failed_attempts.pop(username_clean, None)
+
     totp = pyotp.TOTP(db_user.totp_secret)
     if totp.verify(code):
+        _2fa_failed_attempts.pop(username_clean, None)
         return {"status": "success"}
+
+    lock_info = _2fa_failed_attempts.get(username_clean, {"attempts": 0, "lockout_until": 0})
+    lock_info["attempts"] += 1
+    if lock_info["attempts"] >= 5:
+        lock_info["lockout_until"] = now + 900 # 15 minutes lockout
+    _2fa_failed_attempts[username_clean] = lock_info
 
     raise HTTPException(status_code=401, detail="Código inválido")
