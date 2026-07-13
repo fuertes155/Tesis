@@ -193,57 +193,71 @@ DATOS DE PRUEBAS APLICADAS:
 {bloque_metricas}
 
 ════════════════════════════════════════
+ESTILO DE ESCRITURA REQUERIDO:
+════════════════════════════════════════
+Redacta en TERCERA PERSONA impersonal y voz formal clínica.
+Usa terminología neuropsicológica precisa:
+  Correcto: "dominio mnésico", "funciones ejecutivas frontales", "control inhibitorio",
+            "velocidad de procesamiento", "capacidad atencional sostenida",
+            "fluencia verbal semántica", "flexibilidad cognitiva", "codificación mnésica".
+  Incorrecto: "el paciente recordó bien", "se portó bien", "le fue mal".
+Cuantifica siempre con los datos: menciona puntajes exactos y métricas específicas.
+Evita diagnósticos definitivos; usa calificadores clínicos:
+  "los hallazgos son consistentes con", "no puede descartarse", "sugiere la posibilidad de",
+  "compatible con", "en el contexto de la presente evaluación".
+
+════════════════════════════════════════
 INSTRUCCIONES DETALLADAS POR SECCIÓN:
 ════════════════════════════════════════
 
 SECCIÓN 1 — ANTECEDENTES Y CONTEXTO DE EVALUACIÓN:
-Redacta 2–3 oraciones describiendo: (a) el motivo probable de derivación, \
-considerando el antecedente clínico registrado; (b) el contexto general de la evaluación \
-(plataforma digital NeuroApp360, fecha, profesional); (c) una aclaración de que los \
-resultados deben interpretarse como apoyo clínico y no como diagnóstico aislado.
+Redacta 3 oraciones en tono formal. Incluye: (a) el motivo clínico de derivación \
+inferido del antecedente registrado; (b) descripción del contexto evaluativo \
+(plataforma NeuroApp360, profesional a cargo, fecha); \
+(c) declaración de que los hallazgos constituyen apoyo clínico y no diagnóstico definitivo.
 
 SECCIÓN 2 — RESULTADOS DE PRUEBAS:
-Analiza CADA prueba de forma individual en un párrafo separado. Para cada una debes:
-a) Nombrar la prueba y su dominio cognitivo evaluado.
-b) Reportar el puntaje exacto (porcentaje_obtenido) y el nivel (BAJO/MEDIO/ALTO).
-c) Interpretar las métricas_detalladas disponibles. Ejemplo: si hay muchos errores y \
-pocas omisiones, eso sugiere impulsividad más que inatención. Si el tiempo de reacción \
-es alto con pocos errores, sugiere procesamiento cauteloso pero lento. Si la precisión \
-es baja, indica dificultad cualitativa en la tarea más allá de la velocidad.
-d) Concluir qué implica ese resultado para la función cognitiva específica evaluada.
+Un párrafo por cada prueba aplicada. Para cada una:
+a) Identificar la prueba y el dominio cognitivo que evalúa.
+b) Citar el puntaje exacto (porcentaje_obtenido) y el nivel clasificatorio.
+c) Interpretar las métricas_detalladas clínicamente:
+   Muchos errores + pocas omisiones → patrón impulsivo más que inatento.
+   Tiempo de reacción alto + pocos errores → procesamiento cauteloso y lento.
+   Precisión baja + errores altos → dificultad cualitativa en la tarea.
+   Pocas omisiones + tiempo bajo → ejecución eficiente y sostenida.
+d) Cerrar el párrafo con una oración que traduzca el dato al proceso cognitivo subyacente.
 
 SECCIÓN 3 — INTERPRETACIÓN CLÍNICA:
-Este es el núcleo del informe. Debes:
-a) Integrar los resultados por DOMINIO COGNITIVO (no por prueba individual).
-b) Para cada dominio, argumentar si está PRESERVADO, LEVEMENTE COMPROMETIDO \
-o SIGNIFICATIVAMENTE ALTERADO, justificando con los datos.
-c) Discutir la coherencia o inconsistencia entre dominios \
-(p.ej., si la atención está baja pero la memoria está bien, eso tiene implicaciones clínicas).
-d) Si el antecedente clínico es relevante (depresión, ansiedad, daño neurológico), \
-analizar cómo puede estar modulando el rendimiento cognitivo.
-e) Evitar diagnósticos definitivos; usa frases como "los hallazgos son consistentes con", \
-"se sugiere la posibilidad de", "no puede descartarse".
+Es el núcleo clínico del informe. Debes:
+a) Organizar la discusión POR DOMINIO COGNITIVO, no por prueba.
+b) Clasificar cada dominio como PRESERVADO, LEVEMENTE COMPROMETIDO \
+o SIGNIFICATIVAMENTE ALTERADO, con justificación cuantitativa.
+c) Analizar la coherencia del perfil: si la atención está comprometida \
+pero la memoria está preservada, discutir las implicaciones clínicas diferenciales.
+d) Relacionar los hallazgos con el antecedente clínico reportado \
+(ej.: la depresión puede generar pseudodemencia; la ansiedad eleva la impulsividad).
+e) Usar calificadores clínicos apropiados en lugar de diagnósticos definitivos.
 
 SECCIÓN 4 — RECOMENDACIONES Y SEGUIMIENTO:
-Proporciona recomendaciones ESPECÍFICAS por dominio comprometido. Incluye:
-a) Derivaciones a especialistas si aplica (neurología, fonoaudiología, psiquiatría).
-b) Intervenciones cognitivas concretas (rehabilitación, estimulación, psicoeducación).
-c) Evaluaciones complementarias sugeridas (laboratorio, neuroimagen, audición).
-d) Plazos de seguimiento diferenciados: 3 meses si hay déficit BAJO, \
-6 meses si hay déficit MEDIO, 12 meses si todo está en nivel ALTO.
+Recomendaciones concretas y jerarquizadas por dominio comprometido:
+a) Derivaciones a especialistas con justificación (neurología, psiquiatría, fonoaudiología).
+b) Intervenciones específicas: rehabilitación cognitiva, psicoeducación, adaptaciones funcionales.
+c) Estudios complementarios si se justifican: neuroimagen, laboratorio, evaluación auditiva.
+d) Plazos diferenciados: seguimiento en 3 meses si nivel BAJO, \
+6 meses si nivel MEDIO, 12 meses si todo en nivel ALTO.
 
 SECCIÓN 5 — NOTA ÉTICA Y ALCANCE:
-Redacta un párrafo indicando que el informe es de apoyo clínico, \
-que no reemplaza la valoración médica integral, que debe interpretarse \
-en conjunto con la historia clínica y el criterio del profesional responsable.
+Párrafo formal que explicite: el informe es de apoyo clínico y no reemplaza \
+la valoración médica integral, debe contextualizarse en la historia clínica \
+completa y el juicio profesional del evaluador responsable.
 
 SECCIÓN 6 — CONCLUSIÓN:
-Sintetiza en 3–5 oraciones el perfil neuropsicológico global del paciente. \
-Menciona explícitamente los dominios comprometidos y preservados. \
-Cierra con la fecha de expedición y la firma del profesional evaluador: {datos["profesional"]}.
+3–5 oraciones que sinteticen el perfil neuropsicológico global. \
+Mencionar dominios comprometidos y preservados con sus puntajes. \
+Cerrar con fecha de expedición y firma: {datos["profesional"]}.
 
 ════════════════════════════════════════
-INICIO DEL INFORME — ESCRIBE SOLO EL INFORME, SIN COMENTARIOS PREVIOS:
+INICIO DEL INFORME — ESCRIBE SOLO EL INFORME, SIN PREÁMBULOS:
 ════════════════════════════════════════
 """.strip()
 
@@ -255,203 +269,342 @@ INICIO DEL INFORME — ESCRIBE SOLO EL INFORME, SIN COMENTARIOS PREVIOS:
 
 # ── Helpers para el reporte local ─────────────────────────────────────────────
 
-def _texto_nivel(nivel: str) -> str:
+def _calificacion_clinica(nivel: str) -> str:
+    """Devuelve la calificación clínica formal según el nivel de rendimiento."""
     return {
-        "ALTO": "dentro de parámetros funcionales adecuados",
-        "MEDIO": "en rango intermedio con áreas de oportunidad",
-        "BAJO": "por debajo de los parámetros esperados para la edad",
+        "ALTO": "dentro de parámetros normativos funcionales",
+        "MEDIO": "en rango limítrofe con compromiso funcional leve",
+        "BAJO": "significativamente por debajo de los parámetros normativos esperados para la edad cronológica",
     }.get(nivel, "en rango indeterminado")
 
 
+def _interpretar_metrica_individual(nombre_metrica: str, valor: Any, total_aciertos: int | None = None) -> str:
+    """Traduce una métrica específica en lenguaje clínico interpretativo."""
+    try:
+        v = float(valor)
+    except (TypeError, ValueError):
+        return ""
+
+    if nombre_metrica == "errores":
+        if v == 0:
+            return "sin errores de comisión registrados, lo que indica una ejecución precisa"
+        if v <= 2:
+            return f"{int(v)} error(es) de comisión, dentro de límites aceptables"
+        if v <= 5:
+            return f"{int(v)} errores de comisión, indicativos de dificultades en la precisión de respuesta"
+        return f"{int(v)} errores de comisión, patrón consistente con compromiso significativo del proceso evaluado"
+
+    if nombre_metrica == "omisiones":
+        if v == 0:
+            return "sin omisiones, lo que refleja sostenimiento atencional adecuado"
+        if v <= 3:
+            return f"{int(v)} omisión(es), sugiriendo leves fluctuaciones en la vigilancia"
+        return f"{int(v)} omisiones, patrón indicativo de déficit en la atención sostenida o procesamiento lento"
+
+    if nombre_metrica == "aciertos":
+        ref = total_aciertos or v
+        pct = (v / ref * 100) if ref > 0 else 0
+        if pct >= 80:
+            return f"{int(v)} respuestas correctas ({pct:.0f}%), reflejando eficacia en la recuperación de información"
+        if pct >= 60:
+            return f"{int(v)} respuestas correctas ({pct:.0f}%), con rendimiento moderado"
+        return f"{int(v)} respuestas correctas ({pct:.0f}%), evidenciando dificultades marcadas en la ejecución"
+
+    if nombre_metrica == "tiempo_reaccion_promedio":
+        if v < 350:
+            return f"latencia promedio de respuesta de {int(v)} ms, compatible con velocidad de procesamiento ágil"
+        if v < 600:
+            return f"latencia promedio de {int(v)} ms, dentro de rangos normativos de velocidad de procesamiento"
+        if v < 900:
+            return f"latencia promedio de {int(v)} ms, sugestiva de enlentecimiento en la velocidad de procesamiento cognitivo"
+        return f"latencia promedio de {int(v)} ms, compatible con enlentecimiento cognitivo de grado moderado a severo"
+
+    if nombre_metrica in ("precision", "precisión"):
+        if v >= 85:
+            return f"índice de precisión del {v:.1f}%, preservado dentro de parámetros normativos"
+        if v >= 65:
+            return f"índice de precisión del {v:.1f}%, en rango limítrofe"
+        return f"índice de precisión del {v:.1f}%, evidenciando comprometida calidad de respuesta"
+
+    return ""
+
+
 def _analizar_prueba_individual(prueba: dict[str, Any]) -> str:
-    """Genera un párrafo clínico para una prueba individual, integrando métricas detalladas."""
+    """Genera un párrafo clínico formal para una prueba individual con interpretación cuantitativa."""
     nombre = prueba["nombre_prueba"]
+    dominio = prueba["dominio_cognitivo"]
     porcentaje = prueba["porcentaje_obtenido"]
     nivel = prueba["nivel"]
     tiempo = prueba["tiempo_segundos"]
     metricas = prueba.get("metricas_detalladas") or {}
-    desc_nivel = _texto_nivel(nivel)
+    calificacion = _calificacion_clinica(nivel)
 
+    # Párrafo principal
     texto = (
-        f"Prueba '{nombre}': puntuación de {porcentaje:.1f}% (nivel {nivel}), "
-        f"tiempo de ejecución {tiempo} segundos. "
-        f"El desempeño se ubica {desc_nivel}."
+        f"La prueba de {nombre} (dominio: {dominio}) arrojó un puntaje de {porcentaje:.1f}%, "
+        f"clasificado como nivel {nivel}. El rendimiento observado se ubica {calificacion}, "
+        f"con un tiempo total de ejecución de {tiempo} segundos."
     )
 
-    # Integrar métricas detalladas si están disponibles
-    detalles_metricas: list[str] = []
-    if metricas:
-        if "errores" in metricas:
-            detalles_metricas.append(f"errores registrados: {metricas['errores']}")
-        if "omisiones" in metricas:
-            detalles_metricas.append(f"omisiones: {metricas['omisiones']}")
-        if "aciertos" in metricas:
-            detalles_metricas.append(f"aciertos: {metricas['aciertos']}")
-        if "tiempo_reaccion_promedio" in metricas:
-            detalles_metricas.append(
-                f"tiempo de reacción promedio: {metricas['tiempo_reaccion_promedio']} ms"
-            )
-        for key in ("precision", "precisión"):
-            if key in metricas:
-                detalles_metricas.append(f"precisión: {metricas[key]}%")
-                break
+    # Interpretación clínica de métricas detalladas
+    interpretaciones_metricas: list[str] = []
+    total_aciertos = metricas.get("aciertos")
+    for clave, valor in metricas.items():
+        interp = _interpretar_metrica_individual(clave, valor, total_aciertos)
+        if interp:
+            interpretaciones_metricas.append(interp)
 
-    if detalles_metricas:
-        texto += f" Métricas adicionales: {'; '.join(detalles_metricas)}."
+    if interpretaciones_metricas:
+        texto += (
+            f" El análisis de las métricas de ejecución revela: "
+            + "; ".join(interpretaciones_metricas)
+            + "."
+        )
+
+    # Calificación clínica final por nivel
+    if nivel == "BAJO":
+        texto += (
+            f" Estos hallazgos son clínicamente significativos y sugieren la presencia de "
+            f"alteraciones en los procesos cognitivos subyacentes al dominio de {dominio}, "
+            f"requiriendo evaluación complementaria."
+        )
+    elif nivel == "MEDIO":
+        texto += (
+            f" El perfil observado es compatible con funcionamiento cognitivo limítrofe en el "
+            f"dominio de {dominio}, ameritando seguimiento y posible intervención preventiva."
+        )
+    else:
+        texto += (
+            f" Los procesos cognitivos correspondientes al dominio de {dominio} "
+            f"se encuentran funcionales y preservados."
+        )
 
     return texto
 
 
 def _interpretar_dominio(dominio: str, ps: list[dict[str, Any]]) -> str:
-    """Genera un párrafo clínico de interpretación para un dominio cognitivo."""
+    """Genera interpretación clínica profesional de un dominio cognitivo con lenguaje neuropsicológico formal."""
     promedio_d = sum(x["porcentaje_obtenido"] for x in ps) / len(ps)
     nivel_d = interpretar_nivel(promedio_d)
     nombres = ", ".join(x["nombre_prueba"] for x in ps)
     tiempo_total = sum(x["tiempo_segundos"] for x in ps)
+    n_pruebas = len(ps)
+    plural = "s" if n_pruebas > 1 else ""
 
     frases: dict[str, dict[str, str]] = {
         "Memoria": {
             "ALTO": (
-                f"Las pruebas de {nombres} evidencian una capacidad mnemónica dentro de parámetros funcionales adecuados "
-                f"(promedio {promedio_d:.1f}%). El/la paciente demuestra retención y evocación de información de manera eficiente, "
-                f"sin señales de deterioro en la codificación o consolidación de la memoria."
+                f"La evaluación del dominio mnésico mediante la{plural} prueba{plural} de {nombres} "
+                f"evidencia un funcionamiento mnemónico dentro de los parámetros normativos esperados "
+                f"(puntuación media del dominio: {promedio_d:.1f}%). "
+                f"Los procesos de codificación, almacenamiento y recuperación de la información "
+                f"se encuentran conservados, sin indicadores de compromiso en la consolidación mnésica "
+                f"a corto ni a largo plazo. El rendimiento es consistente con una memoria funcional preservada."
             ),
             "MEDIO": (
-                f"Las pruebas de {nombres} arrojan un desempeño intermedio en memoria (promedio {promedio_d:.1f}%). "
-                f"Se observan dificultades leves en la retención a corto plazo o en la recuperación de información sin claves, "
-                f"sin que esto constituya un deterioro clínicamente significativo de manera aislada."
+                f"La exploración del dominio mnésico a través de la{plural} prueba{plural} de {nombres} "
+                f"revela un rendimiento en rango limítrofe (puntuación media: {promedio_d:.1f}%). "
+                f"Se aprecian dificultades leves en alguna de las fases del proceso mnésico —codificación, "
+                f"consolidación o evocación—, que, si bien no alcanzan criterios de deterioro clínicamente "
+                f"significativo de forma aislada, merecen seguimiento sistemático dado su potencial evolución."
             ),
             "BAJO": (
-                f"Las pruebas de {nombres} evidencian un rendimiento mnésico por debajo de lo esperado para la edad "
-                f"(promedio {promedio_d:.1f}%). Se identifican dificultades en la codificación, almacenamiento o recuperación "
-                f"de información que requieren evaluación complementaria."
+                f"Los hallazgos en el dominio mnésico, evaluado mediante la{plural} prueba{plural} de {nombres}, "
+                f"revelan un rendimiento significativamente por debajo de los parámetros normativos para la edad "
+                f"(puntuación media: {promedio_d:.1f}%). "
+                f"El perfil obtenido es compatible con alteraciones en uno o más componentes del proceso mnésico: "
+                f"dificultades en la codificación de nueva información, en su consolidación a corto plazo "
+                f"o en los mecanismos de recuperación libre y/o con claves. "
+                f"Estos hallazgos revisten relevancia clínica y justifican la derivación para evaluación especializada."
             ),
         },
         "Atención": {
             "ALTO": (
-                f"El desempeño en {nombres} refleja una capacidad atencional sostenida adecuada (promedio {promedio_d:.1f}%). "
-                f"El/la evaluado(a) mantuvo el foco durante la tarea sin signos de fatiga cognitiva prematura "
-                f"ni errores por inatención significativos."
+                f"La exploración de los procesos atencionales mediante la{plural} prueba{plural} de {nombres} "
+                f"demuestra una capacidad atencional sostenida y selectiva funcionalmente preservada "
+                f"(puntuación media: {promedio_d:.1f}%). "
+                f"No se evidenciaron fluctuaciones relevantes en la vigilancia, ni patrones de inatención, "
+                f"impulsividad o fatiga cognitiva prematura durante la ejecución de las tareas. "
+                f"La velocidad de procesamiento y la regulación atencional se encuentran dentro de rangos normativos."
             ),
             "MEDIO": (
-                f"En las pruebas de atención ({nombres}), se obtuvo un promedio de {promedio_d:.1f}%, indicando fluctuaciones "
-                f"en el sostenimiento atencional. Se observan omisiones o tiempos de reacción variables que sugieren "
-                f"capacidad atencional limitada bajo demanda sostenida."
+                f"La valoración del dominio atencional mediante la{plural} prueba{plural} de {nombres} "
+                f"revela un rendimiento en rango limítrofe (puntuación media: {promedio_d:.1f}%), "
+                f"con fluctuaciones en el sostenimiento del foco atencional bajo demanda continua. "
+                f"Se identifican omisiones y/o variabilidad en los tiempos de reacción compatibles con "
+                f"dificultades en la atención sostenida, sin que esto constituya un déficit atencional "
+                f"primario de grado severo en el contexto de la presente evaluación."
             ),
             "BAJO": (
-                f"Los resultados en {nombres} (promedio {promedio_d:.1f}%) señalan dificultades marcadas en la regulación "
-                f"atencional. El patrón de errores y/o tiempos de reacción elevados es consistente con déficit atencional "
-                f"que impacta el funcionamiento cognitivo general."
+                f"La evaluación del dominio atencional mediante la{plural} prueba{plural} de {nombres} "
+                f"evidencia dificultades marcadas en la regulación y el sostenimiento del proceso atencional "
+                f"(puntuación media: {promedio_d:.1f}%). "
+                f"El patrón de errores de comisión, omisiones y/o latencias de respuesta elevadas observado "
+                f"es clínicamente consistente con compromiso significativo de los sistemas atencionales, "
+                f"con impacto probable en el funcionamiento cognitivo global y en las actividades de la vida diaria."
             ),
         },
         "Funciones Ejecutivas": {
             "ALTO": (
-                f"Las pruebas de funciones ejecutivas ({nombres}) muestran un rendimiento adecuado (promedio {promedio_d:.1f}%). "
-                f"El/la paciente demuestra capacidad de planificación, flexibilidad cognitiva e inhibición de respuestas "
-                f"predominantes sin dificultades evidentes."
+                f"La valoración de las funciones ejecutivas mediante la{plural} prueba{plural} de {nombres} "
+                f"evidencia un funcionamiento ejecutivo preservado dentro de parámetros normativos "
+                f"(puntuación media: {promedio_d:.1f}%). "
+                f"Se constata integridad en los procesos de planificación, flexibilidad cognitiva, "
+                f"control inhibitorio y autorregulación conductual. "
+                f"No se identificaron dificultades en la alternancia de sets cognitivos ni en la "
+                f"inhibición de respuestas prepotentes."
             ),
             "MEDIO": (
-                f"En funciones ejecutivas ({nombres}), el rendimiento fue de {promedio_d:.1f}%, situándose en rango intermedio. "
-                f"Se aprecian ligeras dificultades en la inhibición de respuestas o en la velocidad de alternancia entre tareas, "
-                f"sin llegar a un deterioro ejecutivo significativo."
+                f"La exploración de las funciones ejecutivas mediante la{plural} prueba{plural} de {nombres} "
+                f"sitúa el rendimiento en un rango limítrofe (puntuación media: {promedio_d:.1f}%). "
+                f"Se aprecian dificultades leves en alguno de los componentes ejecutivos, "
+                f"particularmente en el control inhibitorio, la velocidad de alternancia entre conjuntos "
+                f"cognitivos o la planificación bajo presión temporal, sin configurar un compromiso ejecutivo "
+                f"de grado clínicamente severo en el momento de la evaluación."
             ),
             "BAJO": (
-                f"Los resultados en {nombres} (promedio {promedio_d:.1f}%) evidencian alteraciones en las funciones ejecutivas. "
-                f"Se detecta compromiso en la planificación, flexibilidad cognitiva y/o control inhibitorio, "
-                f"lo que puede impactar en el desempeño de actividades de vida diaria complejas."
+                f"Los resultados en el dominio de funciones ejecutivas, obtenidos mediante la{plural} "
+                f"prueba{plural} de {nombres}, revelan compromiso significativo del funcionamiento ejecutivo "
+                f"(puntuación media: {promedio_d:.1f}%). "
+                f"Se evidencia alteración en los procesos de control inhibitorio, planificación "
+                f"y/o flexibilidad cognitiva, lo que puede traducirse en dificultades para la gestión "
+                f"autónoma de actividades complejas de la vida cotidiana. "
+                f"El perfil ejecutivo obtenido amerita evaluación neurológica complementaria."
             ),
         },
         "Lenguaje": {
             "ALTO": (
-                f"Las pruebas de lenguaje ({nombres}) indican un funcionamiento lingüístico dentro de la normalidad "
-                f"(promedio {promedio_d:.1f}%). La fluidez verbal, recuperación léxica y organización del discurso "
-                f"se encuentran preservadas."
+                f"La evaluación del dominio lingüístico mediante la{plural} prueba{plural} de {nombres} "
+                f"evidencia un funcionamiento verbal dentro de los parámetros normativos "
+                f"(puntuación media: {promedio_d:.1f}%). "
+                f"La fluencia verbal, el acceso léxico y la organización del discurso "
+                f"se encuentran conservados. No se identificaron anomias, parafasias "
+                f"ni dificultades en la comprensión verbal."
             ),
             "MEDIO": (
-                f"En las pruebas de lenguaje ({nombres}), se obtuvo un promedio de {promedio_d:.1f}%, con rendimiento intermedio. "
-                f"Se aprecian dificultades leves en la evocación léxica o en la fluidez verbal bajo condiciones de tiempo limitado."
+                f"La valoración del dominio lingüístico mediante la{plural} prueba{plural} de {nombres} "
+                f"sitúa el rendimiento en rango limítrofe (puntuación media: {promedio_d:.1f}%). "
+                f"Se aprecian dificultades leves en la evocación léxica bajo condiciones de tiempo "
+                f"limitado o restricciones semánticas/fonológicas, sin constituir un compromiso "
+                f"lingüístico primario de grado significativo."
             ),
             "BAJO": (
-                f"Los resultados en {nombres} (promedio {promedio_d:.1f}%) sugieren dificultades en la producción y/o comprensión verbal. "
-                f"La reducción en fluencia y el acceso léxico limitado ameritan evaluación lingüística especializada."
+                f"Los hallazgos en el dominio del lenguaje, valorados mediante la{plural} prueba{plural} "
+                f"de {nombres}, evidencian dificultades clínicamente significativas en la producción "
+                f"y/o comprensión verbal (puntuación media: {promedio_d:.1f}%). "
+                f"La reducción marcada en la fluencia verbal, el acceso léxico limitado "
+                f"y/o las dificultades en la organización discursiva justifican la derivación "
+                f"a valoración fonoaudiológica especializada y, de ser pertinente, estudio de neuroimagen."
             ),
         },
         "Dominio no especificado": {
             "ALTO": (
-                f"Las pruebas de {nombres} muestran un rendimiento adecuado (promedio {promedio_d:.1f}%), "
-                f"sin alteraciones cognitivas evidentes en este dominio."
+                f"La evaluación mediante la{plural} prueba{plural} de {nombres} "
+                f"no evidencia alteraciones cognitivas en este dominio (puntuación media: {promedio_d:.1f}%), "
+                f"con un rendimiento dentro de parámetros funcionales adecuados."
             ),
             "MEDIO": (
-                f"En {nombres}, el rendimiento fue de {promedio_d:.1f}%, con un perfil intermedio que requiere monitoreo clínico."
+                f"La prueba{plural} de {nombres} arrojó un rendimiento en rango limítrofe "
+                f"(puntuación media: {promedio_d:.1f}%), requiriendo monitoreo clínico periódico "
+                f"para evaluar su evolución."
             ),
             "BAJO": (
-                f"Las pruebas de {nombres} (promedio {promedio_d:.1f}%) revelan dificultades cognitivas "
-                f"que merecen seguimiento e intervención profesional."
+                f"Los resultados de la{plural} prueba{plural} de {nombres} "
+                f"(puntuación media: {promedio_d:.1f}%) revelan dificultades cognitivas clínicamente relevantes "
+                f"que justifican intervención y seguimiento profesional especializado."
             ),
         },
     }
 
     texto_dominio = frases.get(dominio, frases["Dominio no especificado"]).get(nivel_d, "")
     return (
-        f"{dominio.upper()}: {texto_dominio} "
-        f"Tiempo total de ejecución del dominio: {tiempo_total} segundos."
+        f"{dominio.upper()}: "
+        + texto_dominio
+        + f" Tiempo total de ejecución en este dominio: {tiempo_total} segundos."
     )
 
 
 def _recomendaciones_por_dominio(dominios: dict[str, list[dict[str, Any]]]) -> str:
-    """Genera recomendaciones clínicas específicas según los dominios comprometidos."""
+    """Genera recomendaciones clínicas formales y específicas por dominio comprometido."""
     recomendaciones: list[str] = []
 
     recs_bajo: dict[str, str] = {
         "Memoria": (
-            "Derivar a neuropsicología clínica para evaluación comprehensiva de memoria. "
-            "Considerar estrategias compensatorias (agendas, recordatorios externos). "
-            "Descartar causas tratables: déficit de vitamina B12, hipotiroidismo, privación de sueño crónica. "
-            "Control neuropsicológico en 3 meses."
+            "En virtud del compromiso mnésico evidenciado, se recomienda derivación a neuropsicología "
+            "clínica para evaluación comprehensiva de los procesos de memoria mediante baterías "
+            "neuropsicológicas estandarizadas (p. ej., RAVLT, WMS-IV o equivalentes). "
+            "Se sugiere descartar etiologías reversibles: déficit de vitamina B12, hipotiroidismo, "
+            "síndrome de apnea del sueño y factores farmacológicos. "
+            "La implementación de estrategias compensatorias (sistemas de recordatorio externos, "
+            "técnicas de codificación semántica y repetición espaciada) es aconsejable "
+            "como medida de soporte funcional. Control neuropsicológico en un plazo de 3 meses."
         ),
         "Atención": (
-            "Evaluar la presencia de TDAH en adultos o trastorno atencional de origen secundario. "
-            "Implementar técnicas de manejo ambiental para reducir distractores. "
-            "Considerar intervención cognitiva de entrenamiento atencional estructurado. "
-            "Control en 3 meses o según criterio clínico."
+            "Dado el compromiso atencional identificado, se recomienda valoración psiquiátrica "
+            "y/o neurológica orientada a descartar trastorno por déficit de atención e hiperactividad "
+            "en el adulto (TDAH), trastorno del sueño o condiciones médicas subyacentes. "
+            "Se sugiere implementar intervención cognitiva estructurada de entrenamiento atencional "
+            "(Attention Process Training o equivalente) y adaptaciones en el entorno para minimizar "
+            "la carga cognitiva. Control en 3 meses o según criterio del especialista."
         ),
         "Funciones Ejecutivas": (
-            "Derivar a neuropsicología y/o neurología para evaluación de funciones frontales. "
-            "Implementar estrategias de planificación asistida y descomposición de tareas complejas. "
-            "Evaluar impacto en actividades instrumentales de la vida diaria. "
-            "Control en 3 meses."
+            "El compromiso ejecutivo evidenciado justifica derivación a neuropsicología clínica "
+            "y consulta neurológica para descartar patología frontal o subcortical. "
+            "Se recomienda evaluación del impacto funcional en actividades instrumentales de la vida diaria "
+            "(AIVD) mediante escalas validadas (p. ej., DAD o IADL). "
+            "La intervención debe incluir entrenamiento en planificación asistida, "
+            "descomposición de tareas complejas y psicoeducación en autorregulación. "
+            "Control de seguimiento en 3 meses."
         ),
         "Lenguaje": (
-            "Derivar a fonoaudiología/logopedia para evaluación formal del lenguaje. "
-            "Considerar estudio de neuroimagen si existe deterioro súbito o progresivo. "
-            "Evaluar la audición como posible factor contribuyente. "
-            "Control en 3 meses."
+            "Las dificultades lingüísticas identificadas ameritan derivación a fonoaudiología "
+            "para evaluación formal mediante protocolos estandarizados "
+            "(p. ej., Boston Diagnostic Aphasia Examination o equivalente). "
+            "De existir deterioro de instauración aguda o progresiva, se recomienda "
+            "estudio de neuroimagen estructural (RM cerebral). "
+            "Evaluar la función auditiva como factor contribuyente. "
+            "Control multidisciplinario en 3 meses."
         ),
         "Dominio no especificado": (
-            "Derivar a especialista para evaluación cognitiva comprehensiva. "
+            "Los resultados obtenidos justifican derivación a neuropsicología clínica "
+            "para evaluación cognitiva comprehensiva mediante batería neuropsicológica completa. "
             "Control de seguimiento en 3 meses o según criterio del profesional responsable."
         ),
     }
 
     recs_medio: dict[str, str] = {
         "Memoria": (
-            "Implementar programa de estimulación de memoria (asociación, repetición espaciada, técnicas mnemónicas). "
-            "Evaluar factores de sueño y estrés como contribuyentes. Control neuropsicológico en 6 meses."
+            "El rendimiento mnésico limítrofe identificado sugiere la implementación de un "
+            "programa estructurado de estimulación cognitiva orientado a memoria, "
+            "con énfasis en técnicas de codificación profunda, repetición espaciada y "
+            "uso de estrategias mnemónicas (método loci, encadenamiento semántico). "
+            "Se recomienda evaluar la calidad del sueño y los niveles de estrés como "
+            "factores moduladores. Control neuropsicológico en 6 meses."
         ),
         "Atención": (
-            "Entrenamiento de atención sostenida y selectiva con apoyo profesional. "
-            "Evaluar higiene del sueño y niveles de ansiedad. Control en 6 meses."
+            "El perfil atencional limítrofe observado aconseja intervención preventiva "
+            "mediante entrenamiento de atención sostenida y selectiva con apoyo profesional. "
+            "Se recomienda evaluación de la higiene del sueño, niveles de ansiedad "
+            "y hábitos de uso de tecnología como variables moduladoras. "
+            "Control neuropsicológico en 6 meses."
         ),
         "Funciones Ejecutivas": (
-            "Técnicas de organización personal y planificación de tareas. "
-            "Psicoeducación sobre funciones ejecutivas y autorregulación. Control en 6 meses."
+            "El rendimiento ejecutivo limítrofe identificado sugiere la implementación de "
+            "estrategias de organización y planificación personal (agendas estructuradas, "
+            "técnicas de priorización y gestión del tiempo), complementadas con "
+            "psicoeducación sobre el funcionamiento ejecutivo y estrategias de autorregulación. "
+            "Control en 6 meses."
         ),
         "Lenguaje": (
-            "Ejercicios de fluidez verbal y acceso léxico. Estimulación lingüística estructurada. "
+            "Las dificultades leves en el dominio lingüístico aconsejan la práctica sistemática "
+            "de ejercicios de fluencia verbal (categorías semánticas y fonológicas) "
+            "y estimulación del acceso léxico. "
+            "Si los síntomas persisten o progresan, derivar a fonoaudiología. "
             "Control en 6 meses."
         ),
         "Dominio no especificado": (
-            "Estimulación cognitiva general y monitoreo clínico. Control en 6 meses."
+            "Se recomienda estimulación cognitiva multidominio y monitoreo clínico periódico. "
+            "Control neuropsicológico en 6 meses."
         ),
     }
 

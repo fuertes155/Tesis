@@ -65,29 +65,23 @@ class _ReporteCognitivoScreenState extends State<ReporteCognitivoScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                // ── Encabezado institucional ─────────────────────────────
-                _HeaderCard(
-                  reporte: reporte,
-                  solicitud: widget.solicitud,
-                ),
-                const SizedBox(height: 2),
                 // ── Datos del paciente ────────────────────────────────────
                 _DatosPacienteCard(
                   reporte: reporte,
                   solicitud: widget.solicitud,
                 ),
                 const SizedBox(height: 2),
-                // ── Métricas resumen ──────────────────────────────────────
+                // ── Métricas resumen ──────────────────────────────────
                 if (widget.solicitud.pruebas.isNotEmpty) ...[
                   _ResumenResultadosCard(pruebas: widget.solicitud.pruebas),
                   const SizedBox(height: 2),
                   _ResultsBarsCard(pruebas: widget.solicitud.pruebas),
                   const SizedBox(height: 2),
                 ],
-                // ── Contenido del informe ─────────────────────────────────
+                // ── Contenido del informe ──────────────────────────────
                 _ReporteContenidoCard(reporte: reporte),
                 const SizedBox(height: 2),
-                // ── Pruebas aplicadas ─────────────────────────────────────
+                // ── Pruebas aplicadas ─────────────────────────────────
                 _PruebasAplicadasCard(pruebas: widget.solicitud.pruebas),
                 const SizedBox(height: 16),
                 // ── Botones ───────────────────────────────────────────────
@@ -923,6 +917,148 @@ class _DatosPacienteCard extends StatelessWidget {
               label: 'Fecha evaluación',
               value: reporte.fechaEvaluacion,
             ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ────────────────────────────────────────────────────────────────────────────────────
+
+/// Muestra el texto del informe generado, dividido en secciones con títulos.
+class _ReporteContenidoCard extends StatelessWidget {
+  const _ReporteContenidoCard({required this.reporte});
+
+  final ReporteCognitivoModel reporte;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 0),
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          border: Border.all(color: theme.colorScheme.outlineVariant),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _SectionTitle('INFORME NEUROPSICOLÓGICO:'),
+              const SizedBox(height: 12),
+              _StructuredReportView(text: reporte.reporte),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Tabla de pruebas aplicadas con puntajes y niveles.
+class _PruebasAplicadasCard extends StatelessWidget {
+  const _PruebasAplicadasCard({required this.pruebas});
+
+  final List<PruebaCognitivaModel> pruebas;
+
+  @override
+  Widget build(BuildContext context) {
+    if (pruebas.isEmpty) return const SizedBox.shrink();
+
+    final theme = Theme.of(context);
+
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        border: Border.all(color: theme.colorScheme.outlineVariant),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const _SectionTitle('PRUEBAS APLICADAS:'),
+            const SizedBox(height: 10),
+            // Encabezado de tabla
+            Row(
+              children: [
+                const Expanded(
+                  flex: 4,
+                  child: Text('Prueba', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 12)),
+                ),
+                const SizedBox(
+                  width: 60,
+                  child: Text('Result.', textAlign: TextAlign.center, style: TextStyle(fontWeight: FontWeight.w800, fontSize: 12)),
+                ),
+                const SizedBox(
+                  width: 60,
+                  child: Text('Nivel', textAlign: TextAlign.center, style: TextStyle(fontWeight: FontWeight.w800, fontSize: 12)),
+                ),
+                const SizedBox(
+                  width: 52,
+                  child: Text('Tiempo', textAlign: TextAlign.center, style: TextStyle(fontWeight: FontWeight.w800, fontSize: 12)),
+                ),
+              ],
+            ),
+            const Divider(height: 8),
+            ...pruebas.map((prueba) {
+              final nivel = _nivelResultado(prueba.porcentajeObtenido);
+              final color = _levelColor(context, prueba.porcentajeObtenido);
+              return Padding(
+                padding: const EdgeInsets.symmetric(vertical: 5),
+                child: Row(
+                  children: [
+                    Expanded(
+                      flex: 4,
+                      child: Text(
+                        prueba.nombrePrueba,
+                        style: theme.textTheme.bodySmall,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    SizedBox(
+                      width: 60,
+                      child: Text(
+                        '${prueba.porcentajeObtenido.toStringAsFixed(1)}%',
+                        textAlign: TextAlign.center,
+                        style: theme.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w700),
+                      ),
+                    ),
+                    SizedBox(
+                      width: 60,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: color.withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: Text(
+                          nivel,
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w800,
+                            color: color,
+                          ),
+                        ),
+                      ),
+                    ),
+                    SizedBox(
+                      width: 52,
+                      child: Text(
+                        '${prueba.tiempoSegundos}s',
+                        textAlign: TextAlign.center,
+                        style: theme.textTheme.bodySmall,
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }),
           ],
         ),
       ),
