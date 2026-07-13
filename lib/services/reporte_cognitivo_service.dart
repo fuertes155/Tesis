@@ -1,6 +1,18 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 
 import '../models/reporte_cognitivo_model.dart';
+
+/// Devuelve la URL base correcta según la plataforma.
+/// - Web / Desktop Windows: http://localhost:8000
+/// - Emulador Android:      http://10.0.2.2:8000
+String _defaultBaseUrl() {
+  const envUrl = String.fromEnvironment('REPORTE_API_BASE_URL');
+  if (envUrl.isNotEmpty) return envUrl;
+  if (kIsWeb) return 'http://localhost:8000';
+  // En desktop nativo (Windows / Linux / macOS) también usamos localhost
+  return 'http://localhost:8000';
+}
 
 class ReporteCognitivoService {
   ReporteCognitivoService({Dio? dio})
@@ -8,10 +20,7 @@ class ReporteCognitivoService {
           dio ??
           Dio(
             BaseOptions(
-              baseUrl: const String.fromEnvironment(
-                'REPORTE_API_BASE_URL',
-                defaultValue: 'http://10.0.2.2:8000',
-              ),
+              baseUrl: _defaultBaseUrl(),
               connectTimeout: const Duration(seconds: 20),
               receiveTimeout: const Duration(minutes: 10),
               sendTimeout: const Duration(seconds: 20),

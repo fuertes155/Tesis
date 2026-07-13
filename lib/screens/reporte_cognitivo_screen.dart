@@ -35,10 +35,19 @@ class _ReporteCognitivoScreenState extends State<ReporteCognitivoScreen> {
   @override
   Widget build(BuildContext context) {
     final tema = Theme.of(context);
+    final colorScheme = tema.colorScheme;
 
     return Scaffold(
+      backgroundColor: colorScheme.surfaceContainerLowest,
       appBar: AppBar(
-        title: const Text('Reporte neuropsicológico'),
+        backgroundColor: const Color(0xFF1A3A6B),
+        foregroundColor: Colors.white,
+        elevation: 0,
+        title: const Text(
+          'Reporte Neuropsicológico',
+          style: TextStyle(fontWeight: FontWeight.w700, fontSize: 17),
+        ),
+        centerTitle: false,
       ),
       body: FutureBuilder<ReporteCognitivoModel>(
         future: _reporteFuture,
@@ -53,84 +62,73 @@ class _ReporteCognitivoScreenState extends State<ReporteCognitivoScreen> {
 
           final reporte = snapshot.data!;
           return SingleChildScrollView(
-            padding: const EdgeInsets.all(20),
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Center(
-                  child: Column(
+                // ── Encabezado institucional ─────────────────────────────
+                _HeaderCard(
+                  reporte: reporte,
+                  solicitud: widget.solicitud,
+                ),
+                const SizedBox(height: 2),
+                // ── Datos del paciente ────────────────────────────────────
+                _DatosPacienteCard(
+                  reporte: reporte,
+                  solicitud: widget.solicitud,
+                ),
+                const SizedBox(height: 2),
+                // ── Métricas resumen ──────────────────────────────────────
+                if (widget.solicitud.pruebas.isNotEmpty) ...[
+                  _ResumenResultadosCard(pruebas: widget.solicitud.pruebas),
+                  const SizedBox(height: 2),
+                  _ResultsBarsCard(pruebas: widget.solicitud.pruebas),
+                  const SizedBox(height: 2),
+                ],
+                // ── Contenido del informe ─────────────────────────────────
+                _ReporteContenidoCard(reporte: reporte),
+                const SizedBox(height: 2),
+                // ── Pruebas aplicadas ─────────────────────────────────────
+                _PruebasAplicadasCard(pruebas: widget.solicitud.pruebas),
+                const SizedBox(height: 16),
+                // ── Botones ───────────────────────────────────────────────
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Row(
                     children: [
-                      SvgPicture.asset(
-                        'assets/svg/hospital_logo.svg',
-                        width: 46,
-                        height: 46,
-                        colorFilter: ColorFilter.mode(
-                          tema.colorScheme.primary,
-                          BlendMode.srcIn,
+                      Expanded(
+                        child: FilledButton.icon(
+                          style: FilledButton.styleFrom(
+                            backgroundColor: const Color(0xFF1A3A6B),
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                          ),
+                          onPressed: () => _compartirReporte(reporte),
+                          icon: const Icon(Icons.ios_share_rounded),
+                          label: const Text('Compartir'),
                         ),
                       ),
-                      const SizedBox(height: 10),
-                      Text(
-                        'INFORME NEUROPSICOLÓGICO',
-                        textAlign: TextAlign.center,
-                        style: tema.textTheme.titleLarge?.copyWith(
-                          fontWeight: FontWeight.w900,
-                          decoration: TextDecoration.underline,
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      Text(
-                        reporte.nombrePaciente,
-                        style: tema.textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.w800,
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          style: OutlinedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            side: const BorderSide(color: Color(0xFF1A3A6B), width: 1.5),
+                            foregroundColor: const Color(0xFF1A3A6B),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                          ),
+                          onPressed: () => _guardarReporte(reporte),
+                          icon: const Icon(Icons.picture_as_pdf_rounded),
+                          label: const Text('Guardar PDF'),
                         ),
                       ),
                     ],
                   ),
                 ),
-                const SizedBox(height: 20),
-                _DatosPacienteCard(
-                  reporte: reporte,
-                  solicitud: widget.solicitud,
-                ),
-                const SizedBox(height: 20),
-                _ResumenResultadosCard(pruebas: widget.solicitud.pruebas),
-                const SizedBox(height: 20),
-                _ResultsBarsCard(pruebas: widget.solicitud.pruebas),
-                const SizedBox(height: 20),
-                _SectionTitle('RESULTADOS E INTERPRETACIÓN:'),
-                _StructuredReportView(text: reporte.reporte),
-                const SizedBox(height: 20),
-                _SectionTitle('PRUEBAS APLICADAS:'),
-                const SizedBox(height: 8),
-                ...widget.solicitud.pruebas.map(
-                  (prueba) => Padding(
-                    padding: const EdgeInsets.only(bottom: 6),
-                    child: Text(
-                      '${prueba.nombrePrueba}: ${prueba.porcentajeObtenido.toStringAsFixed(1)}% - ${prueba.tiempoSegundos}s',
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 24),
-                Row(
-                  children: [
-                    Expanded(
-                      child: FilledButton.icon(
-                        onPressed: () => _compartirReporte(reporte),
-                        icon: const Icon(Icons.ios_share_rounded),
-                        label: const Text('Compartir'),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: OutlinedButton.icon(
-                        onPressed: () => _guardarReporte(reporte),
-                        icon: const Icon(Icons.picture_as_pdf_rounded),
-                        label: const Text('Guardar PDF'),
-                      ),
-                    ),
-                  ],
-                ),
+                const SizedBox(height: 32),
               ],
             ),
           );
