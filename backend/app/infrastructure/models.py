@@ -12,6 +12,7 @@ class User(Base):
     hashed_password: Mapped[str] = mapped_column(String)
     role: Mapped[str] = mapped_column(String, default="doctor")
     full_name: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    document_id: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     is_available: Mapped[bool] = mapped_column(Boolean, default=True)
     is_2fa_enabled: Mapped[bool] = mapped_column(Boolean, default=False)

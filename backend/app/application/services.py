@@ -15,7 +15,8 @@ class UserService:
             username=user.username,
             hashed_password=hashed_password,
             role=user.role,
-            full_name=user.full_name
+            full_name=user.full_name,
+            document_id=user.document_id
         )
         db.add(db_user)
         db.commit()

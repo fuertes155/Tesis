@@ -33,6 +33,8 @@ def _ensure_db_schema() -> None:
         cols_u = {r[1] for r in conn.execute(text("PRAGMA table_info(users)")).fetchall()}
         if "full_name" not in cols_u:
             conn.execute(text("ALTER TABLE users ADD COLUMN full_name TEXT"))
+        if "document_id" not in cols_u:
+            conn.execute(text("ALTER TABLE users ADD COLUMN document_id TEXT"))
         if "is_2fa_enabled" not in cols_u:
             conn.execute(text("ALTER TABLE users ADD COLUMN is_2fa_enabled BOOLEAN DEFAULT 0"))
         if "totp_secret" not in cols_u:

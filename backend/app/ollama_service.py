@@ -795,6 +795,7 @@ async def generar_reporte_cognitivo(datos: dict[str, Any]) -> str:
         "model": MODELO_OLLAMA,
         "prompt": prompt,
         "stream": False,
+        "keep_alive": "1h",
         "options": {
             "temperature": 0.35,
             "top_p": 0.85,

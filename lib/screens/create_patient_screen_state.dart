@@ -278,8 +278,8 @@ class CreatePatientScreenState extends ConsumerState<CreatePatientScreen> {
                         TextFormField(
                           controller: _docIdController,
                           decoration: const InputDecoration(
-                            labelText: 'Documento de Identidad',
-                            hintText: 'Número de documento',
+                            labelText: 'Cédula / Documento de Identidad',
+                            hintText: 'Número de documento o cédula',
                             prefixIcon: Icon(Icons.credit_card_outlined),
                           ),
                         ).animate().fadeIn(delay: 350.ms),

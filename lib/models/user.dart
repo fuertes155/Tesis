@@ -10,6 +10,7 @@ class User with _$User {
     required String username,
     required String role,
     @JsonKey(name: 'full_name') String? fullName,
+    @JsonKey(name: 'document_id') String? documentId,
     @JsonKey(name: 'is_active') @Default(true) bool isActive,
     @JsonKey(name: 'is_available') @Default(true) bool isAvailable,
     @JsonKey(name: 'registration_date') DateTime? registrationDate,

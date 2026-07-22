@@ -578,6 +578,7 @@ class ApiService {
     required String password,
     required String role,
     String? fullName,
+    String? documentId,
   }) async {
     try {
       final response = await _dio.post(
@@ -587,6 +588,7 @@ class ApiService {
           'password': password,
           'role': role,
           'full_name': fullName,
+          'document_id': documentId,
         },
       );
       return response.data;

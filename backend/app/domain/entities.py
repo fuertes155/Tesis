@@ -17,6 +17,7 @@ class UserBase(BaseModel):
     username: str
     role: str = "doctor"
     full_name: Optional[str] = None
+    document_id: Optional[str] = None
 
     @field_validator("username")
     @classmethod

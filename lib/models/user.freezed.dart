@@ -26,6 +26,8 @@ mixin _$User {
   String get role => throw _privateConstructorUsedError;
   @JsonKey(name: 'full_name')
   String? get fullName => throw _privateConstructorUsedError;
+  @JsonKey(name: 'document_id')
+  String? get documentId => throw _privateConstructorUsedError;
   @JsonKey(name: 'is_active')
   bool get isActive => throw _privateConstructorUsedError;
   @JsonKey(name: 'is_available')
@@ -54,6 +56,7 @@ abstract class $UserCopyWith<$Res> {
     String username,
     String role,
     @JsonKey(name: 'full_name') String? fullName,
+    @JsonKey(name: 'document_id') String? documentId,
     @JsonKey(name: 'is_active') bool isActive,
     @JsonKey(name: 'is_available') bool isAvailable,
     @JsonKey(name: 'registration_date') DateTime? registrationDate,
@@ -80,6 +83,7 @@ class _$UserCopyWithImpl<$Res, $Val extends User>
     Object? username = null,
     Object? role = null,
     Object? fullName = freezed,
+    Object? documentId = freezed,
     Object? isActive = null,
     Object? isAvailable = null,
     Object? registrationDate = freezed,
@@ -102,6 +106,10 @@ class _$UserCopyWithImpl<$Res, $Val extends User>
             fullName: freezed == fullName
                 ? _value.fullName
                 : fullName // ignore: cast_nullable_to_non_nullable
+                      as String?,
+            documentId: freezed == documentId
+                ? _value.documentId
+                : documentId // ignore: cast_nullable_to_non_nullable
                       as String?,
             isActive: null == isActive
                 ? _value.isActive
@@ -138,6 +146,7 @@ abstract class _$$UserImplCopyWith<$Res> implements $UserCopyWith<$Res> {
     String username,
     String role,
     @JsonKey(name: 'full_name') String? fullName,
+    @JsonKey(name: 'document_id') String? documentId,
     @JsonKey(name: 'is_active') bool isActive,
     @JsonKey(name: 'is_available') bool isAvailable,
     @JsonKey(name: 'registration_date') DateTime? registrationDate,
@@ -161,6 +170,7 @@ class __$$UserImplCopyWithImpl<$Res>
     Object? username = null,
     Object? role = null,
     Object? fullName = freezed,
+    Object? documentId = freezed,
     Object? isActive = null,
     Object? isAvailable = null,
     Object? registrationDate = freezed,
@@ -183,6 +193,10 @@ class __$$UserImplCopyWithImpl<$Res>
         fullName: freezed == fullName
             ? _value.fullName
             : fullName // ignore: cast_nullable_to_non_nullable
+                  as String?,
+        documentId: freezed == documentId
+            ? _value.documentId
+            : documentId // ignore: cast_nullable_to_non_nullable
                   as String?,
         isActive: null == isActive
             ? _value.isActive
@@ -213,6 +227,7 @@ class _$UserImpl implements _User {
     required this.username,
     required this.role,
     @JsonKey(name: 'full_name') this.fullName,
+    @JsonKey(name: 'document_id') this.documentId,
     @JsonKey(name: 'is_active') this.isActive = true,
     @JsonKey(name: 'is_available') this.isAvailable = true,
     @JsonKey(name: 'registration_date') this.registrationDate,
@@ -232,6 +247,9 @@ class _$UserImpl implements _User {
   @JsonKey(name: 'full_name')
   final String? fullName;
   @override
+  @JsonKey(name: 'document_id')
+  final String? documentId;
+  @override
   @JsonKey(name: 'is_active')
   final bool isActive;
   @override
@@ -246,7 +264,7 @@ class _$UserImpl implements _User {
 
   @override
   String toString() {
-    return 'User(id: $id, username: $username, role: $role, fullName: $fullName, isActive: $isActive, isAvailable: $isAvailable, registrationDate: $registrationDate, createdAt: $createdAt)';
+    return 'User(id: $id, username: $username, role: $role, fullName: $fullName, documentId: $documentId, isActive: $isActive, isAvailable: $isAvailable, registrationDate: $registrationDate, createdAt: $createdAt)';
   }
 
   @override
@@ -260,6 +278,8 @@ class _$UserImpl implements _User {
             (identical(other.role, role) || other.role == role) &&
             (identical(other.fullName, fullName) ||
                 other.fullName == fullName) &&
+            (identical(other.documentId, documentId) ||
+                other.documentId == documentId) &&
             (identical(other.isActive, isActive) ||
                 other.isActive == isActive) &&
             (identical(other.isAvailable, isAvailable) ||
@@ -278,6 +298,7 @@ class _$UserImpl implements _User {
     username,
     role,
     fullName,
+    documentId,
     isActive,
     isAvailable,
     registrationDate,
@@ -304,6 +325,7 @@ abstract class _User implements User {
     required final String username,
     required final String role,
     @JsonKey(name: 'full_name') final String? fullName,
+    @JsonKey(name: 'document_id') final String? documentId,
     @JsonKey(name: 'is_active') final bool isActive,
     @JsonKey(name: 'is_available') final bool isAvailable,
     @JsonKey(name: 'registration_date') final DateTime? registrationDate,
@@ -321,6 +343,9 @@ abstract class _User implements User {
   @override
   @JsonKey(name: 'full_name')
   String? get fullName;
+  @override
+  @JsonKey(name: 'document_id')
+  String? get documentId;
   @override
   @JsonKey(name: 'is_active')
   bool get isActive;

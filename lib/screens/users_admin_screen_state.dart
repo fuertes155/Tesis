@@ -129,6 +129,7 @@ class UsersAdminScreenState extends ConsumerState<UsersAdminScreen> {
     final emailController = TextEditingController();
     final passController = TextEditingController();
     final nameController = TextEditingController();
+    final cedulaController = TextEditingController();
     String selectedRole = 'doctor';
     final api = await ref.read(apiServiceProvider.future);
     if (!mounted) return;
@@ -173,6 +174,15 @@ class UsersAdminScreenState extends ConsumerState<UsersAdminScreen> {
                     decoration: InputDecoration(
                       labelText: 'Nombre Completo',
                       prefixIcon: const Icon(Icons.person_outline_rounded),
+                      border: OutlineInputBorder(borderRadius: r.radiusSm),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: cedulaController,
+                    decoration: InputDecoration(
+                      labelText: 'Cédula / Documento de Identidad',
+                      prefixIcon: const Icon(Icons.badge_outlined),
                       border: OutlineInputBorder(borderRadius: r.radiusSm),
                     ),
                   ),
@@ -267,6 +277,9 @@ class UsersAdminScreenState extends ConsumerState<UsersAdminScreen> {
                       fullName: nameController.text.trim().isEmpty
                           ? null
                           : nameController.text,
+                      documentId: cedulaController.text.trim().isEmpty
+                          ? null
+                          : cedulaController.text.trim(),
                     );
                     if (ctx.mounted) {
                       Navigator.pop(ctx, true);

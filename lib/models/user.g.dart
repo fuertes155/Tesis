@@ -11,6 +11,7 @@ _$UserImpl _$$UserImplFromJson(Map<String, dynamic> json) => _$UserImpl(
   username: json['username'] as String,
   role: json['role'] as String,
   fullName: json['full_name'] as String?,
+  documentId: json['document_id'] as String?,
   isActive: json['is_active'] as bool? ?? true,
   isAvailable: json['is_available'] as bool? ?? true,
   registrationDate: json['registration_date'] == null
@@ -27,6 +28,7 @@ Map<String, dynamic> _$$UserImplToJson(_$UserImpl instance) =>
       'username': instance.username,
       'role': instance.role,
       'full_name': instance.fullName,
+      'document_id': instance.documentId,
       'is_active': instance.isActive,
       'is_available': instance.isAvailable,
       'registration_date': instance.registrationDate?.toIso8601String(),
