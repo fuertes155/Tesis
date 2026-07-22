@@ -29,6 +29,8 @@ class Patient(Base):
     document_id: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     phone: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     diagnosis: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    institution: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    medical_history: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     email: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     doctor_id: Mapped[Optional[int]] = mapped_column(Integer, ForeignKey("users.id"), nullable=True)
     user_id: Mapped[Optional[int]] = mapped_column(Integer, ForeignKey("users.id"), nullable=True, unique=True)

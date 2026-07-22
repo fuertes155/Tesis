@@ -17,6 +17,8 @@ _$PatientImpl _$$PatientImplFromJson(Map<String, dynamic> json) =>
       documentId: json['document_id'] as String?,
       phone: json['phone'] as String?,
       diagnosis: json['diagnosis'] as String?,
+      institution: json['institution'] as String?,
+      medicalHistory: json['medical_history'] as String?,
       doctorId: (json['doctor_id'] as num?)?.toInt(),
       createdAt: json['created_at'] == null
           ? null
@@ -33,6 +35,8 @@ Map<String, dynamic> _$$PatientImplToJson(_$PatientImpl instance) =>
       'document_id': instance.documentId,
       'phone': instance.phone,
       'diagnosis': instance.diagnosis,
+      'institution': instance.institution,
+      'medical_history': instance.medicalHistory,
       'doctor_id': instance.doctorId,
       'created_at': instance.createdAt?.toIso8601String(),
       'external_id': instance.externalId,

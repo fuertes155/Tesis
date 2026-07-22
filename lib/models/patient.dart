@@ -13,6 +13,8 @@ class Patient with _$Patient {
     @JsonKey(name: 'document_id') String? documentId,
     String? phone,
     String? diagnosis,
+    String? institution,
+    @JsonKey(name: 'medical_history') String? medicalHistory,
     @JsonKey(name: 'doctor_id') int? doctorId,
     @JsonKey(name: 'created_at') DateTime? createdAt,
     @JsonKey(name: 'external_id') String? externalId,

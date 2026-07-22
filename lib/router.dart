@@ -299,16 +299,30 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/reporte_cognitivo',
         pageBuilder: (context, state) {
           final extra = state.extra;
-          final solicitud = extra is SolicitudReporteCognitivoModel
-              ? extra
-              : SolicitudReporteCognitivoModel.fromJson(
-                  extra as Map<String, dynamic>,
-                );
+          SolicitudReporteCognitivoModel solicitud;
+          ReporteCognitivoModel? preGeneratedReport;
+
+          if (extra is SolicitudReporteCognitivoModel) {
+            solicitud = extra;
+          } else if (extra is Map<String, dynamic>) {
+            solicitud = SolicitudReporteCognitivoModel.fromJson(
+              extra['solicitud'] as Map<String, dynamic>? ?? extra,
+            );
+            if (extra['preGeneratedReport'] != null) {
+              preGeneratedReport = ReporteCognitivoModel.fromJson(
+                extra['preGeneratedReport'] as Map<String, dynamic>,
+              );
+            }
+          } else {
+            throw Exception('Invalid extra type for /reporte_cognitivo');
+          }
+
           return _deferredPage(
             state,
             reporte_cognitivo_screen.loadLibrary,
             () => reporte_cognitivo_screen.ReporteCognitivoScreen(
               solicitud: solicitud,
+              preGeneratedReport: preGeneratedReport,
             ),
           );
         },

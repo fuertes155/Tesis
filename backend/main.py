@@ -44,6 +44,12 @@ def _ensure_db_schema() -> None:
         cols_p = {r[1] for r in conn.execute(text("PRAGMA table_info(patients)")).fetchall()}
         if "user_id" not in cols_p:
             conn.execute(text("ALTER TABLE patients ADD COLUMN user_id INTEGER"))
+        if "document_id" not in cols_p:
+            conn.execute(text("ALTER TABLE patients ADD COLUMN document_id TEXT"))
+        if "institution" not in cols_p:
+            conn.execute(text("ALTER TABLE patients ADD COLUMN institution TEXT"))
+        if "medical_history" not in cols_p:
+            conn.execute(text("ALTER TABLE patients ADD COLUMN medical_history TEXT"))
         if "email" not in cols_p:
             conn.execute(text("ALTER TABLE patients ADD COLUMN email TEXT"))
         if "external_id" not in cols_p:

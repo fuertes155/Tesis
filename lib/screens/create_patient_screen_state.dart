@@ -7,6 +7,8 @@ class CreatePatientScreenState extends ConsumerState<CreatePatientScreen> {
   final _docIdController = TextEditingController();
   final _phoneController = TextEditingController();
   final _emailController = TextEditingController();
+  final _institutionController = TextEditingController();
+  final _medicalHistoryController = TextEditingController();
   final _diagnosisController = TextEditingController(text: 'Pendiente');
   bool _isLoading = false;
   bool _hasConsent = false;
@@ -18,6 +20,8 @@ class CreatePatientScreenState extends ConsumerState<CreatePatientScreen> {
     _docIdController.dispose();
     _phoneController.dispose();
     _emailController.dispose();
+    _institutionController.dispose();
+    _medicalHistoryController.dispose();
     _diagnosisController.dispose();
     super.dispose();
   }
@@ -68,6 +72,8 @@ class CreatePatientScreenState extends ConsumerState<CreatePatientScreen> {
         'document_id': _docIdController.text,
         'phone': _phoneController.text,
         'email': _emailController.text,
+        'institution': _institutionController.text,
+        'medical_history': _medicalHistoryController.text,
         'diagnosis': 'Pendiente',
         'has_consent': _hasConsent,
       });
@@ -305,6 +311,39 @@ class CreatePatientScreenState extends ConsumerState<CreatePatientScreen> {
                             prefixIcon: Icon(Icons.email_outlined),
                           ),
                         ).animate().fadeIn(delay: 420.ms),
+
+                        SizedBox(height: spacing.xl),
+
+                        // ── Datos Clínicos ──────────────────────────────
+                        _SectionHeader(
+                          icon: Icons.local_hospital_outlined,
+                          label: 'Datos Clínicos (Opcional)',
+                          color: Colors.redAccent,
+                        ),
+                        SizedBox(height: spacing.lg),
+
+                        TextFormField(
+                          controller: _institutionController,
+                          textCapitalization: TextCapitalization.words,
+                          decoration: const InputDecoration(
+                            labelText: 'Institución',
+                            hintText: 'Ej. NeuroApp360, Clínica San José',
+                            prefixIcon: Icon(Icons.business_outlined),
+                          ),
+                        ).animate().fadeIn(delay: 430.ms),
+                        SizedBox(height: spacing.md),
+
+                        TextFormField(
+                          controller: _medicalHistoryController,
+                          textCapitalization: TextCapitalization.sentences,
+                          maxLines: 3,
+                          decoration: const InputDecoration(
+                            labelText: 'Antecedentes',
+                            hintText: 'Historial clínico, enfermedades previas...',
+                            prefixIcon: Icon(Icons.medical_information_outlined),
+                            alignLabelWithHint: true,
+                          ),
+                        ).animate().fadeIn(delay: 440.ms),
 
                         SizedBox(height: spacing.xl),
 

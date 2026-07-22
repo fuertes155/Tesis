@@ -105,6 +105,8 @@ class PatientBase(BaseModel):
     document_id: Optional[str] = None
     phone: Optional[str] = None
     diagnosis: Optional[str] = None
+    institution: Optional[str] = None
+    medical_history: Optional[str] = None
     email: Optional[str] = None
     doctor_id: Optional[int] = None
     has_consent: bool = False

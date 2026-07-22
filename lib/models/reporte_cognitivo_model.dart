@@ -101,42 +101,66 @@ class SolicitudReporteCognitivoModel {
 
 class ReporteCognitivoModel {
   const ReporteCognitivoModel({
-    this.id,
+    required this.id,
     required this.pacienteId,
     required this.nombrePaciente,
+    required this.edadPaciente,
+    required this.profesional,
+    required this.pruebas,
     required this.fechaEvaluacion,
     required this.reporte,
-    this.createdAt,
+    required this.createdAt,
   });
 
-  final int? id;
+  final int id;
   final String pacienteId;
   final String nombrePaciente;
+  final int edadPaciente;
+  final String profesional;
+  final List<PruebaCognitivaModel> pruebas;
   final String fechaEvaluacion;
   final String reporte;
-  final String? createdAt;
+  final DateTime createdAt;
 
   factory ReporteCognitivoModel.fromJson(Map<String, dynamic> json) {
     return ReporteCognitivoModel(
-      id: json['id'] is int
-          ? json['id'] as int
-          : int.tryParse(json['id']?.toString() ?? ''),
+      id: json['id'] as int,
       pacienteId: json['paciente_id']?.toString() ?? '',
       nombrePaciente: json['nombre_paciente']?.toString() ?? '',
+      edadPaciente: (json['edad_paciente'] as num?)?.toInt() ?? 30,
+      profesional: json['profesional']?.toString() ?? 'Profesional evaluador',
+      pruebas: (json['pruebas'] as List<dynamic>?)
+              ?.map((e) => PruebaCognitivaModel.fromJson(e as Map<String, dynamic>))
+              .toList() ??
+          [],
       fechaEvaluacion: json['fecha_evaluacion']?.toString() ?? '',
       reporte: json['reporte']?.toString() ?? '',
-      createdAt: json['created_at']?.toString(),
+      createdAt: DateTime.tryParse(json['created_at']?.toString() ?? '') ?? DateTime.now(),
     );
   }
 
   Map<String, dynamic> toJson() {
     return {
-      if (id != null) 'id': id,
+      'id': id,
       'paciente_id': pacienteId,
       'nombre_paciente': nombrePaciente,
+      'edad_paciente': edadPaciente,
+      'profesional': profesional,
+      'pruebas': pruebas.map((e) => e.toJson()).toList(),
       'fecha_evaluacion': fechaEvaluacion,
       'reporte': reporte,
-      if (createdAt != null) 'created_at': createdAt,
+      'created_at': createdAt.toIso8601String(),
     };
+  }
+
+  SolicitudReporteCognitivoModel toSolicitud() {
+    return SolicitudReporteCognitivoModel(
+      pacienteId: pacienteId,
+      nombrePaciente: nombrePaciente,
+      edadPaciente: edadPaciente,
+      fechaEvaluacion: fechaEvaluacion,
+      profesional: profesional,
+      pruebas: pruebas,
+    );
   }
 }

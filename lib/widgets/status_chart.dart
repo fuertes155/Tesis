@@ -28,12 +28,16 @@ class StatusChart extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
-                  'Estado de sesiones',
-                  style: theme.textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
+                Expanded(
+                  child: Text(
+                    'Estado de sesiones',
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
+                const SizedBox(width: 8),
                 Text(
                   'Total: ${completed + pending}',
                   style: theme.textTheme.labelLarge?.copyWith(
@@ -94,32 +98,43 @@ class StatusChart extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 10),
-            Row(
+            Wrap(
+              spacing: 16,
+              runSpacing: 8,
               children: [
-                Container(
-                  width: 10,
-                  height: 10,
-                  decoration: BoxDecoration(
-                    color: Colors.green.withValues(alpha: 0.5),
-                    shape: BoxShape.circle,
-                  ),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 10,
+                      height: 10,
+                      decoration: BoxDecoration(
+                        color: Colors.green.withValues(alpha: 0.5),
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      'Completadas: $completed',
+                      style: theme.textTheme.labelLarge,
+                    ),
+                  ],
                 ),
-                const SizedBox(width: 6),
-                Text(
-                  'Completadas: $completed',
-                  style: theme.textTheme.labelLarge,
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 10,
+                      height: 10,
+                      decoration: BoxDecoration(
+                        color: Colors.orange.withValues(alpha: 0.6),
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    Text('Pendientes: $pending', style: theme.textTheme.labelLarge),
+                  ],
                 ),
-                const SizedBox(width: 16),
-                Container(
-                  width: 10,
-                  height: 10,
-                  decoration: BoxDecoration(
-                    color: Colors.orange.withValues(alpha: 0.6),
-                    shape: BoxShape.circle,
-                  ),
-                ),
-                const SizedBox(width: 6),
-                Text('Pendientes: $pending', style: theme.textTheme.labelLarge),
               ],
             ),
           ],

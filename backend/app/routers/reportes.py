@@ -70,6 +70,9 @@ class ReporteCognitivoRespuestaSchema(BaseModel):
     id: int
     paciente_id: str
     nombre_paciente: str
+    edad_paciente: int
+    profesional: str
+    pruebas: list[dict[str, Any]]
     fecha_evaluacion: date
     reporte: str
     created_at: str
@@ -120,6 +123,9 @@ async def generar_reporte(
         id=reporte_db.id,
         paciente_id=evaluacion.paciente_id,
         nombre_paciente=evaluacion.nombre_paciente,
+        edad_paciente=evaluacion.edad_paciente,
+        profesional=evaluacion.profesional,
+        pruebas=[prueba.model_dump(mode="json") for prueba in evaluacion.pruebas],
         fecha_evaluacion=evaluacion.fecha_evaluacion,
         reporte=reporte,
         created_at=reporte_db.created_at.isoformat(),
@@ -143,6 +149,9 @@ def listar_reportes_paciente(paciente_id: str, db: Session = Depends(get_db)):
             id=reporte.id,
             paciente_id=reporte.paciente_id,
             nombre_paciente=reporte.nombre_paciente,
+            edad_paciente=reporte.edad_paciente,
+            profesional=reporte.profesional,
+            pruebas=reporte.pruebas if isinstance(reporte.pruebas, list) else [],
             fecha_evaluacion=date.fromisoformat(reporte.fecha_evaluacion),
             reporte=reporte.reporte,
             created_at=reporte.created_at.isoformat(),

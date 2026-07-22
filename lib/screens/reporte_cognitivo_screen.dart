@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:go_router/go_router.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
@@ -11,9 +12,11 @@ class ReporteCognitivoScreen extends StatefulWidget {
   const ReporteCognitivoScreen({
     super.key,
     required this.solicitud,
+    this.preGeneratedReport,
   });
 
   final SolicitudReporteCognitivoModel solicitud;
+  final ReporteCognitivoModel? preGeneratedReport;
 
   @override
   State<ReporteCognitivoScreen> createState() => _ReporteCognitivoScreenState();
@@ -26,7 +29,11 @@ class _ReporteCognitivoScreenState extends State<ReporteCognitivoScreen> {
   @override
   void initState() {
     super.initState();
-    _reporteFuture = _servicio.generarReporte(widget.solicitud);
+    if (widget.preGeneratedReport != null) {
+      _reporteFuture = Future.value(widget.preGeneratedReport);
+    } else {
+      _reporteFuture = _servicio.generarReporte(widget.solicitud);
+    }
   }
 
   @override
@@ -40,9 +47,19 @@ class _ReporteCognitivoScreenState extends State<ReporteCognitivoScreen> {
         backgroundColor: const Color(0xFF1A3A6B),
         foregroundColor: Colors.white,
         elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
+          onPressed: () {
+            if (context.canPop()) {
+              context.pop();
+            } else {
+              context.go('/home');
+            }
+          },
+        ),
         title: const Text(
           'Reporte Neuropsicológico',
-          style: TextStyle(fontWeight: FontWeight.w700, fontSize: 17),
+          style: TextStyle(fontWeight: FontWeight.w700, fontSize: 17, color: Colors.white),
         ),
         centerTitle: false,
       ),
@@ -87,6 +104,20 @@ class _ReporteCognitivoScreenState extends State<ReporteCognitivoScreen> {
                   child: Row(
                     children: [
                       Expanded(
+                        child: OutlinedButton.icon(
+                          style: OutlinedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                          ),
+                          onPressed: () => _guardarReporte(reporte),
+                          icon: const Icon(Icons.download_rounded),
+                          label: const Text('Guardar'),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
                         child: FilledButton.icon(
                           style: FilledButton.styleFrom(
                             backgroundColor: const Color(0xFF1A3A6B),
@@ -96,24 +127,8 @@ class _ReporteCognitivoScreenState extends State<ReporteCognitivoScreen> {
                             ),
                           ),
                           onPressed: () => _compartirReporte(reporte),
-                          icon: const Icon(Icons.ios_share_rounded),
+                          icon: const Icon(Icons.share_rounded),
                           label: const Text('Compartir'),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: OutlinedButton.icon(
-                          style: OutlinedButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(vertical: 14),
-                            side: const BorderSide(color: Color(0xFF1A3A6B), width: 1.5),
-                            foregroundColor: const Color(0xFF1A3A6B),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                          ),
-                          onPressed: () => _guardarReporte(reporte),
-                          icon: const Icon(Icons.picture_as_pdf_rounded),
-                          label: const Text('Guardar PDF'),
                         ),
                       ),
                     ],
@@ -1098,14 +1113,24 @@ class _SectionTitle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    const color = Color(0xFF1A3A6B);
     return Container(
-      color: Colors.yellow.shade200,
-      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        border: const Border(
+          left: BorderSide(
+            color: color,
+            width: 4,
+          ),
+        ),
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       child: Text(
         text,
         style: const TextStyle(
           fontWeight: FontWeight.w900,
           letterSpacing: 0.2,
+          color: color,
         ),
       ),
     );

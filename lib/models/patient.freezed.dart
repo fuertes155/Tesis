@@ -30,6 +30,9 @@ mixin _$Patient {
   String? get documentId => throw _privateConstructorUsedError;
   String? get phone => throw _privateConstructorUsedError;
   String? get diagnosis => throw _privateConstructorUsedError;
+  String? get institution => throw _privateConstructorUsedError;
+  @JsonKey(name: 'medical_history')
+  String? get medicalHistory => throw _privateConstructorUsedError;
   @JsonKey(name: 'doctor_id')
   int? get doctorId => throw _privateConstructorUsedError;
   @JsonKey(name: 'created_at')
@@ -59,6 +62,8 @@ abstract class $PatientCopyWith<$Res> {
     @JsonKey(name: 'document_id') String? documentId,
     String? phone,
     String? diagnosis,
+    String? institution,
+    @JsonKey(name: 'medical_history') String? medicalHistory,
     @JsonKey(name: 'doctor_id') int? doctorId,
     @JsonKey(name: 'created_at') DateTime? createdAt,
     @JsonKey(name: 'external_id') String? externalId,
@@ -87,6 +92,8 @@ class _$PatientCopyWithImpl<$Res, $Val extends Patient>
     Object? documentId = freezed,
     Object? phone = freezed,
     Object? diagnosis = freezed,
+    Object? institution = freezed,
+    Object? medicalHistory = freezed,
     Object? doctorId = freezed,
     Object? createdAt = freezed,
     Object? externalId = freezed,
@@ -120,6 +127,14 @@ class _$PatientCopyWithImpl<$Res, $Val extends Patient>
             diagnosis: freezed == diagnosis
                 ? _value.diagnosis
                 : diagnosis // ignore: cast_nullable_to_non_nullable
+                      as String?,
+            institution: freezed == institution
+                ? _value.institution
+                : institution // ignore: cast_nullable_to_non_nullable
+                      as String?,
+            medicalHistory: freezed == medicalHistory
+                ? _value.medicalHistory
+                : medicalHistory // ignore: cast_nullable_to_non_nullable
                       as String?,
             doctorId: freezed == doctorId
                 ? _value.doctorId
@@ -155,6 +170,8 @@ abstract class _$$PatientImplCopyWith<$Res> implements $PatientCopyWith<$Res> {
     @JsonKey(name: 'document_id') String? documentId,
     String? phone,
     String? diagnosis,
+    String? institution,
+    @JsonKey(name: 'medical_history') String? medicalHistory,
     @JsonKey(name: 'doctor_id') int? doctorId,
     @JsonKey(name: 'created_at') DateTime? createdAt,
     @JsonKey(name: 'external_id') String? externalId,
@@ -182,6 +199,8 @@ class __$$PatientImplCopyWithImpl<$Res>
     Object? documentId = freezed,
     Object? phone = freezed,
     Object? diagnosis = freezed,
+    Object? institution = freezed,
+    Object? medicalHistory = freezed,
     Object? doctorId = freezed,
     Object? createdAt = freezed,
     Object? externalId = freezed,
@@ -216,6 +235,14 @@ class __$$PatientImplCopyWithImpl<$Res>
             ? _value.diagnosis
             : diagnosis // ignore: cast_nullable_to_non_nullable
                   as String?,
+        institution: freezed == institution
+            ? _value.institution
+            : institution // ignore: cast_nullable_to_non_nullable
+                  as String?,
+        medicalHistory: freezed == medicalHistory
+            ? _value.medicalHistory
+            : medicalHistory // ignore: cast_nullable_to_non_nullable
+                  as String?,
         doctorId: freezed == doctorId
             ? _value.doctorId
             : doctorId // ignore: cast_nullable_to_non_nullable
@@ -244,6 +271,8 @@ class _$PatientImpl implements _Patient {
     @JsonKey(name: 'document_id') this.documentId,
     this.phone,
     this.diagnosis,
+    this.institution,
+    @JsonKey(name: 'medical_history') this.medicalHistory,
     @JsonKey(name: 'doctor_id') this.doctorId,
     @JsonKey(name: 'created_at') this.createdAt,
     @JsonKey(name: 'external_id') this.externalId,
@@ -269,6 +298,11 @@ class _$PatientImpl implements _Patient {
   @override
   final String? diagnosis;
   @override
+  final String? institution;
+  @override
+  @JsonKey(name: 'medical_history')
+  final String? medicalHistory;
+  @override
   @JsonKey(name: 'doctor_id')
   final int? doctorId;
   @override
@@ -280,7 +314,7 @@ class _$PatientImpl implements _Patient {
 
   @override
   String toString() {
-    return 'Patient(id: $id, name: $name, age: $age, birthDate: $birthDate, documentId: $documentId, phone: $phone, diagnosis: $diagnosis, doctorId: $doctorId, createdAt: $createdAt, externalId: $externalId)';
+    return 'Patient(id: $id, name: $name, age: $age, birthDate: $birthDate, documentId: $documentId, phone: $phone, diagnosis: $diagnosis, institution: $institution, medicalHistory: $medicalHistory, doctorId: $doctorId, createdAt: $createdAt, externalId: $externalId)';
   }
 
   @override
@@ -298,6 +332,10 @@ class _$PatientImpl implements _Patient {
             (identical(other.phone, phone) || other.phone == phone) &&
             (identical(other.diagnosis, diagnosis) ||
                 other.diagnosis == diagnosis) &&
+            (identical(other.institution, institution) ||
+                other.institution == institution) &&
+            (identical(other.medicalHistory, medicalHistory) ||
+                other.medicalHistory == medicalHistory) &&
             (identical(other.doctorId, doctorId) ||
                 other.doctorId == doctorId) &&
             (identical(other.createdAt, createdAt) ||
@@ -317,6 +355,8 @@ class _$PatientImpl implements _Patient {
     documentId,
     phone,
     diagnosis,
+    institution,
+    medicalHistory,
     doctorId,
     createdAt,
     externalId,
@@ -345,6 +385,8 @@ abstract class _Patient implements Patient {
     @JsonKey(name: 'document_id') final String? documentId,
     final String? phone,
     final String? diagnosis,
+    final String? institution,
+    @JsonKey(name: 'medical_history') final String? medicalHistory,
     @JsonKey(name: 'doctor_id') final int? doctorId,
     @JsonKey(name: 'created_at') final DateTime? createdAt,
     @JsonKey(name: 'external_id') final String? externalId,
@@ -368,6 +410,11 @@ abstract class _Patient implements Patient {
   String? get phone;
   @override
   String? get diagnosis;
+  @override
+  String? get institution;
+  @override
+  @JsonKey(name: 'medical_history')
+  String? get medicalHistory;
   @override
   @JsonKey(name: 'doctor_id')
   int? get doctorId;

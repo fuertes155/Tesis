@@ -23,6 +23,8 @@ class _GameFlowState extends ConsumerState<GameFlow> {
   String? _patientDocument;
   String? _patientPhone;
   String? _patientDiagnosis;
+  String? _patientInstitution;
+  String? _patientMedicalHistory;
   late DateTime _startTime;
   final List<Map<String, dynamic>> _results = [];
 
@@ -50,6 +52,8 @@ class _GameFlowState extends ConsumerState<GameFlow> {
       _patientDocument = patient.documentId;
       _patientPhone = patient.phone;
       _patientDiagnosis = patient.diagnosis;
+      _patientInstitution = patient.institution;
+      _patientMedicalHistory = patient.medicalHistory;
     } catch (e) {
       _age = 30;
     }
@@ -98,6 +102,17 @@ class _GameFlowState extends ConsumerState<GameFlow> {
     final endTime = DateTime.now();
     final durationMs = endTime.difference(_startTime).inMilliseconds;
     final api = await ref.read(apiServiceProvider.future);
+    
+    String profesionalName = api.currentUsername ?? 'Profesional evaluador';
+    try {
+      final me = await api.getMe();
+      if (me.fullName != null && me.fullName!.trim().isNotEmpty) {
+        profesionalName = me.fullName!;
+      }
+    } catch (_) {
+      // Usar fallback si falla la red
+    }
+
     await GameResults.sendSession(
       api: api,
       status: 'completed',
@@ -116,11 +131,11 @@ class _GameFlowState extends ConsumerState<GameFlow> {
       nombrePaciente: _patientName,
       edadPaciente: _age ?? 30,
       fechaEvaluacion: _fechaActualIso(),
-      profesional: api.currentUsername ?? 'Profesional evaluador',
+      profesional: profesionalName,
       documentoPaciente: _patientDocument,
       telefonoPaciente: _patientPhone,
-      diagnosticoPaciente: _patientDiagnosis,
-      institucion: 'NeuroApp360',
+      diagnosticoPaciente: _patientMedicalHistory ?? _patientDiagnosis,
+      institucion: _patientInstitution?.trim().isEmpty ?? true ? 'NeuroApp360' : _patientInstitution,
       pruebas: _results.map(_pruebaDesdeResultado).toList(),
     );
 

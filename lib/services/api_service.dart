@@ -6,6 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../models/patient.dart';
 import '../models/session.dart';
 import '../models/user.dart';
+import '../models/reporte_cognitivo_model.dart';
 import '../core/database/local_database_service.dart';
 
 class ApiService {
@@ -654,6 +655,16 @@ class ApiService {
       return authMap;
     } on dio.DioException catch (e) {
       throw Exception('Error al registrar usuario: ${e.message}');
+    }
+  }
+
+  Future<List<ReporteCognitivoModel>> getReportesByPatient(String patientId) async {
+    try {
+      final response = await _dio.get('/evaluacion/reportes/$patientId');
+      final data = response.data as List;
+      return data.map((e) => ReporteCognitivoModel.fromJson(e as Map<String, dynamic>)).toList();
+    } on dio.DioException catch (e) {
+      throw Exception('Error al cargar historial de reportes: ${e.message}');
     }
   }
 }
