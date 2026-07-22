@@ -86,8 +86,7 @@ class User(UserBase):
     full_name: Optional[str] = None
     registration_date: Optional[datetime] = None
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class Token(BaseModel):
@@ -150,8 +149,7 @@ class Patient(PatientBase):
     created_at: Optional[datetime] = None
     registration_date: Optional[datetime] = None
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 # ── Session ───────────────────────────────────────────────────────────────────
@@ -193,8 +191,7 @@ class Session(SessionBase):
     id: int
     created_at: Optional[datetime] = None
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 # ── Result ────────────────────────────────────────────────────────────────────

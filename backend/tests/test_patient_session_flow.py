@@ -1,8 +1,14 @@
-import requests
+from fastapi.testclient import TestClient
+import sys
+import os
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from main import app
+
+client = TestClient(app)
 import time
 from datetime import datetime
 
-BASE_URL = "http://localhost:8000/api/v1"
+BASE_URL = "/api/v1"
 
 def test_patient_and_session_flow():
     print("Iniciando prueba de flujo de pacientes y sesiones...")
@@ -13,7 +19,7 @@ def test_patient_and_session_flow():
             "username": "samuel1@gmail.com",
             "password": "Password123!"
         }
-        r = requests.post(f"{BASE_URL}/users/auth/login", json=login_data)
+        r = client.post(f"{BASE_URL}/users/auth/login", json=login_data)
         if r.status_code != 200:
             print(f"Error en login: {r.text}")
             return
@@ -32,7 +38,7 @@ def test_patient_and_session_flow():
             "education_level": "universitario"
         }
         print("\n2. Registrando un nuevo paciente...")
-        r = requests.post(f"{BASE_URL}/patients/", json=patient_data, headers=headers)
+        r = client.post(f"{BASE_URL}/patients/", json=patient_data, headers=headers)
         if r.status_code not in [200, 201]:
             print(f"Error creando paciente: {r.text}")
             return
@@ -49,7 +55,7 @@ def test_patient_and_session_flow():
             "status": "pending",
             "notes": "Sesión de prueba automatizada"
         }
-        r = requests.post(f"{BASE_URL}/sessions/", json=session_data, headers=headers)
+        r = client.post(f"{BASE_URL}/sessions/", json=session_data, headers=headers)
         if r.status_code not in [200, 201]:
             print(f"Error creando sesión: {r.text}")
             return
@@ -70,7 +76,7 @@ def test_patient_and_session_flow():
             "timestamp": datetime.now().isoformat(),
             "details": {"nivel": 3, "errores": 1}
         }
-        r = requests.post(f"{BASE_URL}/sessions/results", json=result_data, headers=headers)
+        r = client.post(f"{BASE_URL}/sessions/results", json=result_data, headers=headers)
         if r.status_code not in [200, 201]:
             print(f"Error enviando resultados: {r.text}")
             return
@@ -80,7 +86,7 @@ def test_patient_and_session_flow():
 
         # 5. Obtener los últimos resultados
         print("\n5. Obteniendo historial de resultados del paciente...")
-        r = requests.get(f"{BASE_URL}/sessions/results/latest?patient_id={patient_id}", headers=headers)
+        r = client.get(f"{BASE_URL}/sessions/results/latest?patient_id={patient_id}", headers=headers)
         if r.status_code == 200:
             results = r.json()
             print(f"Resultados encontrados: {len(results)}")

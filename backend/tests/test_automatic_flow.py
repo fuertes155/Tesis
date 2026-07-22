@@ -1,7 +1,13 @@
-import requests
+from fastapi.testclient import TestClient
+import sys
+import os
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from main import app
+
+client = TestClient(app)
 import time
 
-BASE_URL = "http://localhost:8000/api/v1"
+BASE_URL = "/api/v1"
 
 def test_flow():
     try:
@@ -11,7 +17,7 @@ def test_flow():
             "username": "samuel1@gmail.com",
             "password": "Password123!"
         }
-        r = requests.post(f"{BASE_URL}/users/auth/login", json=login_data)
+        r = client.post(f"{BASE_URL}/users/auth/login", json=login_data)
         if r.status_code != 200:
             print(f"Admin login failed: {r.text}")
             return
@@ -30,7 +36,7 @@ def test_flow():
             "role": "doctor",
             "full_name": "Test Doctor Automático"
         }
-        r = requests.post(f"{BASE_URL}/users/register", json=create_data, headers=headers)
+        r = client.post(f"{BASE_URL}/users/register", json=create_data, headers=headers)
         if r.status_code != 201:
             print(f"Doctor creation failed: {r.text}")
             return
@@ -43,7 +49,7 @@ def test_flow():
             "username": doctor_username,
             "password": doctor_password
         }
-        r = requests.post(f"{BASE_URL}/users/auth/login", json=doctor_login_data)
+        r = client.post(f"{BASE_URL}/users/auth/login", json=doctor_login_data)
         if r.status_code != 200:
             print(f"Doctor login failed: {r.text}")
             return

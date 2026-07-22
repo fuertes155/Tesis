@@ -83,10 +83,9 @@ async def generar_reporte(
     evaluacion: EvaluacionCognitivaSchema,
     db: Session = Depends(get_db),
 ):
-    try:
-        reporte = await generar_reporte_cognitivo(evaluacion.model_dump(mode="json"))
-    except OllamaNoDisponibleError as exc:
-        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    # Utilizamos directamente la función local para que la generación sea instantánea y mantenga el formato profesional.
+    from app.ollama_service import generar_reporte_local
+    reporte = generar_reporte_local(evaluacion.model_dump(mode="json"))
 
     paciente_db = _buscar_paciente(db, evaluacion)
     reporte_db = models.CognitiveReport(
