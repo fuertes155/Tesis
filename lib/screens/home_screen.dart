@@ -14,6 +14,8 @@ import '../widgets/activity_filters.dart';
 import '../widgets/home_kpi_section.dart';
 import '../widgets/home_dashboard_grid.dart';
 import '../widgets/home_recent_activity_section.dart';
+import '../widgets/home_hero_banner.dart';
+import '../widgets/dashboard_panel.dart';
 import '../core/theme/app_theme.dart';
 import '../core/theme/app_decorations.dart';
 import '../providers/api_providers.dart';
@@ -210,428 +212,349 @@ class HomeScreenState extends ConsumerState<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final cs = theme.colorScheme;
-    final spacing = context.spacing;
-    final r = context.radii;
+    final cs = Theme.of(context).colorScheme;
     assert(_touchState() >= 0);
+    final role = _api?.currentRole;
 
     return Scaffold(
       backgroundColor: cs.surface,
       body: AppDecorations.meshBackground(
-        child: CustomScrollView(
-          slivers: [
-            SliverAppBar(
-              pinned: true,
-              expandedHeight: 120,
-              backgroundColor: Colors.transparent,
-              surfaceTintColor: Colors.transparent,
-            elevation: 0,
-            flexibleSpace: FlexibleSpaceBar(
-              centerTitle: false,
-              titlePadding: EdgeInsets.only(left: spacing.lg, bottom: spacing.lg - 4),
-              title: const HomeHeader(),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            // Contenido centrado con ancho máximo en pantallas grandes.
+            final margen = constraints.maxWidth > 1328
+                ? (constraints.maxWidth - 1280) / 2
+                : (constraints.maxWidth < 600 ? 16.0 : 24.0);
+
+            return CustomScrollView(
+              slivers: [
+                SliverAppBar(
+                  pinned: true,
+                  toolbarHeight: 72,
+                  titleSpacing: margen,
+                  backgroundColor: cs.surface.withValues(alpha: 0.92),
+                  surfaceTintColor: Colors.transparent,
+                  shape: Border(bottom: BorderSide(color: cs.outlineVariant.withValues(alpha: 0.7))),
+                  title: const HomeHeader(),
+                  actions: [
+                    if (role != 'user')
+                      IconButton(
+                        icon: const Icon(Icons.refresh_rounded),
+                        onPressed: () {
+                          HapticFeedback.mediumImpact();
+                          _fetch();
+                        },
+                        tooltip: 'Actualizar',
+                      ),
+                    const SizedBox(width: 4),
+                    _MenuUsuario(fallbackName: _api?.currentUsername ?? 'Usuario'),
+                    SizedBox(width: margen),
+                  ],
+                ),
+                SliverPadding(
+                  padding: EdgeInsets.fromLTRB(margen, 24, margen, 48),
+                  sliver: SliverToBoxAdapter(child: _contenido(context, role)),
+                ),
+              ],
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  Widget _contenido(BuildContext context, String? role) {
+    final cs = Theme.of(context).colorScheme;
+    const gap = SizedBox(height: 24);
+
+    final semanal = DashboardPanel(
+      icon: Icons.bar_chart_rounded,
+      title: 'Actividad semanal',
+      subtitle: 'Sesiones registradas por día',
+      trailing: _loading
+          ? null
+          : _ChipTotal(total: _weeklyCounts.fold<int>(0, (a, b) => a + b)),
+      child: _loading ? const WeeklyChartSkeleton() : WeeklyChart(counts: _weeklyCounts),
+    );
+
+    final estado = DashboardPanel(
+      icon: Icons.donut_large_rounded,
+      iconColor: cs.secondary,
+      title: 'Estado de sesiones',
+      subtitle: 'Últimos $_daysFilter días',
+      child: _loading
+          ? const StatusChartSkeleton()
+          : StatusChart(
+              completed: _statusCounts(_daysFilter)['completed'] ?? 0,
+              pending: _statusCounts(_daysFilter)['pending'] ?? 0,
             ),
-            actions: [
-              IconButton(
-                icon: Icon(
-                  Icons.person_outline_rounded,
-                  color: cs.onSurfaceVariant,
-                ),
-                onPressed: () {
-                  HapticFeedback.lightImpact();
-                  context.push('/profile');
-                },
-                tooltip: 'Mi Perfil',
-              ),
-              if (_api?.currentRole != 'user')
-                IconButton(
-                  icon: Icon(
-                    Icons.refresh_rounded,
-                    color: cs.onSurfaceVariant,
-                  ),
-                  onPressed: () {
-                    HapticFeedback.mediumImpact();
-                    _fetch();
-                  },
-                  tooltip: 'Actualizar',
-                ),
-              IconButton(
-                icon: Icon(
-                  Icons.logout_rounded,
-                  color: cs.onSurfaceVariant,
-                ),
-                onPressed: () {
-                  HapticFeedback.lightImpact();
-                  context.go('/');
-                },
-                tooltip: 'Cerrar Sesión',
-              ),
-              SizedBox(width: spacing.md),
+    );
+
+    final accesos = DashboardPanel(
+      icon: Icons.bolt_rounded,
+      iconColor: cs.tertiary,
+      title: 'Accesos rápidos',
+      padding: const EdgeInsets.fromLTRB(16, 20, 16, 16),
+      child: const HomeDashboardGrid(),
+    );
+
+    final actividad = DashboardPanel(
+      icon: Icons.history_rounded,
+      title: 'Actividad reciente',
+      subtitle: 'Últimas sesiones de tus pacientes',
+      trailingBreakpoint: 900,
+      trailing: _loading
+          ? null
+          : ActivityFilters(
+              daysFilter: _daysFilter,
+              statusFilter: _statusFilter,
+              searchQuery: _searchQuery,
+              sortMode: _sortMode,
+              onDaysChanged: (v) {
+                setState(() => _daysFilter = v);
+                _api?.setHomeFilters(days: _daysFilter, status: _statusFilter);
+                _persistFilters();
+              },
+              onStatusChanged: (v) {
+                setState(() => _statusFilter = v);
+                _api?.setHomeFilters(days: _daysFilter, status: _statusFilter);
+                _persistFilters();
+              },
+              onSearchChanged: (v) {
+                setState(() => _searchQuery = v);
+                _api?.setHomeSearchAndSort(query: _searchQuery, sortMode: _sortMode);
+                _persistFilters();
+              },
+              onSortSelected: (v) {
+                setState(() => _sortMode = v);
+                _api?.setHomeSearchAndSort(query: _searchQuery, sortMode: _sortMode);
+                _persistFilters();
+              },
+            ),
+      child: _allSessions.isEmpty && !_loading
+          ? _SinSesiones(
+              mostrarAccion: role != 'user',
+              onNuevaSesion: () => context.push('/new_session'),
+            )
+          : HomeRecentActivitySection(
+              loading: _loading,
+              sessions: _filteredRecent(),
+              patientNames: _patientNames,
+              onTapSession: (s) async {
+                final pid = s.patientId;
+                final name = _patientNames[pid] ?? 'Paciente #$pid';
+                final result = await context.push(
+                  '/patient_detail',
+                  extra: {'name': name, 'id': pid},
+                );
+                if (result == true) await _fetch();
+              },
+            ),
+    );
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        HomeHeroBanner(
+          loading: _loading,
+          sessionsToday: _sessionsToday,
+          sessionsPending: _sessionsPending,
+          role: role,
+          fallbackName: _api?.currentUsername ?? 'Doctor',
+          onNewSession: () => context.push('/new_session'),
+          onPatients: () => context.push('/patients'),
+          onResults: () => context.push('/history'),
+        ).animate().fadeIn(duration: 300.ms).moveY(begin: 10, end: 0),
+        gap,
+        HomeKpiSection(
+          loading: _loading,
+          patientsCount: _patientsCount,
+          sessionsToday: _sessionsToday,
+          sessionsPending: _sessionsPending,
+          todayVsYesterdayPct: _todayVsYesterdayPct,
+          pendingWeekDeltaPct: _pendingWeekDeltaPct,
+          counts30: _counts30,
+          weeklyCounts: _weeklyCounts,
+        ),
+        gap,
+        LayoutBuilder(
+          builder: (context, constraints) {
+            if (constraints.maxWidth >= 1040) {
+              return Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(child: Column(children: [semanal, gap, actividad])),
+                  const SizedBox(width: 24),
+                  SizedBox(width: 360, child: Column(children: [accesos, gap, estado])),
+                ],
+              );
+            }
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [accesos, gap, semanal, gap, estado, gap, actividad],
+            );
+          },
+        ).animate().fadeIn(delay: 200.ms, duration: 300.ms),
+      ],
+    );
+  }
+}
+
+/// Avatar con menú: perfil y cierre de sesión.
+class _MenuUsuario extends ConsumerWidget {
+  const _MenuUsuario({required this.fallbackName});
+
+  final String fallbackName;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+    final usuario = ref.watch(currentUserProvider).valueOrNull;
+    final nombre = (usuario?.fullName?.trim().isNotEmpty ?? false)
+        ? usuario!.fullName!.trim()
+        : (usuario?.username ?? fallbackName);
+    final iniciales = nombre
+        .split(RegExp(r'\s+'))
+        .where((p) => p.isNotEmpty)
+        .take(2)
+        .map((p) => p[0].toUpperCase())
+        .join();
+
+    return PopupMenuButton<String>(
+      tooltip: 'Cuenta',
+      position: PopupMenuPosition.under,
+      offset: const Offset(0, 8),
+      onSelected: (v) {
+        HapticFeedback.lightImpact();
+        if (v == 'perfil') context.push('/profile');
+        if (v == 'salir') context.go('/');
+      },
+      itemBuilder: (context) => [
+        PopupMenuItem<String>(
+          enabled: false,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(nombre, style: theme.textTheme.titleSmall?.copyWith(color: cs.onSurface)),
+              if (usuario != null) Text(usuario.username, style: theme.textTheme.bodySmall),
             ],
           ),
-          SliverPadding(
-            padding: EdgeInsets.symmetric(horizontal: spacing.lg, vertical: spacing.xl),
-            sliver: SliverToBoxAdapter(
-              child: Align(
-                alignment: Alignment.topCenter,
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 1400),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Saludo dinámico
-                      Builder(builder: (context) {
-                        final hour = DateTime.now().hour;
-                        final greeting = hour < 12
-                            ? 'Buenos días'
-                            : hour < 18
-                                ? 'Buenas tardes'
-                                : 'Buenas noches';
-                        final now = DateTime.now();
-                        final months = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
-                        final dateStr = '${now.day} de ${months[now.month - 1]}, ${now.year}';
-                        return Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Wrap(
-                              crossAxisAlignment: WrapCrossAlignment.center,
-                              children: [
-                                Text(
-                                  '$greeting, ',
-                                  style: theme.textTheme.headlineMedium?.copyWith(
-                                    fontWeight: FontWeight.w400,
-                                    color: cs.onSurfaceVariant,
-                                    letterSpacing: -0.5,
-                                  ),
-                                ),
-                                Consumer(
-                                  builder: (context, ref, child) {
-                                    final profile = ref.watch(currentUserProvider);
-                                    return profile.when(
-                                      data: (u) => Text(
-                                        (u.fullName != null && u.fullName!.trim().isNotEmpty) 
-                                            ? u.fullName! 
-                                            : u.username,
-                                        style: theme.textTheme.headlineMedium?.copyWith(
-                                          fontWeight: FontWeight.w900,
-                                          color: cs.onSurface,
-                                          letterSpacing: -1,
-                                        ),
-                                      ),
-                                      loading: () => Text(
-                                        '---',
-                                        style: theme.textTheme.headlineMedium,
-                                      ),
-                                      error: (_, __) => Text(
-                                        _api?.currentUsername ?? 'Doctor',
-                                        style: theme.textTheme.headlineMedium?.copyWith(
-                                          fontWeight: FontWeight.w900,
-                                          color: cs.onSurface,
-                                          letterSpacing: -1,
-                                        ),
-                                      ),
-                                    );
-                                  },
-                                ),
-                                Text(
-                                  ' 👋',
-                                  style: theme.textTheme.headlineMedium,
-                                ),
-                              ],
-                            ),
-                            SizedBox(height: spacing.xs),
-                            Wrap(
-                              crossAxisAlignment: WrapCrossAlignment.center,
-                              spacing: 6,
-                              children: [
-                                Icon(Icons.calendar_today_outlined, size: 14, color: cs.onSurfaceVariant),
-                                Text(
-                                  dateStr,
-                                  style: theme.textTheme.bodyMedium?.copyWith(
-                                    color: cs.onSurfaceVariant,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ],
-                        );
-                      }).animate().fadeIn().slideX(begin: -0.08),
-                      SizedBox(height: spacing.xl),
-                      HomeKpiSection(
-                        loading: _loading,
-                        patientsCount: _patientsCount,
-                        sessionsToday: _sessionsToday,
-                        sessionsPending: _sessionsPending,
-                        todayVsYesterdayPct: _todayVsYesterdayPct,
-                        pendingWeekDeltaPct: _pendingWeekDeltaPct,
-                        counts30: _counts30,
-                      ),
-                      SizedBox(height: spacing.xl),
-                      Wrap(
-                        crossAxisAlignment: WrapCrossAlignment.center,
-                        spacing: spacing.sm,
-                        children: [
-                          Icon(
-                            Icons.grid_view_rounded,
-                            size: 20,
-                            color: cs.primary,
-                          ),
-                          Text(
-                            'ACCESO RÁPIDO',
-                            style: theme.textTheme.labelSmall?.copyWith(
-                              color: cs.onSurfaceVariant,
-                              fontWeight: FontWeight.w800,
-                              letterSpacing: 1.5,
-                            ),
-                          ),
-                        ],
-                      ).animate().fadeIn(delay: 200.ms),
-                      SizedBox(height: spacing.lg),
-                      const HomeDashboardGrid(),
-                      const SizedBox(height: 64),
-                      Wrap(
-                        alignment: WrapAlignment.spaceBetween,
-                        crossAxisAlignment: WrapCrossAlignment.center,
-                        spacing: spacing.md,
-                        runSpacing: spacing.md,
-                        children: [
-                          Wrap(
-                            crossAxisAlignment: WrapCrossAlignment.center,
-                            spacing: spacing.sm,
-                            children: [
-                              Icon(
-                                Icons.analytics_outlined,
-                                size: 20,
-                                color: cs.primary,
-                              ),
-                              Text(
-                                'ANÁLISIS DE ACTIVIDAD',
-                                style: theme.textTheme.labelSmall?.copyWith(
-                                  color: cs.onSurfaceVariant,
-                                  fontWeight: FontWeight.w800,
-                                  letterSpacing: 1.5,
-                                ),
-                              ),
-                            ],
-                          ),
-                          if (!_loading)
-                            ActivityFilters(
-                              daysFilter: _daysFilter,
-                              statusFilter: _statusFilter,
-                              searchQuery: _searchQuery,
-                              sortMode: _sortMode,
-                              onDaysChanged: (v) {
-                                setState(() => _daysFilter = v);
-                                _api?.setHomeFilters(
-                                  days: _daysFilter,
-                                  status: _statusFilter,
-                                );
-                                _persistFilters();
-                              },
-                              onStatusChanged: (v) {
-                                setState(() => _statusFilter = v);
-                                _api?.setHomeFilters(
-                                  days: _daysFilter,
-                                  status: _statusFilter,
-                                );
-                                _persistFilters();
-                              },
-                              onSearchChanged: (v) {
-                                setState(() => _searchQuery = v);
-                                _api?.setHomeSearchAndSort(
-                                  query: _searchQuery,
-                                  sortMode: _sortMode,
-                                );
-                                _persistFilters();
-                              },
-                              onSortSelected: (v) {
-                                setState(() => _sortMode = v);
-                                _api?.setHomeSearchAndSort(
-                                  query: _searchQuery,
-                                  sortMode: _sortMode,
-                                );
-                                _persistFilters();
-                              },
-                            ),
-                        ],
-                      ).animate().fadeIn(delay: 300.ms),
-                      SizedBox(height: spacing.xl),
-                      if (_loading)
-                        const WeeklyChartSkeleton().animate().fadeIn(
-                          duration: 220.ms,
-                        )
-                      else
-                        Builder(builder: (ctx) {
-                            final glass = ctx.glass;
-                            final bool isMobile = ctx.isMobile;
-                            
-                            final weeklyChartCard = Container(
-                              padding: EdgeInsets.all(spacing.lg),
-                              decoration: BoxDecoration(
-                                gradient: glass.cardGradient,
-                                borderRadius: r.radiusXl,
-                                border: Border.all(color: glass.borderColor, width: 1),
-                                boxShadow: ctx.premiumShadows,
-                              ),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Row(
-                                    children: [
-                                      Container(
-                                        padding: const EdgeInsets.all(6),
-                                        decoration: BoxDecoration(
-                                          color: cs.primary.withValues(alpha: 0.10),
-                                          borderRadius: BorderRadius.circular(8),
-                                        ),
-                                        child: Icon(Icons.bar_chart_rounded, color: cs.primary, size: 16),
-                                      ),
-                                      SizedBox(width: spacing.sm),
-                                      Text(
-                                        'Sesiones Semanales',
-                                        style: theme.textTheme.titleMedium?.copyWith(
-                                          fontWeight: FontWeight.w800,
-                                          color: cs.onSurface,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                  SizedBox(height: spacing.xl),
-                                  WeeklyChart(counts: _weeklyCounts),
-                                ],
-                              ),
-                            );
-
-                            final statusChartCard = Container(
-                              padding: EdgeInsets.all(spacing.lg),
-                              decoration: BoxDecoration(
-                                gradient: glass.cardGradient,
-                                borderRadius: r.radiusXl,
-                                border: Border.all(color: glass.borderColor, width: 1),
-                                boxShadow: ctx.premiumShadows,
-                              ),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Row(
-                                    children: [
-                                      Container(
-                                        padding: const EdgeInsets.all(6),
-                                        decoration: BoxDecoration(
-                                          color: cs.tertiary.withValues(alpha: 0.10),
-                                          borderRadius: BorderRadius.circular(8),
-                                        ),
-                                        child: Icon(Icons.donut_small_rounded, color: cs.tertiary, size: 16),
-                                      ),
-                                      SizedBox(width: spacing.sm),
-                                      Text(
-                                        'Estado',
-                                        style: theme.textTheme.titleMedium?.copyWith(
-                                          fontWeight: FontWeight.w800,
-                                          color: cs.onSurface,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                  SizedBox(height: spacing.xl),
-                                  StatusChart(
-                                    completed: _statusCounts(_daysFilter)['completed'] ?? 0,
-                                    pending: _statusCounts(_daysFilter)['pending'] ?? 0,
-                                  ),
-                                ],
-                              ),
-                            );
-
-                            if (isMobile) {
-                              return Column(
-                                crossAxisAlignment: CrossAxisAlignment.stretch,
-                                children: [
-                                  weeklyChartCard,
-                                  SizedBox(height: spacing.lg),
-                                  statusChartCard,
-                                ],
-                              );
-                            }
-
-                            return Row(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Expanded(flex: 7, child: weeklyChartCard),
-                                SizedBox(width: spacing.lg),
-                                Expanded(flex: 4, child: statusChartCard),
-                              ],
-                            );
-                          }).animate().fadeIn(delay: 400.ms),
-                      const SizedBox(height: 64),
-                      Wrap(
-                        crossAxisAlignment: WrapCrossAlignment.center,
-                        spacing: spacing.sm,
-                        children: [
-                          Icon(
-                            Icons.history_rounded,
-                            size: 20,
-                            color: cs.primary,
-                          ),
-                          Text(
-                            'REGISTRO DE ACTIVIDAD',
-                            style: theme.textTheme.labelSmall?.copyWith(
-                              color: cs.onSurfaceVariant,
-                              fontWeight: FontWeight.w800,
-                              letterSpacing: 1.5,
-                            ),
-                          ),
-                        ],
-                      ).animate().fadeIn(delay: 500.ms),
-                      SizedBox(height: spacing.lg),
-                      if (_allSessions.isEmpty && !_loading)
-                        Container(
-                          width: double.infinity,
-                          padding: EdgeInsets.all(spacing.xl),
-                          decoration: AppDecorations.premiumCard(context, radius: 16),
-                          child: Column(
-                            children: [
-                              Icon(Icons.event_note_outlined, size: 48, color: cs.primary.withValues(alpha: 0.5)),
-                              SizedBox(height: spacing.md),
-                              Text(
-                                'No hay sesiones registradas',
-                                style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
-                              ),
-                              SizedBox(height: spacing.xs),
-                              Text(
-                                'Las sesiones y evaluaciones aparecerán aquí una vez que comiences a trabajar con tus pacientes.',
-                                textAlign: TextAlign.center,
-                                style: theme.textTheme.bodyMedium?.copyWith(color: cs.onSurfaceVariant),
-                              ),
-                            ],
-                          ),
-                        ).animate().fadeIn(delay: 600.ms)
-                      else
-                        HomeRecentActivitySection(
-                          loading: _loading,
-                          sessions: _filteredRecent(),
-                          patientNames: _patientNames,
-                          onTapSession: (s) async {
-                            final pid = s.patientId;
-                            final name = _patientNames[pid] ?? 'Paciente #$pid';
-                            final result = await context.push(
-                              '/patient_detail',
-                              extra: {'name': name, 'id': pid},
-                            );
-                            if (result == true) await _fetch();
-                          },
-                        ).animate().fadeIn(delay: 600.ms),
-                    ],
-                  ),
-                ),
+        ),
+        const PopupMenuDivider(),
+        const PopupMenuItem(
+          value: 'perfil',
+          child: ListTile(
+            dense: true,
+            contentPadding: EdgeInsets.zero,
+            leading: Icon(Icons.person_outline_rounded),
+            title: Text('Mi perfil'),
+          ),
+        ),
+        PopupMenuItem(
+          value: 'salir',
+          child: ListTile(
+            dense: true,
+            contentPadding: EdgeInsets.zero,
+            leading: Icon(Icons.logout_rounded, color: cs.error),
+            title: Text('Cerrar sesión', style: TextStyle(color: cs.error)),
+          ),
+        ),
+      ],
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(4, 4, 10, 4),
+        decoration: BoxDecoration(
+          color: cs.surfaceContainerLowest,
+          borderRadius: BorderRadius.circular(99),
+          border: Border.all(color: cs.outlineVariant),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            CircleAvatar(
+              radius: 16,
+              backgroundColor: cs.primaryContainer,
+              child: Text(
+                iniciales.isEmpty ? '?' : iniciales,
+                style: theme.textTheme.labelMedium?.copyWith(color: cs.onPrimaryContainer),
               ),
             ),
+            const SizedBox(width: 6),
+            Icon(Icons.expand_more_rounded, size: 18, color: cs.onSurfaceVariant),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ChipTotal extends StatelessWidget {
+  const _ChipTotal({required this.total});
+
+  final int total;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: cs.primary.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(99),
+      ),
+      child: Text(
+        '$total en total',
+        style: theme.textTheme.labelMedium?.copyWith(color: cs.primary),
+      ),
+    );
+  }
+}
+
+/// Estado vacío cuando todavía no hay ninguna sesión registrada.
+class _SinSesiones extends StatelessWidget {
+  const _SinSesiones({required this.mostrarAccion, required this.onNuevaSesion});
+
+  final bool mostrarAccion;
+  final VoidCallback onNuevaSesion;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 24),
+      child: Column(
+        children: [
+          Container(
+            width: 64,
+            height: 64,
+            decoration: BoxDecoration(
+              color: cs.primary.withValues(alpha: 0.08),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(Icons.event_note_rounded, size: 30, color: cs.primary),
           ),
+          const SizedBox(height: 14),
+          Text('Aún no hay sesiones registradas', style: theme.textTheme.titleMedium),
+          const SizedBox(height: 4),
+          Text(
+            'Las evaluaciones aparecerán aquí cuando empieces a trabajar con tus pacientes.',
+            textAlign: TextAlign.center,
+            style: theme.textTheme.bodySmall,
+          ),
+          if (mostrarAccion) ...[
+            const SizedBox(height: 16),
+            FilledButton.icon(
+              onPressed: onNuevaSesion,
+              icon: const Icon(Icons.play_arrow_rounded, size: 20),
+              label: const Text('Iniciar primera sesión'),
+            ),
+          ],
         ],
       ),
-    ),
-  );
-}
+    );
+  }
 }
 
 extension _HomeScreenStateInternals on HomeScreenState {

@@ -1,18 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/date_symbol_data_local.dart';
 
-// ── Design Tokens ────────────────────────────────────────────────────────────
-// Color primario:   Azul Cobalto  #2563EB
-// Tipografía:       Inter (Sans Serif)
-// Border Radius:    8px (uniforme)
-// Botones:          Altura 48px, texto 14px SemiBold
-// Grid:             12 columnas
+// ── Design Tokens (ver core/theme/app_theme.dart) ────────────────────────────
+// Colores:          Azul cobalto #2563EB · Verde azulado #0D9488 · Violeta #7C3AED
+// Tipografía:       Plus Jakarta Sans
+// Border Radius:    10 / 12 / 16 / 20
+// Botones:          Altura 44px, texto 14px Bold
 import 'router.dart';
 import 'core/theme/app_theme.dart';
 import 'providers/theme_provider.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await initializeDateFormatting('es');
 
   final container = ProviderContainer();
 

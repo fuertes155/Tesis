@@ -254,6 +254,7 @@ class _FluencyGameState extends ConsumerState<FluencyGame> {
                       'nombre_prueba': 'Fluidez Verbal',
                       'score': score,
                       'details': details,
+                      'metrics': metrics,
                       'duration_ms': durationMs,
                     },
                   });

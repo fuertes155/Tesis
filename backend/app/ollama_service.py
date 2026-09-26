@@ -14,10 +14,10 @@ logger = logging.getLogger(__name__)
 OLLAMA_URL = os.getenv("OLLAMA_URL", "http://localhost:11434/api/generate")
 MODELO_OLLAMA = os.getenv("OLLAMA_MODEL", "llama3")
 TIMEOUT_SEGUNDOS = float(os.getenv("OLLAMA_TIMEOUT_SECONDS", "90"))     # da tiempo al modelo en CPU
-MAX_TOKENS_REPORTE = int(os.getenv("OLLAMA_NUM_PREDICT", "700"))         # informe breve (~250 palabras)
+MAX_TOKENS_REPORTE = int(os.getenv("OLLAMA_NUM_PREDICT", "1300"))        # informe clínico (~520 palabras)
 MAX_PRUEBAS_PROMPT = int(os.getenv("OLLAMA_MAX_PRUEBAS_PROMPT", "6"))
 MAX_CHARS_PROMPT = int(os.getenv("OLLAMA_MAX_PROMPT_CHARS", "6000"))
-MAX_PALABRAS_REPORTE = 220
+MAX_PALABRAS_REPORTE = 520
 
 DOMINIOS_PRUEBAS = {
     "memoria visual": "Memoria",
@@ -116,6 +116,8 @@ def _construir_bloque_metricas(pruebas: list[dict[str, Any]]) -> str:
         "count": "palabras producidas; <10 por minuto sugiere déficit de fluidez",
         "nivel_maximo": "máximo nivel alcanzado",
         "level": "máximo nivel alcanzado",
+        "items_to_remember": "estímulos por serie en el último nivel",
+        "prompt": "consigna de fluidez (categoría semántica o letra)",
     }
     guia_items = [f"{clave}: {glosario[clave]}" for clave in sorted(tipos_metricas) if clave in glosario]
     if not guia_items:
@@ -140,32 +142,47 @@ def construir_prompt(datos: dict[str, Any]) -> str:
     dominios_comprometidos = sorted({p["dominio_cognitivo"] for p in pruebas_mostradas if p["nivel"] != "ALTO"})
     dominios_preservados = sorted({p["dominio_cognitivo"] for p in pruebas_mostradas if p["nivel"] == "ALTO"})
 
-    prompt = f"""Eres un neuropsicólogo clínico. Redacta en español un INFORME NEUROPSICOLÓGICO BREVE \
-(máximo {MAX_PALABRAS_REPORTE} palabras en total) a partir de una evaluación cognitiva digital.
+    prompt = f"""Actúa como neuropsicólogo clínico con experiencia en evaluación cognitiva del adulto. \
+Redacta en español un INFORME NEUROPSICOLÓGICO de tamizaje (máximo {MAX_PALABRAS_REPORTE} palabras) \
+a partir de los datos de una evaluación digital.
 
 FORMATO OBLIGATORIO:
-Usa exactamente estas 4 secciones y en este orden. Cada título va solo en su línea, en MAYÚSCULAS y terminado en dos puntos.
-Texto plano: sin asteriscos, almohadillas, guiones ni viñetas. Sé directo, sin relleno ni repeticiones.
+Usa exactamente estas secciones y en este orden. Cada título va solo en su línea, en MAYÚSCULAS y terminado en dos puntos.
+Texto plano: sin asteriscos, almohadillas, guiones ni viñetas. Tercera persona, registro clínico formal, sin relleno.
 
-RESUMEN:
-Una o dos oraciones con el nivel global y el promedio.
-RESULTADOS POR DOMINIO:
-Una línea por dominio con este formato exacto: Dominio: puntaje% (NIVEL), interpretación de máximo 15 palabras.
+MOTIVO DE EVALUACIÓN:
+Una o dos oraciones: paciente, profesional solicitante, antecedente y número de pruebas.
+INSTRUMENTOS APLICADOS:
+Una línea por prueba con el formato "Nombre de la prueba: qué función cognitiva explora."
+OBSERVACIONES DE LA EJECUCIÓN:
+Una línea por prueba con métricas, formato "Nombre de la prueba: lectura clínica" (velocidad, variabilidad, impulsividad, errores de interferencia, producción verbal).
+INTERPRETACIÓN CLÍNICA POR DOMINIO:
+Una línea por dominio con el formato "Dominio: Rendimiento <nivel> (<puntaje>%). <interpretación con terminología neuropsicológica>".
+IMPRESIÓN CLÍNICA:
+Un párrafo: índice global, patrón del perfil (focal, heterogéneo o global), relación con la edad y el antecedente. \
+Usa calificadores ("compatible con", "sugiere", "no puede descartarse"); nunca diagnósticos definitivos.
+IMPRESIÓN DIAGNÓSTICA:
+Líneas "Categoría: ...", "Equivalencia DSM-5: ..." (si aplica), "Fundamento: ..." y "Confirmación: ...". \
+Criterios (Petersen 2004 y DSM-5): todos los dominios ALTO = funcionamiento normal; índice global >= 70% sin dominios BAJO \
+y un solo dominio MEDIO = dentro de lo esperado con dificultad aislada; índice 41-69% o algún dominio BAJO = deterioro cognitivo leve probable \
+(subtipo amnésico o no amnésico, de dominio único o múltiple); índice <= 40% con dos o más dominios BAJO = deterioro \
+cognitivo mayor probable; un solo dominio explorado = indeterminada. Siempre como impresión presuntiva de tamizaje.
 RECOMENDACIONES:
-Una línea por cada dominio BAJO o MEDIO con una recomendación concreta. \
-Última línea: plazo de control (3 meses si hay nivel BAJO, 6 si hay MEDIO, 12 si todo es ALTO).
-CONCLUSIÓN:
-Una o dos oraciones de síntesis. Usa calificadores clínicos ("compatible con", "sugiere"); nunca diagnósticos definitivos.
+Una línea por dominio BAJO o MEDIO ("Dominio: recomendación concreta"), estudios complementarios si hay nivel BAJO \
+y una última línea "Reevaluación neuropsicológica sugerida en N meses." (3 si hay BAJO, 6 si hay MEDIO, 12 si todo es ALTO).
+LIMITACIONES:
+Una o dos oraciones: tamizaje computarizado, sin baremos por edad ni escolaridad.
 
 DATOS DEL PACIENTE:
 Nombre completo: {datos["nombre_paciente"]}
-Edad: {datos["edad_paciente"]} años
+Edad: {datos["edad_paciente"]} años (0 significa no registrada)
 Antecedente clínico: {datos.get("diagnostico_paciente") or "No registrado"}
 Profesional evaluador/a: {datos["profesional"]}
 Fecha de la evaluación: {datos["fecha_evaluacion"]}
-Promedio global: {promedio_global:.1f}% ({nivel_global})
+Índice global: {promedio_global:.1f}% ({nivel_global})
 Dominios comprometidos (BAJO o MEDIO): {", ".join(dominios_comprometidos) or "ninguno"}
 Dominios preservados (ALTO): {", ".join(dominios_preservados) or "ninguno"}
+Escala: BAJO 0-40%, MEDIO 41-69%, ALTO 70-100%.
 
 PRUEBAS APLICADAS:
 {pruebas_json}{nota_pruebas}
@@ -181,114 +198,355 @@ Escribe solo el informe, sin preámbulos ni despedidas.
 
 
 # ── Reporte local (sin Ollama) ─────────────────────────────────────────────────
+# Redactado con criterio neuropsicológico: motivo, instrumentos, observaciones de
+# la ejecución, interpretación por dominio, impresión clínica, recomendaciones y
+# limitaciones. Cada encabezado va en MAYÚSCULAS seguido de (:) para el parser de
+# Flutter. Las líneas "Etiqueta: texto" se muestran como filas etiquetadas.
 
-_INTERPRETACION_BREVE: dict[str, dict[str, str]] = {
+_MESES_CONTROL = {"BAJO": 3, "MEDIO": 6, "ALTO": 12}
+
+_DESCRIPTOR_NIVEL = {
+    "ALTO": "dentro de lo esperado",
+    "MEDIO": "rango limítrofe",
+    "BAJO": "por debajo de lo esperado",
+}
+
+_MESES = (
+    "enero", "febrero", "marzo", "abril", "mayo", "junio", "julio",
+    "agosto", "septiembre", "octubre", "noviembre", "diciembre",
+)
+
+_INSTRUMENTOS: dict[str, str] = {
+    "Memoria": (
+        "reconocimiento de estímulos visoespaciales con carga creciente; explora memoria "
+        "de trabajo visoespacial y recuerdo inmediato."
+    ),
+    "Atención": (
+        "tiempo de reacción ante estímulos visuales; explora vigilancia, velocidad de "
+        "procesamiento e impulsividad."
+    ),
+    "Funciones Ejecutivas": (
+        "paradigma de interferencia color-palabra; explora control inhibitorio y "
+        "atención selectiva."
+    ),
+    "Lenguaje": (
+        "evocación de palabras en 60 s ante consigna semántica o fonológica; explora "
+        "acceso léxico y estrategias de búsqueda verbal."
+    ),
+    "Dominio no especificado": "tarea cognitiva computarizada.",
+}
+
+_INTERPRETACION: dict[str, dict[str, str]] = {
     "Memoria": {
-        "ALTO": "codificación y recuerdo conservados",
-        "MEDIO": "leves dificultades para codificar o recuperar información",
-        "BAJO": "dificultad marcada para codificar y recuperar información",
+        "ALTO": "La codificación y el recuerdo inmediato de información visoespacial se encuentran preservados.",
+        "MEDIO": (
+            "Sugiere dificultades leves en la codificación o en la recuperación de información "
+            "visoespacial, sin alcanzar un compromiso clínicamente significativo."
+        ),
+        "BAJO": (
+            "Compatible con compromiso de la memoria de trabajo visoespacial y del recuerdo inmediato; "
+            "debe precisarse si afecta la codificación, la consolidación o la evocación."
+        ),
     },
     "Atención": {
-        "ALTO": "foco atencional estable y respuesta ágil",
-        "MEDIO": "fluctuaciones en la atención sostenida",
-        "BAJO": "dificultad marcada para sostener la atención",
+        "ALTO": "Capacidad de vigilancia y velocidad de respuesta conservadas, sin indicadores de fatigabilidad.",
+        "MEDIO": (
+            "Sugiere fluctuaciones en la atención sostenida o un enlentecimiento leve de la "
+            "velocidad de procesamiento."
+        ),
+        "BAJO": (
+            "Compatible con compromiso de la atención sostenida, con posible repercusión sobre "
+            "los dominios que dependen de los recursos atencionales."
+        ),
     },
     "Funciones Ejecutivas": {
-        "ALTO": "control inhibitorio y flexibilidad conservados",
-        "MEDIO": "leve dificultad en control inhibitorio o flexibilidad",
-        "BAJO": "compromiso del control inhibitorio y la flexibilidad cognitiva",
+        "ALTO": "Control inhibitorio y resistencia a la interferencia preservados.",
+        "MEDIO": "Sugiere dificultad leve para inhibir respuestas automáticas bajo condiciones de interferencia.",
+        "BAJO": (
+            "Compatible con disfunción ejecutiva, con compromiso del control inhibitorio y de la "
+            "flexibilidad cognitiva, hallazgo habitualmente asociado a circuitos frontosubcorticales."
+        ),
     },
     "Lenguaje": {
-        "ALTO": "fluidez verbal y acceso léxico conservados",
-        "MEDIO": "leve reducción de la fluidez verbal",
-        "BAJO": "reducción marcada de la fluidez verbal y el acceso léxico",
+        "ALTO": "Acceso léxico y organización de la búsqueda verbal preservados.",
+        "MEDIO": "Sugiere leve reducción en la eficiencia del acceso léxico o de las estrategias de búsqueda verbal.",
+        "BAJO": (
+            "Compatible con compromiso de la fluidez verbal; conviene diferenciar un origen "
+            "lingüístico (acceso léxico-semántico) de uno ejecutivo (estrategias de búsqueda)."
+        ),
     },
     "Dominio no especificado": {
-        "ALTO": "sin alteraciones relevantes",
-        "MEDIO": "rendimiento limítrofe",
-        "BAJO": "dificultades clínicamente relevantes",
+        "ALTO": "Sin alteraciones relevantes en la tarea aplicada.",
+        "MEDIO": "Rendimiento limítrofe que amerita seguimiento.",
+        "BAJO": "Dificultades clínicamente relevantes que ameritan evaluación ampliada.",
     },
 }
 
-_RECOMENDACION_BREVE: dict[str, dict[str, str]] = {
+_RECOMENDACION: dict[str, dict[str, str]] = {
     "BAJO": {
-        "Memoria": "derivar a neuropsicología para evaluación ampliada y descartar causas reversibles (B12, tiroides, sueño).",
-        "Atención": "valoración por neurología o psiquiatría y entrenamiento atencional estructurado.",
-        "Funciones Ejecutivas": "derivar a neuropsicología y neurología; entrenar planificación y autorregulación.",
-        "Lenguaje": "derivar a fonoaudiología; considerar neuroimagen si el cambio es progresivo.",
-        "Dominio no especificado": "derivar a neuropsicología para evaluación ampliada.",
+        "Memoria": (
+            "evaluación ampliada de memoria verbal y visual con pruebas estandarizadas "
+            "(p. ej., RAVLT, Figura de Rey) y estrategias compensatorias externas."
+        ),
+        "Atención": (
+            "valoración neurológica o psiquiátrica para descartar causas secundarias "
+            "(sueño, fármacos, TDAH) y entrenamiento atencional estructurado."
+        ),
+        "Funciones Ejecutivas": (
+            "evaluación ejecutiva ampliada (p. ej., TMT A/B, WCST) y rehabilitación centrada "
+            "en planificación y autorregulación."
+        ),
+        "Lenguaje": (
+            "valoración por fonoaudiología con exploración formal de denominación, comprensión "
+            "y repetición."
+        ),
+        "Dominio no especificado": "evaluación neuropsicológica ampliada.",
     },
     "MEDIO": {
-        "Memoria": "estimulación cognitiva con estrategias mnemónicas; revisar sueño y estrés.",
-        "Atención": "entrenamiento de atención sostenida; revisar sueño y ansiedad.",
-        "Funciones Ejecutivas": "estrategias de organización y planificación (agenda, priorización de tareas).",
+        "Memoria": "estimulación cognitiva con estrategias de codificación profunda y repetición espaciada.",
+        "Atención": "entrenamiento de atención sostenida y revisión de higiene del sueño y niveles de estrés.",
+        "Funciones Ejecutivas": "estrategias de organización y planificación (agenda estructurada, fraccionamiento de tareas).",
         "Lenguaje": "ejercicios de fluidez verbal semántica y fonológica.",
         "Dominio no especificado": "estimulación cognitiva y monitoreo periódico.",
     },
 }
 
-_MESES_CONTROL = {"BAJO": 3, "MEDIO": 6, "ALTO": 12}
-
-# (claves aceptadas, plantilla). Incluye las claves que envían los juegos de la app.
-_FORMATO_METRICAS: tuple[tuple[tuple[str, ...], str], ...] = (
-    (("aciertos", "correct"), "aciertos {v:.0f}"),
-    (("errores", "wrong"), "errores {v:.0f}"),
-    (("tiempo_reaccion_promedio", "avg_ms", "avg_selection_ms"), "tiempo medio {v:.0f} ms"),
-    (("omisiones",), "omisiones {v:.0f}"),
-    (("too_early",), "anticipaciones {v:.0f}"),
-    (("intrusiones", "intrusions"), "intrusiones {v:.0f}"),
-    (("precision", "precisión"), "precisión {v:.0f}%"),
-    (("palabras_generadas", "count"), "palabras {v:.0f}"),
-    (("nivel_maximo", "level"), "nivel alcanzado {v:.0f}"),
-    (("secuencias_correctas",), "secuencias correctas {v:.0f}"),
+# Palabras clave del antecedente -> consideración clínica para la impresión.
+_ANTECEDENTES: tuple[tuple[tuple[str, ...], str], ...] = (
+    (("depres",), "El antecedente de depresión puede afectar la atención y la memoria; debe considerarse el componente afectivo en la interpretación."),
+    (("ansied",), "La ansiedad puede interferir con la atención y el control inhibitorio; conviene valorar su efecto sobre el desempeño."),
+    (("tdah", "déficit de atención", "deficit de atencion", "hiperactiv"), "Los hallazgos deben interpretarse a la luz del antecedente de TDAH."),
+    (("tce", "traumatismo", "trauma craneo", "trauma cráneo"), "El antecedente de traumatismo craneoencefálico es relevante para interpretar las dificultades atencionales y ejecutivas."),
+    (("acv", "ictus", "cerebrovascular", "infarto cerebral"), "El antecedente cerebrovascular obliga a correlacionar los hallazgos con la localización y extensión de la lesión."),
+    (("alzheimer", "demencia", "deterioro cognitivo"), "Dado el antecedente, se recomienda comparar con evaluaciones previas para estimar la evolución del perfil."),
+    (("parkinson",), "La enfermedad de Parkinson se asocia a enlentecimiento y disfunción ejecutiva, aspectos a considerar en la interpretación."),
+    (("epilep",), "La epilepsia y su tratamiento farmacológico pueden influir en la atención y la memoria."),
 )
 
+_AFECTIVOS = ("depres", "ansied")
 
-def _resumir_metricas(metricas: dict[str, Any] | None, maximo: int = 3) -> str:
-    """Resume las métricas clave en una frase corta, p. ej. 'Aciertos 12, errores 2'."""
-    if not metricas:
-        return ""
 
+def _numero(valor: Any) -> float | None:
+    try:
+        return float(valor)
+    except (TypeError, ValueError):
+        return None
+
+
+def _metrica(metricas: dict[str, Any], *claves: str) -> float | None:
+    """Primer valor numérico presente entre las claves dadas (0 cuenta como valor)."""
+    for clave in claves:
+        if metricas.get(clave) is not None:
+            return _numero(metricas[clave])
+    return None
+
+
+def _formatear_fecha(valor: Any) -> str:
+    texto = str(valor)
+    try:
+        anio, mes, dia = (int(x) for x in texto[:10].split("-"))
+        return f"{dia} de {_MESES[mes - 1]} de {anio}"
+    except (ValueError, IndexError):
+        return texto
+
+
+def _plural(n: int, singular: str, plural: str) -> str:
+    return singular if n == 1 else plural
+
+
+def _observacion_prueba(prueba: dict[str, Any]) -> str | None:
+    """Lectura clínica de las métricas de proceso de una prueba."""
+    m = prueba.get("metricas_detalladas") or {}
+    dominio = prueba["dominio_cognitivo"]
     partes: list[str] = []
-    for claves, plantilla in _FORMATO_METRICAS:
-        clave = next((c for c in claves if c in metricas), None)
-        if clave is None:
-            continue
-        try:
-            valor = float(metricas[clave])
-        except (TypeError, ValueError):
-            continue
-        partes.append(plantilla.format(v=valor))
-        if len(partes) == maximo:
-            break
 
-    texto = ", ".join(partes)
-    return texto[:1].upper() + texto[1:]
+    if dominio == "Atención":
+        media = _metrica(m, "avg_ms", "tiempo_reaccion_promedio")
+        mejor = _metrica(m, "best_ms")
+        anticipadas = _metrica(m, "too_early")
+        if media:
+            if media < 400:
+                velocidad = "velocidad de respuesta ágil"
+            elif media < 550:
+                velocidad = "velocidad de respuesta dentro de lo esperado"
+            elif media < 750:
+                velocidad = "velocidad de respuesta levemente enlentecida"
+            else:
+                velocidad = "velocidad de respuesta enlentecida"
+            partes.append(f"tiempo de reacción medio de {media:.0f} ms ({velocidad})")
+            if mejor and media > 0 and (media - mejor) / media > 0.4:
+                partes.append(
+                    "variabilidad intraindividual elevada entre ensayos, sugestiva de fluctuaciones atencionales"
+                )
+        if anticipadas is not None:
+            if anticipadas > 0:
+                n = int(anticipadas)
+                partes.append(
+                    f"{n} {_plural(n, 'respuesta anticipatoria', 'respuestas anticipatorias')}, "
+                    "indicador de impulsividad o de dificultad para inhibir la respuesta"
+                )
+            else:
+                partes.append("sin respuestas anticipatorias")
+
+    elif dominio == "Funciones Ejecutivas":
+        aciertos = _metrica(m, "correct", "aciertos")
+        errores = _metrica(m, "wrong", "errores")
+        media = _metrica(m, "avg_ms")
+        if aciertos is not None and errores is not None and aciertos + errores > 0:
+            precision = aciertos * 100 / (aciertos + errores)
+            texto = f"{precision:.0f}% de aciertos en ensayos de interferencia ({int(errores)} {_plural(int(errores), 'error', 'errores')})"
+            if precision < 70:
+                texto += ", con errores de interferencia frecuentes"
+            partes.append(texto)
+        if media:
+            partes.append(
+                f"tiempo medio de respuesta de {media:.0f} ms"
+                + (", enlentecido bajo interferencia" if media > 1500 else "")
+            )
+
+    elif dominio == "Memoria":
+        nivel = _metrica(m, "level", "nivel_maximo")
+        elementos = _metrica(m, "items_to_remember")
+        seleccion = _metrica(m, "avg_selection_ms")
+        if nivel:
+            texto = f"alcanzó el nivel {nivel:.0f} de la tarea"
+            if elementos:
+                texto += f" (series de {elementos:.0f} estímulos)"
+            partes.append(texto)
+        if seleccion:
+            partes.append(
+                f"tiempo medio de selección de {seleccion:.0f} ms"
+                + (", compatible con un estilo de respuesta lento" if seleccion > 2000 else "")
+            )
+
+    elif dominio == "Lenguaje":
+        palabras = _metrica(m, "count", "palabras_generadas")
+        consigna = str(m.get("prompt") or "").strip()
+        duracion = _metrica(m, "duration_s") or 60
+        if palabras is not None:
+            fonologica = consigna.lower().startswith("letra")
+            tipo = "fonológica" if fonologica else "semántica"
+            detalle = f" ({consigna.lower()})" if consigna else ""
+            texto = f"produjo {palabras:.0f} palabras en {duracion:.0f} s en la condición {tipo}{detalle}"
+            por_minuto = palabras * 60 / duracion if duracion else palabras
+            if por_minuto < (8 if fonologica else 12):
+                texto += ", producción reducida"
+            partes.append(texto)
+
+    if not partes:
+        return None
+    texto = "; ".join(partes)
+    return f"{prueba['nombre_prueba']}: {texto[:1].upper()}{texto[1:]}."
 
 
-def _linea_dominio(dominio: str, pruebas: list[dict[str, Any]]) -> str:
-    promedio = _promedio(pruebas)
-    nivel = interpretar_nivel(promedio)
-    interpretacion = _INTERPRETACION_BREVE.get(dominio, _INTERPRETACION_BREVE["Dominio no especificado"])[nivel]
-    linea = f"{dominio}: {promedio:.1f}% ({nivel}), {interpretacion}."
+def _consideracion_antecedente(diagnostico: str | None) -> str | None:
+    if not diagnostico:
+        return None
+    d = diagnostico.lower()
+    for claves, texto in _ANTECEDENTES:
+        if any(c in d for c in claves):
+            return texto
+    return f"Los hallazgos deben correlacionarse con el antecedente clínico reportado ({diagnostico})."
 
-    metricas = "; ".join(filter(None, (_resumir_metricas(p.get("metricas_detalladas")) for p in pruebas)))
-    if metricas:
-        linea += f" {metricas}."
-    return linea
+
+def _impresion_diagnostica(
+    nivel_por_dominio: dict[str, str],
+    promedio_global: float,
+    edad: int,
+) -> tuple[str, list[str]]:
+    """
+    Clasificación diagnóstica presuntiva según el índice global y los dominios afectados.
+
+    Sigue los criterios de deterioro cognitivo leve de Petersen (2004) y su equivalencia
+    con los trastornos neurocognitivos del DSM-5. Es una impresión de tamizaje: la
+    confirmación exige evaluación estandarizada y valoración de la funcionalidad.
+
+    Devuelve (tipo, líneas); tipo es uno de: "normal", "aislado", "dcl", "mayor",
+    "indeterminada" o "menor".
+    """
+    afectados = [d for d, nv in nivel_por_dominio.items() if nv != "ALTO"]
+    bajos = [d for d, nv in nivel_por_dominio.items() if nv == "BAJO"]
+    total = len(nivel_por_dominio)
+    nivel_global = interpretar_nivel(promedio_global)
+
+    def lista(dominios_: list[str]) -> str:
+        return _unir([d.lower() for d in dominios_])
+
+    fundamento = f"Índice global de {promedio_global:.1f}% ({nivel_global})"
+    if afectados:
+        fundamento += (
+            f" con {len(afectados)} de {total} {_plural(total, 'dominio', 'dominios')} en rango "
+            f"limítrofe o bajo ({lista(afectados)})."
+        )
+    else:
+        fundamento += f" con {_plural(total, 'el dominio explorado', f'los {total} dominios explorados')} dentro de lo esperado."
+    confirmacion = (
+        "Confirmación: Impresión presuntiva de tamizaje; requiere evaluación neuropsicológica "
+        "estandarizada y valoración de la funcionalidad antes de establecer un diagnóstico definitivo."
+    )
+
+    equivalencia: str | None = None
+    if total == 1:
+        tipo = "indeterminada"
+        categoria = (
+            "Indeterminada. Con un solo dominio explorado no es posible establecer una categoría "
+            "diagnóstica; se requiere completar el protocolo integral."
+        )
+    elif 0 < edad < 18:
+        tipo = "menor"
+        categoria = (
+            f"Dificultades cognitivas específicas en {lista(afectados)}. Las categorías de deterioro "
+            "cognitivo del adulto no aplican a esta edad."
+            if afectados
+            else "Funcionamiento cognitivo dentro de lo esperado para la tarea."
+        )
+    elif not afectados:
+        tipo = "normal"
+        categoria = "Funcionamiento cognitivo normal. Sin evidencia de deterioro cognitivo."
+    elif not bajos and promedio_global >= 70 and len(afectados) == 1:
+        tipo = "aislado"
+        categoria = (
+            f"Funcionamiento cognitivo dentro de lo esperado, con rendimiento limítrofe aislado en "
+            f"{lista(afectados)}. No cumple criterios de deterioro cognitivo."
+        )
+    elif promedio_global <= 40 and len(bajos) >= 2:
+        tipo = "mayor"
+        categoria = "Deterioro cognitivo mayor probable."
+        equivalencia = (
+            "Equivalencia DSM-5: Compatible con trastorno neurocognitivo mayor, sujeto a confirmar "
+            "la pérdida de autonomía en las actividades de la vida diaria."
+        )
+    else:
+        tipo = "dcl"
+        amnesico = "Memoria" in afectados
+        subtipo = (
+            f"{'amnésico' if amnesico else 'no amnésico'} de "
+            f"{'dominio múltiple' if len(afectados) > 1 else 'dominio único'}"
+        )
+        categoria = f"Deterioro cognitivo leve (DCL) probable, subtipo {subtipo}."
+        equivalencia = (
+            "Equivalencia DSM-5: Compatible con trastorno neurocognitivo leve, siempre que se "
+            "conserve la autonomía en las actividades de la vida diaria."
+        )
+
+    lineas = [f"Categoría: {categoria}"]
+    if equivalencia:
+        lineas.append(equivalencia)
+    lineas.append(f"Fundamento: {fundamento} Criterios de referencia: Petersen (2004) y DSM-5.")
+    lineas.append(confirmacion)
+    return tipo, lineas
 
 
 def generar_reporte_local(datos: dict[str, Any]) -> str:
     """
-    Genera un reporte neuropsicológico breve sin depender de Ollama.
-    Produce texto plano compatible con el parser _splitReportSections de Flutter:
-    cada encabezado de sección va en MAYÚSCULAS seguido de (:).
-    Los datos del paciente no se repiten aquí porque la app ya los muestra aparte.
+    Genera el informe neuropsicológico sin depender de Ollama.
+    Produce texto plano compatible con el parser _splitReportSections de Flutter.
     """
     pruebas = preparar_pruebas(datos)
     nombre = datos["nombre_paciente"]
-    edad = datos["edad_paciente"]
-    diagnostico = datos.get("diagnostico_paciente")
+    edad = int(_numero(datos.get("edad_paciente")) or 0)
+    profesional = datos["profesional"]
+    diagnostico = (datos.get("diagnostico_paciente") or "").strip() or None
 
     promedio_global = _promedio(pruebas)
     nivel_global = interpretar_nivel(promedio_global)
@@ -296,65 +554,164 @@ def generar_reporte_local(datos: dict[str, Any]) -> str:
 
     dominios = _agrupar_por_dominio(pruebas)
     nivel_por_dominio = {d: interpretar_nivel(_promedio(ps)) for d, ps in dominios.items()}
-    dominios_bajo = [d for d, nv in nivel_por_dominio.items() if nv == "BAJO"]
-    dominios_medio = [d for d, nv in nivel_por_dominio.items() if nv == "MEDIO"]
-    dominios_alto = [d for d, nv in nivel_por_dominio.items() if nv == "ALTO"]
+    bajo = [d for d, nv in nivel_por_dominio.items() if nv == "BAJO"]
+    medio = [d for d, nv in nivel_por_dominio.items() if nv == "MEDIO"]
+    alto = [d for d, nv in nivel_por_dominio.items() if nv == "ALTO"]
 
-    # ── Resumen ───────────────────────────────────────────────────────────────
-    resumen = (
-        f"{nombre} ({edad} años) obtuvo un rendimiento cognitivo global {nivel_global}, "
-        f"con un promedio de {promedio_global:.1f}% en {n} {'prueba' if n == 1 else 'pruebas'}."
+    def lista(dominios_: list[str]) -> str:
+        return _unir([d.lower() for d in dominios_])
+
+    # ── Motivo ────────────────────────────────────────────────────────────────
+    motivo = (
+        f"Evaluación neuropsicológica de tamizaje de {nombre}"
+        + (f", de {edad} años" if edad > 0 else "")
+        + f", solicitada por {profesional} para caracterizar su funcionamiento cognitivo"
+        + (f" en el contexto del antecedente de {diagnostico.lower()}" if diagnostico else "")
+        + f". Se aplicaron {n} {_plural(n, 'prueba', 'pruebas')} de la batería digital NeuroApp360"
+        + f" el {_formatear_fecha(datos['fecha_evaluacion'])}."
     )
-    if diagnostico:
-        resumen += f" Antecedente reportado: {diagnostico}."
 
-    # ── Resultados por dominio ────────────────────────────────────────────────
-    resultados = [_linea_dominio(d, ps) for d, ps in dominios.items()]
+    # ── Instrumentos ──────────────────────────────────────────────────────────
+    instrumentos = [
+        f"{p['nombre_prueba']}: "
+        + _INSTRUMENTOS.get(p["dominio_cognitivo"], _INSTRUMENTOS["Dominio no especificado"])[:1].upper()
+        + _INSTRUMENTOS.get(p["dominio_cognitivo"], _INSTRUMENTOS["Dominio no especificado"])[1:]
+        for p in pruebas
+    ]
+
+    # ── Observaciones de la ejecución ─────────────────────────────────────────
+    observaciones = [o for o in (_observacion_prueba(p) for p in pruebas) if o]
+
+    # ── Interpretación por dominio ────────────────────────────────────────────
+    interpretacion = []
+    for d, ps in dominios.items():
+        promedio = _promedio(ps)
+        nivel = nivel_por_dominio[d]
+        textos = _INTERPRETACION.get(d, _INTERPRETACION["Dominio no especificado"])
+        descriptor = "en rango limítrofe" if nivel == "MEDIO" else _DESCRIPTOR_NIVEL[nivel]
+        interpretacion.append(f"{d}: Rendimiento {descriptor} ({promedio:.1f}%). {textos[nivel]}")
+
+    # ── Impresión clínica ─────────────────────────────────────────────────────
+    impresion = [
+        f"El índice de rendimiento global fue de {promedio_global:.1f}%, correspondiente a un "
+        f"nivel {nivel_global} ({_DESCRIPTOR_NIVEL[nivel_global]})."
+    ]
+    if len(dominios) == 1:
+        unico = next(iter(dominios))
+        impresion.append(
+            f"Solo se exploró el dominio de {unico.lower()}, por lo que los hallazgos no permiten "
+            "caracterizar el perfil cognitivo global."
+        )
+    elif not bajo and not medio:
+        impresion.append("El perfil cognitivo es homogéneo y se encuentra dentro de lo esperado en todos los dominios explorados.")
+    elif alto:
+        rasgos = []
+        if bajo:
+            rasgos.append(f"compromiso en {lista(bajo)}")
+        if medio:
+            rasgos.append(f"rendimiento limítrofe en {lista(medio)}")
+        rasgos.append(f"preservación de {lista(alto)}")
+        impresion.append(
+            f"Se observa un perfil heterogéneo: {', '.join(rasgos[:-1])} y {rasgos[-1]}. "
+            "Este patrón orienta a dificultades focales más que a un compromiso cognitivo global."
+        )
+    else:
+        impresion.append(
+            f"Se observa afectación en todos los dominios explorados ({lista(bajo + medio)}), "
+            "patrón que sugiere un compromiso cognitivo de carácter más global."
+        )
+
+    atencion = nivel_por_dominio.get("Atención")
+    otros_afectados = [d for d in bajo + medio if d != "Atención"]
+    if atencion in ("BAJO", "MEDIO") and otros_afectados:
+        impresion.append(
+            "Dado el compromiso atencional, el menor rendimiento en otros dominios podría estar "
+            "parcialmente mediado por una reducción de los recursos atencionales."
+        )
+    if nivel_por_dominio.get("Memoria") == "BAJO" and edad >= 60:
+        impresion.append(
+            f"En el contexto de la edad ({edad} años), el compromiso mnésico amerita descartar un "
+            "deterioro cognitivo leve de tipo amnésico."
+        )
+    consideracion = _consideracion_antecedente(diagnostico)
+    if consideracion:
+        impresion.append(consideracion)
+
+    # ── Impresión diagnóstica ─────────────────────────────────────────────────
+    tipo_diagnostico, diagnostica = _impresion_diagnostica(nivel_por_dominio, promedio_global, edad)
 
     # ── Recomendaciones ───────────────────────────────────────────────────────
     recomendaciones: list[str] = []
-    for d in dominios_bajo + dominios_medio:
-        recs = _RECOMENDACION_BREVE[nivel_por_dominio[d]]
-        recomendaciones.append(f"{d}: {recs.get(d, recs['Dominio no especificado'])}")
-    if recomendaciones:
-        peor_nivel = "BAJO" if dominios_bajo else "MEDIO"
-        recomendaciones.append(f"Control sugerido en {_MESES_CONTROL[peor_nivel]} meses.")
-    else:
+    for d in bajo + medio:
+        recs = _RECOMENDACION[nivel_por_dominio[d]]
+        texto = recs.get(d, recs["Dominio no especificado"])
+        recomendaciones.append(f"{d}: {texto[:1].upper()}{texto[1:]}")
+    if bajo:
         recomendaciones.append(
-            "Mantener actividad cognitiva, física y social. Control de rutina en 12 meses."
+            "Estudios complementarios: Valoración neurológica y, según criterio clínico, neuroimagen "
+            "estructural (RM cerebral) y laboratorio (vitamina B12, función tiroidea)."
         )
-
-    # ── Conclusión ────────────────────────────────────────────────────────────
-    def _minusculas(lista: list[str]) -> str:
-        return _unir([d.lower() for d in lista])
-
-    if dominios_bajo:
-        conclusion = f"Perfil compatible con compromiso cognitivo en {_minusculas(dominios_bajo)}"
-        if dominios_medio:
-            conclusion += f" y rendimiento limítrofe en {_minusculas(dominios_medio)}"
-        conclusion += ". Se sugiere complementar con valoración clínica especializada."
-    elif dominios_medio:
-        conclusion = (
-            f"Perfil con rendimiento limítrofe en {_minusculas(dominios_medio)}. "
-            "Se sugiere seguimiento clínico periódico."
+    if tipo_diagnostico == "mayor":
+        recomendaciones.append(
+            "Valoración funcional: Escalas de actividades básicas e instrumentales (Barthel, Lawton y Brody) "
+            "y entrevista con un informante para confirmar la pérdida de autonomía."
         )
-    else:
-        conclusion = "Perfil cognitivo preservado en todos los dominios evaluados."
-    if dominios_alto and (dominios_bajo or dominios_medio):
-        conclusion += f" Se conserva el rendimiento en {_minusculas(dominios_alto)}."
+    elif tipo_diagnostico == "dcl":
+        recomendaciones.append(
+            "Valoración funcional: Escala de Lawton y Brody para confirmar que se conserva la autonomía "
+            "en las actividades instrumentales, criterio necesario para el DCL."
+        )
+    if diagnostico and any(a in diagnostico.lower() for a in _AFECTIVOS):
+        recomendaciones.append(
+            "Salud mental: Abordaje de los factores emocionales que puedan interferir con el rendimiento cognitivo."
+        )
+    if len(dominios) == 1:
+        recomendaciones.append(
+            "Exploración complementaria: Aplicar el protocolo integral para caracterizar el perfil cognitivo completo."
+        )
+    if not bajo and not medio:
+        recomendaciones.append(
+            "Factores protectores: Mantener actividad cognitiva, física y social de forma regular."
+        )
+    peor = "BAJO" if bajo else ("MEDIO" if medio else "ALTO")
+    recomendaciones.append(f"Reevaluación neuropsicológica sugerida en {_MESES_CONTROL[peor]} meses.")
+
+    # ── Limitaciones ──────────────────────────────────────────────────────────
+    limitaciones = (
+        "Tamizaje computarizado: los puntajes no están baremados por edad ni escolaridad y no "
+        "sustituyen una evaluación neuropsicológica estandarizada."
+    )
+    if edad <= 0:
+        limitaciones += " La edad no fue registrada, por lo que la interpretación no pudo ajustarse a este factor."
+    limitaciones += (
+        " El desempeño pudo verse influido por fatiga, motivación o familiaridad con dispositivos digitales."
+    )
 
     partes: list[str] = [
-        "RESUMEN:",
-        resumen,
+        "MOTIVO DE EVALUACIÓN:",
+        motivo,
         "",
-        "RESULTADOS POR DOMINIO:",
-        *resultados,
+        "INSTRUMENTOS APLICADOS:",
+        *instrumentos,
+    ]
+    if observaciones:
+        partes += ["", "OBSERVACIONES DE LA EJECUCIÓN:", *observaciones]
+    partes += [
+        "",
+        "INTERPRETACIÓN CLÍNICA POR DOMINIO:",
+        *interpretacion,
+        "",
+        "IMPRESIÓN CLÍNICA:",
+        " ".join(impresion),
+        "",
+        "IMPRESIÓN DIAGNÓSTICA:",
+        *diagnostica,
         "",
         "RECOMENDACIONES:",
         *recomendaciones,
         "",
-        "CONCLUSIÓN:",
-        conclusion,
+        "LIMITACIONES:",
+        limitaciones,
     ]
     return "\n".join(partes)
 

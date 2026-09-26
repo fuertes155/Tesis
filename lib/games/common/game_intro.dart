@@ -80,7 +80,7 @@ class GameIntro extends StatelessWidget {
                       style: theme.textTheme.headlineSmall?.copyWith(
                         fontWeight: FontWeight.w900,
                         color: Colors.white,
-                        letterSpacing: -0.5,
+                        letterSpacing: -0.2,
                       ),
                     ),
                     const SizedBox(height: 8),

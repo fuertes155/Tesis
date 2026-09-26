@@ -209,6 +209,8 @@ app.include_router(users.router, prefix=f"{settings.API_V1_STR}/users", tags=["u
 app.include_router(patients.router, prefix=f"{settings.API_V1_STR}/patients", tags=["patients"])
 app.include_router(sessions.router, prefix=f"{settings.API_V1_STR}/sessions", tags=["sessions"])
 app.include_router(reportes.router, tags=["reportes"])
+# La app también consulta el historial bajo /api/v1 (ApiService usa ese prefijo).
+app.include_router(reportes.router, prefix=settings.API_V1_STR, tags=["reportes"], include_in_schema=False)
 
 @app.get("/")
 def read_root():

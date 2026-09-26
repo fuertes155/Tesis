@@ -116,7 +116,7 @@ class EmptyStateView extends StatelessWidget {
               style: theme.textTheme.titleLarge?.copyWith(
                 fontWeight: FontWeight.w900,
                 color: cs.onSurface,
-                letterSpacing: -0.5,
+                letterSpacing: -0.2,
               ),
             ).animate().fadeIn(delay: 200.ms).slideY(begin: 0.1),
             

@@ -242,6 +242,7 @@ class _VisualMemoryGameState extends ConsumerState<VisualMemoryGame> {
                       'nombre_prueba': 'Memoria Visual',
                       'score': score,
                       'details': details,
+                      'metrics': metrics,
                       'duration_ms': durationMs,
                     },
                   });

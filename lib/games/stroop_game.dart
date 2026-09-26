@@ -244,6 +244,7 @@ class _StroopGameState extends ConsumerState<StroopGame> {
                     'nombre_prueba': 'Funciones Ejecutivas (Stroop)',
                     'score': global,
                     'details': details,
+                    'metrics': metrics,
                     'duration_ms': durationMs,
                   },
                 });

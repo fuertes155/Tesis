@@ -194,6 +194,7 @@ class _ReactionGameState extends ConsumerState<ReactionGame> {
                       'nombre_prueba': 'Atención Sostenida',
                       'score': score,
                       'details': details,
+                      'metrics': metrics,
                       'duration_ms': durationMs,
                     },
                   });

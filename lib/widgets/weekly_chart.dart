@@ -1,112 +1,118 @@
 import 'package:flutter/material.dart';
 
+import '../core/theme/app_theme.dart';
+
+/// Barras de sesiones por día de los últimos 7 días (la última barra es hoy).
+/// No incluye tarjeta ni título: se coloca dentro de un [DashboardPanel].
 class WeeklyChart extends StatelessWidget {
   final List<int> counts;
-  const WeeklyChart({super.key, required this.counts});
+  final double height;
+
+  const WeeklyChart({super.key, required this.counts, this.height = 200});
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final cs = theme.colorScheme;
-    final maxVal = (counts.isEmpty ? 0 : counts.reduce((a, b) => a > b ? a : b))
-        .clamp(1, 999);
-    final days = _last7DayLabels();
-    return Card(
-      elevation: 0,
-      color: cs.surface,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-        side: BorderSide(color: cs.outlineVariant.withValues(alpha: 0.4)),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 16, 16, 10),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Expanded(
-                  child: Text(
-                    'Sesiones en la semana',
-                    style: theme.textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  'Total: ${counts.fold<int>(0, (a, b) => a + b)}',
-                  style: theme.textTheme.labelLarge?.copyWith(
-                    color: cs.onSurfaceVariant,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            SizedBox(
-              height: 135,
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: List.generate(counts.length, (i) {
-                  final v = counts[i];
-                  final h = (v / maxVal) * 82 + (v > 0 ? 6 : 0);
-                  return Expanded(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      children: [
-                        Container(
-                          height: h,
-                          decoration: BoxDecoration(
-                            color: cs.primary.withValues(alpha: 0.15),
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(
-                              color: cs.primary.withValues(alpha: 0.3),
-                            ),
-                          ),
-                          child: Align(
-                            alignment: Alignment.topCenter,
-                            child: Padding(
-                              padding: const EdgeInsets.only(top: 4),
-                              child: Text(
-                                v > 0 ? '$v' : '',
-                                style: theme.textTheme.labelSmall?.copyWith(
-                                  color: cs.primary,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 6),
-                        Text(
-                          days[i],
-                          style: theme.textTheme.labelSmall?.copyWith(
-                            color: cs.onSurfaceVariant,
-                          ),
-                        ),
-                      ],
-                    ),
-                  );
-                }),
+    final maxVal = counts.isEmpty ? 1 : counts.reduce((a, b) => a > b ? a : b).clamp(1, 1 << 30);
+    final labels = _last7DayLabels();
+
+    return SizedBox(
+      height: height,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          for (var i = 0; i < counts.length; i++)
+            Expanded(
+              child: _Barra(
+                valor: counts[i],
+                maximo: maxVal,
+                etiqueta: i < labels.length ? labels[i] : '',
+                esHoy: i == counts.length - 1,
               ),
             ),
-          ],
-        ),
+        ],
       ),
     );
   }
 
   static List<String> _last7DayLabels() {
+    const nombres = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
     final now = DateTime.now();
-    final labels = <String>[];
-    for (var i = 6; i >= 0; i--) {
-      final d = now.subtract(Duration(days: i));
-      const names = ['L', 'M', 'X', 'J', 'V', 'S', 'D'];
-      labels.add(names[(d.weekday - 1)]);
-    }
-    return labels;
+    return [
+      for (var i = 6; i >= 0; i--) nombres[now.subtract(Duration(days: i)).weekday - 1],
+    ];
+  }
+}
+
+class _Barra extends StatelessWidget {
+  const _Barra({
+    required this.valor,
+    required this.maximo,
+    required this.etiqueta,
+    required this.esHoy,
+  });
+
+  final int valor;
+  final int maximo;
+  final String etiqueta;
+  final bool esHoy;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+
+    return Column(
+      children: [
+        Expanded(
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final alturaMax = constraints.maxHeight - 24;
+              final alto = valor == 0 ? 4.0 : (alturaMax * valor / maximo).clamp(10.0, alturaMax);
+              final ancho = (constraints.maxWidth * 0.56).clamp(12.0, 40.0);
+
+              return Column(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  Text(
+                    valor > 0 ? '$valor' : '',
+                    style: theme.textTheme.labelMedium?.copyWith(
+                      color: esHoy ? cs.primary : cs.onSurfaceVariant,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  TweenAnimationBuilder<double>(
+                    tween: Tween(begin: 0, end: alto),
+                    duration: const Duration(milliseconds: 600),
+                    curve: Curves.easeOutCubic,
+                    builder: (context, h, _) => Container(
+                      width: ancho,
+                      height: h,
+                      decoration: BoxDecoration(
+                        gradient: esHoy && valor > 0 ? context.glass.accentGradient : null,
+                        color: esHoy && valor > 0
+                            ? null
+                            : valor == 0
+                                ? cs.surfaceContainerHigh
+                                : cs.primary.withValues(alpha: 0.22),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                  ),
+                ],
+              );
+            },
+          ),
+        ),
+        const SizedBox(height: 10),
+        Text(
+          esHoy ? 'Hoy' : etiqueta,
+          style: theme.textTheme.labelMedium?.copyWith(
+            color: esHoy ? cs.primary : cs.onSurfaceVariant,
+            fontWeight: esHoy ? FontWeight.w800 : FontWeight.w600,
+          ),
+        ),
+      ],
+    );
   }
 }
 
@@ -115,66 +121,39 @@ class WeeklyChartSkeleton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final cs = theme.colorScheme;
-    return Card(
-      elevation: 0,
-      color: cs.surface,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-        side: BorderSide(color: cs.outlineVariant.withValues(alpha: 0.4)),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 16, 16, 10),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              height: 16,
-              width: 180,
-              decoration: BoxDecoration(
-                color: cs.surfaceContainerHighest.withValues(alpha: 0.6),
-                borderRadius: BorderRadius.circular(6),
-              ),
-            ),
-            const SizedBox(height: 12),
-            SizedBox(
-              height: 120,
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: List.generate(7, (i) {
-                  return Expanded(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      children: [
-                        Container(
-                          height: 40,
-                          decoration: BoxDecoration(
-                            color: cs.surfaceContainerHighest.withValues(
-                              alpha: 0.5,
-                            ),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                        ),
-                        const SizedBox(height: 6),
-                        Container(
-                          height: 10,
-                          width: 14,
-                          decoration: BoxDecoration(
-                            color: cs.surfaceContainerHighest.withValues(
-                              alpha: 0.6,
-                            ),
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                        ),
-                      ],
+    final cs = Theme.of(context).colorScheme;
+    const alturas = [60.0, 110.0, 80.0, 140.0, 70.0, 120.0, 90.0];
+    return SizedBox(
+      height: 200,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          for (final h in alturas)
+            Expanded(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  Container(
+                    width: 28,
+                    height: h,
+                    decoration: BoxDecoration(
+                      color: cs.surfaceContainerHigh,
+                      borderRadius: BorderRadius.circular(8),
                     ),
-                  );
-                }),
+                  ),
+                  const SizedBox(height: 10),
+                  Container(
+                    width: 22,
+                    height: 10,
+                    decoration: BoxDecoration(
+                      color: cs.surfaceContainerHigh,
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                  ),
+                ],
               ),
             ),
-          ],
-        ),
+        ],
       ),
     );
   }

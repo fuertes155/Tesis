@@ -1,56 +1,52 @@
 import 'package:flutter/material.dart';
-import 'dart:ui';
+
+import 'app_theme.dart';
 
 class AppDecorations {
+  /// Fondo con dos halos de color muy suaves (azul arriba a la izquierda,
+  /// violeta arriba a la derecha) sobre el color base del tema.
   static BoxDecoration meshGradient(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final primary = Theme.of(context).colorScheme.primary;
-    
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
     return BoxDecoration(
-      color: isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
+      color: theme.colorScheme.surface,
       gradient: RadialGradient(
-        center: const Alignment(-0.8, -0.6),
-        radius: 1.5,
+        center: const Alignment(-0.9, -1.0),
+        radius: 1.2,
         colors: [
-          primary.withValues(alpha: isDark ? 0.15 : 0.08),
-          Colors.transparent,
+          theme.colorScheme.primary.withValues(alpha: isDark ? 0.14 : 0.07),
+          theme.colorScheme.surface.withValues(alpha: 0),
         ],
-        stops: const [0.0, 1.0],
       ),
     );
   }
 
   static Widget meshBackground({required Widget child}) {
-    return Stack(
-      children: [
-        Positioned.fill(
-          child: Builder(
-            builder: (context) => Container(
-              decoration: meshGradient(context),
-            ),
-          ),
-        ),
-        // Sutiles orbes de luz
-        Positioned(
-          top: -100,
-          right: -100,
-          child: Builder(
-            builder: (context) => Container(
-              width: 300,
-              height: 300,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: Theme.of(context).colorScheme.tertiary.withValues(alpha: 0.05),
-              ),
-              child: BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 100, sigmaY: 100),
-                child: Container(color: Colors.transparent),
+    return Builder(
+      builder: (context) {
+        final theme = Theme.of(context);
+        final isDark = theme.brightness == Brightness.dark;
+        return Stack(
+          children: [
+            Positioned.fill(child: DecoratedBox(decoration: meshGradient(context))),
+            Positioned.fill(
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: RadialGradient(
+                    center: const Alignment(1.0, -1.0),
+                    radius: 0.9,
+                    colors: [
+                      theme.colorScheme.tertiary.withValues(alpha: isDark ? 0.10 : 0.05),
+                      theme.colorScheme.tertiary.withValues(alpha: 0),
+                    ],
+                  ),
+                ),
               ),
             ),
-          ),
-        ),
-        child,
-      ],
+            child,
+          ],
+        );
+      },
     );
   }
 
@@ -63,27 +59,16 @@ class AppDecorations {
       labelText: label,
       hintText: hint,
       prefixIcon: Icon(prefixIcon),
-      border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide.none,
-      ),
-      filled: true,
-      fillColor: Colors.white.withValues(alpha: 0.05),
     );
   }
 
   static BoxDecoration premiumCard(BuildContext context, {double radius = 16}) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final cs = Theme.of(context).colorScheme;
     return BoxDecoration(
-      color: isDark ? const Color(0xFF1E293B) : Colors.white,
+      color: cs.surfaceContainerLowest,
       borderRadius: BorderRadius.circular(radius),
-      boxShadow: [
-        BoxShadow(
-          color: Colors.black.withValues(alpha: 0.05),
-          blurRadius: 10,
-          offset: const Offset(0, 4),
-        ),
-      ],
+      border: Border.all(color: cs.outlineVariant),
+      boxShadow: context.premiumShadows,
     );
   }
 }

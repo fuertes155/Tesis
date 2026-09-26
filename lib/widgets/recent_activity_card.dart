@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import '../core/theme/app_theme.dart';
 
-/// Tarjeta de actividad reciente — versión premium con glassmorphism.
+/// Fila de actividad reciente: avatar del paciente, fecha y estado de la sesión.
 class RecentActivityCard extends StatelessWidget {
   final String patientName;
+
+  /// Estado de la sesión, p. ej. "Completada".
   final String action;
   final String time;
   final IconData icon;
@@ -20,108 +22,98 @@ class RecentActivityCard extends StatelessWidget {
     this.onTap,
   });
 
+  static const _coloresAvatar = [
+    Color(0xFF2563EB),
+    Color(0xFF0D9488),
+    Color(0xFF7C3AED),
+    Color(0xFFDB2777),
+    Color(0xFFD97706),
+    Color(0xFF0891B2),
+  ];
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
-    final r = context.radii;
-    final spacing = context.spacing;
-    final glass = context.glass;
+    final colorAvatar = _coloresAvatar[patientName.hashCode.abs() % _coloresAvatar.length];
 
-    return Padding(
-      padding: EdgeInsets.only(bottom: spacing.sm),
-      child: Material(
-        color: Colors.transparent,
-        borderRadius: r.radiusMd,
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: r.radiusMd,
-          splashColor: color.withValues(alpha: 0.05),
-          child: Container(
-            padding: EdgeInsets.symmetric(
-              horizontal: spacing.lg,
-              vertical: spacing.md,
-            ),
-            decoration: BoxDecoration(
-              gradient: glass.cardGradient,
-              borderRadius: r.radiusMd,
-              border: Border.all(color: glass.borderColor, width: 1),
-            ),
-            child: Row(
-              children: [
-                // Ícono con acento de color
-                Container(
-                  width: 42,
-                  height: 42,
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [
-                        color.withValues(alpha: 0.18),
-                        color.withValues(alpha: 0.06),
-                      ],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: color.withValues(alpha: 0.15)),
-                  ),
-                  child: Icon(icon, color: color, size: 18),
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: context.radii.radiusMd,
+        hoverColor: cs.primary.withValues(alpha: 0.04),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+          child: Row(
+            children: [
+              CircleAvatar(
+                radius: 20,
+                backgroundColor: colorAvatar.withValues(alpha: 0.14),
+                child: Text(
+                  _iniciales(patientName),
+                  style: theme.textTheme.labelLarge?.copyWith(color: colorAvatar),
                 ),
-
-                SizedBox(width: spacing.md),
-
-                // Content
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      patientName,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.titleSmall?.copyWith(color: cs.onSurface),
+                    ),
+                    const SizedBox(height: 2),
+                    Row(
+                      children: [
+                        Icon(Icons.schedule_rounded, size: 13, color: cs.onSurfaceVariant),
+                        const SizedBox(width: 4),
+                        Text(time, style: theme.textTheme.bodySmall),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              Flexible(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                  decoration: BoxDecoration(
+                    color: color.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(99),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
                     children: [
-                      Text(
-                        patientName,
-                        style: theme.textTheme.titleSmall?.copyWith(
-                          fontWeight: FontWeight.w800,
-                          color: cs.onSurface,
+                      Icon(icon, size: 14, color: color),
+                      const SizedBox(width: 5),
+                      Flexible(
+                        child: Text(
+                          action,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: theme.textTheme.labelMedium?.copyWith(color: color),
                         ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        action,
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: cs.onSurfaceVariant,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
                       ),
                     ],
                   ),
                 ),
-
-                SizedBox(width: spacing.sm),
-
-                // Time badge
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 4,
-                  ),
-                  decoration: BoxDecoration(
-                    color: cs.primary.withValues(alpha: 0.08),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Text(
-                    time,
-                    style: theme.textTheme.labelSmall?.copyWith(
-                      color: cs.onSurfaceVariant,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ),
-              ],
-            ),
+              ),
+              const SizedBox(width: 4),
+              Icon(Icons.chevron_right_rounded, color: cs.onSurfaceVariant),
+            ],
           ),
         ),
       ),
     );
+  }
+
+  static String _iniciales(String nombre) {
+    final partes = nombre.trim().split(RegExp(r'\s+')).where((p) => p.isNotEmpty && !p.startsWith('#'));
+    final letras = partes.take(2).map((p) => p[0].toUpperCase()).join();
+    return letras.isEmpty ? '?' : letras;
   }
 }

@@ -86,7 +86,7 @@ class HistoryScreenState extends ConsumerState<HistoryScreen> {
                     style: theme.textTheme.headlineSmall?.copyWith(
                       fontWeight: FontWeight.w900,
                       color: cs.onSurface,
-                      letterSpacing: -0.5,
+                      letterSpacing: -0.2,
                     ),
                   ),
                 ],

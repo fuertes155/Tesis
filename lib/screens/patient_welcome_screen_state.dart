@@ -485,7 +485,7 @@ class _WelcomeHeroState extends State<_WelcomeHero>
                     style: theme.textTheme.displaySmall?.copyWith(
                       color: Colors.white,
                       fontWeight: FontWeight.w900,
-                      letterSpacing: -2.0,
+                      letterSpacing: -0.3,
                       height: 1.05,
                     ),
                   )

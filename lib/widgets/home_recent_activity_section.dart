@@ -3,6 +3,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:intl/intl.dart';
 import 'recent_activity_card.dart';
 import 'recent_activity_skeleton.dart';
+import '../core/theme/app_theme.dart';
 import '../models/session.dart';
 
 class HomeRecentActivitySection extends StatelessWidget {
@@ -22,91 +23,60 @@ class HomeRecentActivitySection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+    final sem = context.sem;
+
     if (loading) {
       return Column(
         children: List.generate(
           3,
           (i) => const RecentActivitySkeleton()
               .animate()
-              .fadeIn(duration: 220.ms, delay: (i * 80).ms)
-              .moveY(
-                begin: 6,
-                end: 0,
-                duration: 220.ms,
-                delay: (i * 80).ms,
-              ),
+              .fadeIn(duration: 220.ms, delay: (i * 80).ms),
         ),
       );
     }
+
     if (sessions.isEmpty) {
-      return Card(
-        elevation: 0,
-        color: theme.colorScheme.surface,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-          side: BorderSide(
-            color: theme.colorScheme.outlineVariant.withValues(alpha: 0.3),
-          ),
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 28),
+        child: Column(
+          children: [
+            Icon(Icons.search_off_rounded, size: 36, color: cs.onSurfaceVariant.withValues(alpha: 0.6)),
+            const SizedBox(height: 10),
+            Text('Sin actividad para estos filtros', style: theme.textTheme.titleSmall),
+            const SizedBox(height: 2),
+            Text('Prueba con otro rango de fechas o estado.', style: theme.textTheme.bodySmall),
+          ],
         ),
-        child: Padding(
-          padding: const EdgeInsets.all(20),
-          child: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: theme.colorScheme.primary.withValues(alpha: 0.1),
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(
-                  Icons.info_outline,
-                  color: theme.colorScheme.primary,
-                ),
-              ),
-              const SizedBox(width: 12),
-              const Expanded(
-                child: Text('No hay actividad reciente'),
-              ),
-            ],
-          ),
-        ),
-      )
-          .animate()
-          .fadeIn(duration: 220.ms)
-          .moveY(begin: 6, end: 0, duration: 220.ms);
+      ).animate().fadeIn(duration: 220.ms);
     }
+
     return Column(
-      children: List.generate(sessions.length, (i) {
-        final s = sessions[i];
-        final pid = s.patientId;
-        final name = patientNames[pid] ?? 'Paciente #$pid';
-        final status = s.status;
-        final date = s.date;
-        final isCompleted =
-            status.toLowerCase() == 'completed' || status.toLowerCase() == 'completada';
-        final icon =
-            isCompleted ? Icons.check_circle_outline : Icons.pending_outlined;
-        final color = isCompleted ? Colors.green : Colors.orange;
-        final action =
-            isCompleted ? 'Evaluación completada' : 'Sesión en progreso';
-        final time = DateFormat('dd/MM HH:mm').format(date);
-        return RecentActivityCard(
-              patientName: name,
-              action: action,
-              time: time,
-              icon: icon,
-              color: color,
-              onTap: () => onTapSession(s),
-            )
-            .animate()
-            .fadeIn(duration: 220.ms, delay: (i * 80).ms)
-            .moveY(
-              begin: 6,
-              end: 0,
-              duration: 220.ms,
-              delay: (i * 80).ms,
-            );
-      }),
+      children: [
+        for (var i = 0; i < sessions.length; i++) ...[
+          if (i > 0) Divider(height: 1, indent: 62, color: cs.outlineVariant.withValues(alpha: 0.7)),
+          Builder(
+            builder: (context) {
+              final s = sessions[i];
+              final name = patientNames[s.patientId] ?? 'Paciente #${s.patientId}';
+              final estado = s.status.toLowerCase();
+              final completada = estado == 'completed' || estado == 'completada';
+              return RecentActivityCard(
+                patientName: name,
+                action: completada ? 'Completada' : 'En progreso',
+                time: DateFormat("d MMM · HH:mm", 'es').format(s.date),
+                icon: completada ? Icons.check_circle_rounded : Icons.timelapse_rounded,
+                color: completada ? sem.success : sem.warning,
+                onTap: () => onTapSession(s),
+              )
+                  .animate()
+                  .fadeIn(duration: 220.ms, delay: (i * 60).ms)
+                  .moveY(begin: 6, end: 0, duration: 220.ms, delay: (i * 60).ms);
+            },
+          ),
+        ],
+      ],
     );
   }
 }

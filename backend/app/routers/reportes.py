@@ -5,6 +5,7 @@ from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field, field_validator
+from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
 from app.core.audit import log_action
@@ -137,9 +138,15 @@ async def generar_reporte(
     response_model=list[ReporteCognitivoRespuestaSchema],
 )
 def listar_reportes_paciente(paciente_id: str, db: Session = Depends(get_db)):
+    # Los reportes se guardan con el identificador externo (documento o "PAC-<id>"),
+    # pero la app puede consultar con el id numérico del paciente.
+    filtro = models.CognitiveReport.paciente_id == paciente_id
+    if paciente_id.isdigit():
+        filtro = or_(filtro, models.CognitiveReport.patient_db_id == int(paciente_id))
+
     reportes = (
         db.query(models.CognitiveReport)
-        .filter(models.CognitiveReport.paciente_id == paciente_id)
+        .filter(filtro)
         .order_by(models.CognitiveReport.created_at.desc())
         .all()
     )

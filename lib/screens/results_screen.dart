@@ -130,7 +130,7 @@ class ResultsScreen extends ConsumerWidget {
                             style: theme.textTheme.displayMedium?.copyWith(
                               fontWeight: FontWeight.w900,
                               color: highGlobal ? sem.success : cs.onSurface,
-                              letterSpacing: -2,
+                              letterSpacing: -0.3,
                             ),
                           ),
                           Text(

@@ -191,7 +191,7 @@ class CreatePatientScreenState extends ConsumerState<CreatePatientScreen> {
                     style: theme.textTheme.headlineMedium?.copyWith(
                       fontWeight: FontWeight.w900,
                       color: cs.onSurface,
-                      letterSpacing: -0.8,
+                      letterSpacing: -0.3,
                       height: 1.1,
                     ),
                   ).animate().fadeIn(delay: 100.ms).slideX(begin: -0.08),

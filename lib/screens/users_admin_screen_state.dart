@@ -416,7 +416,7 @@ class UsersAdminScreenState extends ConsumerState<UsersAdminScreen> {
                                 'Panel de Administrador',
                                 style: theme.textTheme.headlineMedium?.copyWith(
                                   fontWeight: FontWeight.w900,
-                                  letterSpacing: -1,
+                                  letterSpacing: -0.3,
                                 ),
                               ),
                               SizedBox(height: s.xs),
@@ -659,7 +659,7 @@ class UsersAdminScreenState extends ConsumerState<UsersAdminScreen> {
             title,
             style: theme.textTheme.titleLarge?.copyWith(
               fontWeight: FontWeight.w900,
-              letterSpacing: -0.5,
+              letterSpacing: -0.2,
             ),
           ),
         ],

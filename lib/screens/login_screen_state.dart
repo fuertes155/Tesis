@@ -411,7 +411,7 @@ class _BrandingPanelState extends State<_BrandingPanel>
                   style: Theme.of(context).textTheme.displaySmall?.copyWith(
                     color: Colors.white,
                     fontWeight: FontWeight.w900,
-                    letterSpacing: -2,
+                    letterSpacing: -0.3,
                   ),
                 ).animate().fadeIn(delay: 200.ms).slideX(begin: -0.1),
 
@@ -525,7 +525,7 @@ class _MobileHero extends StatelessWidget {
               style: Theme.of(context).textTheme.headlineLarge?.copyWith(
                 color: Colors.white,
                 fontWeight: FontWeight.w900,
-                letterSpacing: -1.5,
+                letterSpacing: -0.3,
               ),
             ).animate().fadeIn(delay: 200.ms).slideX(begin: -0.1),
             SizedBox(height: s.xs),
