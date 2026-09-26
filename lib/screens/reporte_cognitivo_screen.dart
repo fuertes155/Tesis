@@ -8,6 +8,24 @@ import 'package:printing/printing.dart';
 import '../models/reporte_cognitivo_model.dart';
 import '../services/reporte_cognitivo_service.dart';
 
+const _kAzul = Color(0xFF1A3A6B);
+const _pdfAzul = PdfColor.fromInt(0xFF1A3A6B);
+
+const _kAviso =
+    'Documento de apoyo clínico. No reemplaza una valoración médica integral '
+    'ni el criterio del profesional responsable.';
+
+/// Secciones de reportes antiguos cuyo contenido ya se muestra en la cabecera,
+/// el resumen de resultados o el aviso legal.
+const _seccionesRedundantes = {
+  'DATOS DE LA EVALUACIÓN',
+  'RESUMEN CUANTITATIVO',
+  'NOTA ÉTICA Y ALCANCE',
+};
+
+/// Detecta líneas del tipo "Memoria: 80.0% (ALTO), ..." para resaltar la etiqueta.
+final _etiquetaLinea = RegExp(r'^([^:]{2,40}):\s+(.+)$');
+
 class ReporteCognitivoScreen extends StatefulWidget {
   const ReporteCognitivoScreen({
     super.key,
@@ -38,13 +56,10 @@ class _ReporteCognitivoScreenState extends State<ReporteCognitivoScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final tema = Theme.of(context);
-    final colorScheme = tema.colorScheme;
-
     return Scaffold(
-      backgroundColor: colorScheme.surfaceContainerLowest,
+      backgroundColor: Theme.of(context).colorScheme.surfaceContainerLow,
       appBar: AppBar(
-        backgroundColor: const Color(0xFF1A3A6B),
+        backgroundColor: _kAzul,
         foregroundColor: Colors.white,
         elevation: 0,
         leading: IconButton(
@@ -75,33 +90,29 @@ class _ReporteCognitivoScreenState extends State<ReporteCognitivoScreen> {
           }
 
           final reporte = snapshot.data!;
-          return SingleChildScrollView(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                // ── Datos del paciente ────────────────────────────────────
-                _DatosPacienteCard(
-                  reporte: reporte,
-                  solicitud: widget.solicitud,
-                ),
-                const SizedBox(height: 2),
-                // ── Métricas resumen ──────────────────────────────────
-                if (widget.solicitud.pruebas.isNotEmpty) ...[
-                  _ResumenResultadosCard(pruebas: widget.solicitud.pruebas),
-                  const SizedBox(height: 2),
-                  _ResultsBarsCard(pruebas: widget.solicitud.pruebas),
-                  const SizedBox(height: 2),
-                ],
-                // ── Contenido del informe ──────────────────────────────
-                _ReporteContenidoCard(reporte: reporte),
-                const SizedBox(height: 2),
-                // ── Pruebas aplicadas ─────────────────────────────────
-                _PruebasAplicadasCard(pruebas: widget.solicitud.pruebas),
-                const SizedBox(height: 16),
-                // ── Botones ───────────────────────────────────────────────
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: Row(
+          final pruebas = widget.solicitud.pruebas;
+
+          return LayoutBuilder(
+            builder: (context, constraints) {
+              // Contenido centrado con ancho máximo en pantallas grandes.
+              final margen = constraints.maxWidth > 792
+                  ? (constraints.maxWidth - 760) / 2
+                  : 16.0;
+
+              return ListView(
+                padding: EdgeInsets.fromLTRB(margen, 16, margen, 32),
+                children: [
+                  _EncabezadoPaciente(reporte: reporte, solicitud: widget.solicitud),
+                  if (pruebas.isNotEmpty) ...[
+                    const SizedBox(height: 12),
+                    _ResultadosCard(pruebas: pruebas),
+                  ],
+                  const SizedBox(height: 12),
+                  _InformeCard(texto: reporte.reporte),
+                  const SizedBox(height: 12),
+                  const _AvisoLegal(),
+                  const SizedBox(height: 20),
+                  Row(
                     children: [
                       Expanded(
                         child: OutlinedButton.icon(
@@ -120,7 +131,7 @@ class _ReporteCognitivoScreenState extends State<ReporteCognitivoScreen> {
                       Expanded(
                         child: FilledButton.icon(
                           style: FilledButton.styleFrom(
-                            backgroundColor: const Color(0xFF1A3A6B),
+                            backgroundColor: _kAzul,
                             padding: const EdgeInsets.symmetric(vertical: 14),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(10),
@@ -133,10 +144,9 @@ class _ReporteCognitivoScreenState extends State<ReporteCognitivoScreen> {
                       ),
                     ],
                   ),
-                ),
-                const SizedBox(height: 32),
-              ],
-            ),
+                ],
+              );
+            },
           );
         },
       ),
@@ -159,104 +169,45 @@ class _ReporteCognitivoScreenState extends State<ReporteCognitivoScreen> {
     );
   }
 
+  // ── PDF ──────────────────────────────────────────────────────────────────────
+
   Future<Uint8List> _crearPdf(ReporteCognitivoModel reporte) async {
     final pdf = pw.Document();
     final solicitud = widget.solicitud;
     final logoSvg = await _loadLogoSvg();
-    final fechaGeneracion = DateTime.now();
+    final hoy = DateTime.now();
     final fechaDocumento =
-        '${fechaGeneracion.day.toString().padLeft(2, '0')}/${fechaGeneracion.month.toString().padLeft(2, '0')}/${fechaGeneracion.year}';
-
-    if (_requierePortada(reporte, solicitud)) {
-      pdf.addPage(
-        pw.Page(
-          pageFormat: PdfPageFormat.a4,
-          margin: const pw.EdgeInsets.fromLTRB(54, 54, 54, 54),
-          build: (context) => _pdfCoverPage(
-            reporte: reporte,
-            solicitud: solicitud,
-            fechaDocumento: fechaDocumento,
-            logoSvg: logoSvg,
-          ),
-        ),
-      );
-    }
+        '${hoy.day.toString().padLeft(2, '0')}/${hoy.month.toString().padLeft(2, '0')}/${hoy.year}';
+    final secciones = _seccionesInforme(reporte.reporte);
 
     pdf.addPage(
       pw.MultiPage(
         pageFormat: PdfPageFormat.a4,
-        margin: const pw.EdgeInsets.fromLTRB(54, 44, 54, 44),
+        margin: const pw.EdgeInsets.fromLTRB(48, 40, 48, 32),
+        footer: _pdfPie,
         build: (context) => [
           _pdfDocumentHeader(logoSvg, solicitud),
-          pw.SizedBox(height: 22),
+          pw.SizedBox(height: 16),
           _pdfPatientHeader(reporte, solicitud),
+          if (solicitud.pruebas.isNotEmpty) ...[
+            pw.SizedBox(height: 18),
+            _pdfSection('Resultados'),
+            _pdfSummary(solicitud.pruebas),
+            _pdfResultsTable(solicitud.pruebas),
+          ],
+          if (secciones.isEmpty) ...[
+            pw.SizedBox(height: 18),
+            _pdfLinea(reporte.reporte),
+          ] else
+            for (final seccion in secciones) ...[
+              pw.SizedBox(height: 16),
+              _pdfSection(_tituloLegible(seccion.title)),
+              for (final linea in seccion.lines) _pdfLinea(linea),
+            ],
           pw.SizedBox(height: 18),
-          _pdfSection('RESUMEN CUANTITATIVO:'),
-          _pdfSummary(solicitud.pruebas),
-          pw.SizedBox(height: 12),
-          _pdfSection('GRÁFICO DE DESEMPEÑO POR PRUEBA:'),
-          _pdfBarsChart(solicitud.pruebas),
-          pw.SizedBox(height: 12),
-          _pdfSection('ANTECEDENTES Y CONTEXTO DE EVALUACIÓN:'),
-          _pdfParagraph(
-            'Evaluación neuropsicológica realizada a solicitud del profesional tratante. '
-            'El presente documento resume los resultados obtenidos en las pruebas cognitivas disponibles y debe interpretarse como apoyo clínico, no como diagnóstico definitivo aislado.',
-          ),
-          pw.SizedBox(height: 12),
-          _pdfSection('PRUEBAS APLICADAS:'),
-          _pdfTestsTable(solicitud.pruebas),
-          pw.SizedBox(height: 12),
-          _pdfSection('RESULTADOS E INTERPRETACIÓN:'),
-          ..._pdfStructuredReport(reporte.reporte),
-          pw.SizedBox(height: 12),
-          _pdfSection('RECOMENDACIONES Y SEGUIMIENTO:'),
-          _pdfParagraph(
-            'Correlacionar estos hallazgos con entrevista clínica, historia médica y observación funcional. '
-            'Se sugiere seguimiento profesional si persisten dificultades cognitivas, cambios conductuales o impacto en actividades diarias.',
-          ),
-          pw.SizedBox(height: 12),
-          _pdfSection('PRONOSTICO:'),
-          _pdfParagraph(
-            'Reservado a la evolución clínica y a la respuesta al plan de intervención definido por el profesional responsable.',
-          ),
-          pw.SizedBox(height: 12),
-          _pdfSection('NOTA ÉTICA Y ALCANCE:'),
-          _pdfParagraph(
-            'Este informe no reemplaza una valoración médica integral. Debe interpretarse junto con la historia clínica, la entrevista clínica, la observación funcional y el criterio del profesional responsable.',
-          ),
-          pw.SizedBox(height: 22),
-          _pdfParagraph(
-            'Se expide el presente informe a solicitud del interesado(a).',
-          ),
-          pw.SizedBox(height: 34),
-          pw.Align(
-            alignment: pw.Alignment.centerRight,
-            child: pw.Text(
-              'Fecha de expedición: $fechaDocumento',
-              style: const pw.TextStyle(fontSize: 10),
-            ),
-          ),
-          pw.SizedBox(height: 42),
-          pw.Align(
-            alignment: pw.Alignment.center,
-            child: pw.Column(
-              children: [
-                pw.Container(width: 190, height: 1, color: PdfColors.black),
-                pw.SizedBox(height: 6),
-                pw.Text(
-                  solicitud.profesional,
-                  style: pw.TextStyle(
-                    fontSize: 11,
-                    fontWeight: pw.FontWeight.bold,
-                  ),
-                ),
-                pw.Text(
-                  'Profesional evaluador',
-                  style: const pw.TextStyle(fontSize: 10),
-                ),
-              ],
-            ),
-          ),
+          _pdfAviso(),
+          pw.SizedBox(height: 44),
+          _pdfFirma(solicitud.profesional, fechaDocumento),
         ],
       ),
     );
@@ -276,139 +227,48 @@ class _ReporteCognitivoScreenState extends State<ReporteCognitivoScreen> {
     String? logoSvg,
     SolicitudReporteCognitivoModel solicitud,
   ) {
-    final institution = solicitud.institucion.blankFallback('NeuroApp360');
-
-    return pw.Row(
-      crossAxisAlignment: pw.CrossAxisAlignment.center,
-      children: [
-        if (logoSvg != null)
-          pw.SvgImage(svg: logoSvg, width: 42, height: 42)
-        else
-          pw.Container(
-            width: 42,
-            height: 42,
-            alignment: pw.Alignment.center,
-            decoration: pw.BoxDecoration(
-              border: pw.Border.all(color: PdfColors.blue800, width: 1.2),
-              shape: pw.BoxShape.circle,
-            ),
-            child: pw.Text(
-              '+',
-              style: pw.TextStyle(
-                color: PdfColors.blue800,
-                fontSize: 24,
-                fontWeight: pw.FontWeight.bold,
-              ),
-            ),
-          ),
-        pw.SizedBox(width: 12),
-        pw.Expanded(
-          child: pw.Column(
-            crossAxisAlignment: pw.CrossAxisAlignment.start,
-            children: [
-              pw.Text(
-                institution,
-                style: pw.TextStyle(
-                  fontSize: 12,
-                  fontWeight: pw.FontWeight.bold,
-                  color: PdfColors.blue900,
-                ),
-              ),
-              pw.Text(
-                'Evaluación cognitiva asistida por NeuroApp360',
-                style: const pw.TextStyle(fontSize: 9.5, color: PdfColors.grey700),
-              ),
-            ],
-          ),
-        ),
-        pw.Text(
-          'INFORME NEUROPSICOLÓGICO',
-          style: pw.TextStyle(
-            fontSize: 15,
-            fontWeight: pw.FontWeight.bold,
-            decoration: pw.TextDecoration.underline,
-          ),
-        ),
-      ],
-    );
-  }
-
-  pw.Widget _pdfCoverPage({
-    required ReporteCognitivoModel reporte,
-    required SolicitudReporteCognitivoModel solicitud,
-    required String fechaDocumento,
-    required String? logoSvg,
-  }) {
     return pw.Column(
-      crossAxisAlignment: pw.CrossAxisAlignment.stretch,
       children: [
-        pw.Align(
-          alignment: pw.Alignment.center,
-          child: logoSvg != null
-              ? pw.SvgImage(svg: logoSvg, width: 76, height: 76)
-              : pw.Text(
-                  'NEUROAPP360',
-                  style: pw.TextStyle(
-                    fontSize: 22,
-                    fontWeight: pw.FontWeight.bold,
-                    color: PdfColors.blue900,
+        pw.Row(
+          crossAxisAlignment: pw.CrossAxisAlignment.center,
+          children: [
+            if (logoSvg != null) ...[
+              pw.SvgImage(svg: logoSvg, width: 36, height: 36),
+              pw.SizedBox(width: 10),
+            ],
+            pw.Expanded(
+              child: pw.Column(
+                crossAxisAlignment: pw.CrossAxisAlignment.start,
+                children: [
+                  pw.Text(
+                    solicitud.institucion.blankFallback('NeuroApp360'),
+                    style: pw.TextStyle(
+                      fontSize: 12,
+                      fontWeight: pw.FontWeight.bold,
+                      color: _pdfAzul,
+                    ),
                   ),
-                ),
-        ),
-        pw.SizedBox(height: 54),
-        pw.Center(
-          child: pw.Text(
-            'INFORME NEUROPSICOLÓGICO',
-            style: pw.TextStyle(fontSize: 22, fontWeight: pw.FontWeight.bold),
-          ),
-        ),
-        pw.SizedBox(height: 18),
-        pw.Center(
-          child: pw.Text(
-            solicitud.institucion.blankFallback('NeuroApp360'),
-            style: const pw.TextStyle(fontSize: 12, color: PdfColors.grey700),
-          ),
-        ),
-        pw.Spacer(),
-        _pdfCoverInfo('Paciente', reporte.nombrePaciente),
-        _pdfCoverInfo('Documento / ID', reporte.pacienteId),
-        _pdfCoverInfo('Edad', '${solicitud.edadPaciente} años'),
-        _pdfCoverInfo('Profesional', solicitud.profesional),
-        _pdfCoverInfo('Fecha de evaluación', reporte.fechaEvaluacion),
-        _pdfCoverInfo('Fecha de expedición', fechaDocumento),
-        pw.Spacer(),
-        pw.Container(
-          padding: const pw.EdgeInsets.all(10),
-          decoration: pw.BoxDecoration(
-            border: pw.Border.all(color: PdfColors.grey500, width: 0.7),
-          ),
-          child: pw.Text(
-            'Documento clínico de apoyo. No reemplaza una valoración médica integral.',
-            textAlign: pw.TextAlign.center,
-            style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold),
-          ),
-        ),
-      ],
-    );
-  }
-
-  pw.Widget _pdfCoverInfo(String label, String value) {
-    return pw.Padding(
-      padding: const pw.EdgeInsets.symmetric(vertical: 5),
-      child: pw.Row(
-        children: [
-          pw.SizedBox(
-            width: 130,
-            child: pw.Text(
-              label.toUpperCase(),
-              style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold),
+                  pw.Text(
+                    'Evaluación cognitiva asistida por NeuroApp360',
+                    style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey700),
+                  ),
+                ],
+              ),
             ),
-          ),
-          pw.Expanded(
-            child: pw.Text(value.blankFallback('No registrado'), style: const pw.TextStyle(fontSize: 11)),
-          ),
-        ],
-      ),
+            pw.Text(
+              'INFORME NEUROPSICOLÓGICO',
+              style: pw.TextStyle(
+                fontSize: 13,
+                fontWeight: pw.FontWeight.bold,
+                color: _pdfAzul,
+                letterSpacing: 0.5,
+              ),
+            ),
+          ],
+        ),
+        pw.SizedBox(height: 10),
+        pw.Container(height: 1.5, color: _pdfAzul),
+      ],
     );
   }
 
@@ -416,77 +276,59 @@ class _ReporteCognitivoScreenState extends State<ReporteCognitivoScreen> {
     ReporteCognitivoModel reporte,
     SolicitudReporteCognitivoModel solicitud,
   ) {
-    return pw.Column(
-      children: [
-        pw.Row(
-          children: [
-            _pdfInfoCell('PROFESIONAL', solicitud.profesional),
-            _pdfInfoCell('PACIENTE', reporte.nombrePaciente),
-          ],
-        ),
-        pw.SizedBox(height: 6),
-        pw.Row(
-          children: [
-            _pdfInfoCell(
-              'DOCUMENTO / ID',
-              solicitud.documentoPaciente.blankFallback(reporte.pacienteId),
+    final telefono = solicitud.telefonoPaciente.blankFallback('');
+    final antecedente = solicitud.diagnosticoPaciente.blankFallback('');
+    final datos = <(String, String)>[
+      ('Paciente', reporte.nombrePaciente),
+      ('Documento / ID', solicitud.documentoPaciente.blankFallback(reporte.pacienteId)),
+      ('Edad', '${solicitud.edadPaciente} años'),
+      ('Fecha de evaluación', reporte.fechaEvaluacion),
+      ('Profesional', solicitud.profesional),
+      ('Institución', solicitud.institucion.blankFallback('NeuroApp360')),
+      if (telefono.isNotEmpty) ('Teléfono', telefono),
+      if (antecedente.isNotEmpty) ('Antecedente', antecedente),
+    ];
+
+    return pw.Container(
+      padding: const pw.EdgeInsets.all(12),
+      decoration: const pw.BoxDecoration(
+        color: PdfColors.grey100,
+        borderRadius: pw.BorderRadius.all(pw.Radius.circular(6)),
+      ),
+      child: pw.Column(
+        children: [
+          for (var i = 0; i < datos.length; i += 2)
+            pw.Padding(
+              padding: pw.EdgeInsets.only(top: i == 0 ? 0 : 8),
+              child: pw.Row(
+                crossAxisAlignment: pw.CrossAxisAlignment.start,
+                children: [
+                  _pdfInfoCell(datos[i].$1, datos[i].$2),
+                  if (i + 1 < datos.length)
+                    _pdfInfoCell(datos[i + 1].$1, datos[i + 1].$2)
+                  else
+                    pw.Expanded(child: pw.SizedBox()),
+                ],
+              ),
             ),
-            _pdfInfoCell('EDAD', '${solicitud.edadPaciente} años'),
-          ],
-        ),
-        pw.SizedBox(height: 6),
-        pw.Row(
-          children: [
-            _pdfInfoCell('FECHA EVALUACIÓN', reporte.fechaEvaluacion),
-            _pdfInfoCell('TIPO DE INFORME', 'Neuropsicológico'),
-          ],
-        ),
-        pw.SizedBox(height: 6),
-        pw.Row(
-          children: [
-            _pdfInfoCell('TELÉFONO', solicitud.telefonoPaciente.blankFallback('No registrado')),
-            _pdfInfoCell('INSTITUCIÓN', solicitud.institucion.blankFallback('NeuroApp360')),
-          ],
-        ),
-        pw.SizedBox(height: 6),
-        pw.Row(
-          children: [
-            _pdfInfoCell(
-              'ANTECEDENTE',
-              solicitud.diagnosticoPaciente.blankFallback('No registrado'),
-            ),
-          ],
-        ),
-        pw.SizedBox(height: 10),
-        pw.Divider(thickness: 0.8),
-      ],
+        ],
+      ),
     );
   }
 
   pw.Widget _pdfInfoCell(String label, String value) {
     return pw.Expanded(
-      child: pw.Row(
+      child: pw.Column(
         crossAxisAlignment: pw.CrossAxisAlignment.start,
         children: [
-          pw.SizedBox(
-            width: 92,
-            child: pw.Text(
-              label,
-              style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold),
-            ),
-          ),
           pw.Text(
-            ':  ',
-            style: pw.TextStyle(
-              fontSize: 10,
-              fontWeight: pw.FontWeight.bold,
-            ),
+            label.toUpperCase(),
+            style: const pw.TextStyle(fontSize: 7.5, color: PdfColors.grey600, letterSpacing: 0.4),
           ),
-          pw.Expanded(
-            child: pw.Text(
-              value.isBlank ? 'No registrado' : value,
-              style: const pw.TextStyle(fontSize: 10),
-            ),
+          pw.SizedBox(height: 2),
+          pw.Text(
+            value.isBlank ? 'No registrado' : value,
+            style: const pw.TextStyle(fontSize: 10.5),
           ),
         ],
       ),
@@ -495,175 +337,82 @@ class _ReporteCognitivoScreenState extends State<ReporteCognitivoScreen> {
 
   pw.Widget _pdfSection(String title) {
     return pw.Container(
-      color: PdfColors.yellow200,
-      padding: const pw.EdgeInsets.symmetric(horizontal: 3, vertical: 1),
+      margin: const pw.EdgeInsets.only(bottom: 6),
+      padding: const pw.EdgeInsets.only(left: 6),
+      decoration: pw.BoxDecoration(
+        border: pw.Border(left: pw.BorderSide(color: _pdfAzul, width: 2.5)),
+      ),
       child: pw.Text(
         title,
         style: pw.TextStyle(
-          fontSize: 10.5,
+          fontSize: 11.5,
           fontWeight: pw.FontWeight.bold,
-          letterSpacing: 0.2,
+          color: _pdfAzul,
         ),
       ),
     );
   }
 
-  pw.Widget _pdfParagraph(String text) {
-    return pw.Padding(
-      padding: const pw.EdgeInsets.only(top: 8),
-      child: pw.Text(
-        text,
-        textAlign: pw.TextAlign.justify,
-        style: const pw.TextStyle(fontSize: 10.5, height: 1.35),
-      ),
-    );
-  }
-
-  pw.Widget _pdfTestsTable(List<PruebaCognitivaModel> pruebas) {
-    if (pruebas.isEmpty) {
-      return _pdfParagraph(
-        'No se registraron pruebas cognitivas en esta evaluación.',
-      );
-    }
+  pw.Widget _pdfLinea(String linea) {
+    final texto = linea.replaceAll('—', '-').replaceAll('–', '-');
+    final match = _etiquetaLinea.firstMatch(texto);
+    const estilo = pw.TextStyle(fontSize: 10.5, lineSpacing: 2);
 
     return pw.Padding(
-      padding: const pw.EdgeInsets.only(top: 8),
-      child: pw.TableHelper.fromTextArray(
-        headerDecoration: const pw.BoxDecoration(color: PdfColors.grey800),
-        headerStyle: pw.TextStyle(
-          color: PdfColors.white,
-          fontWeight: pw.FontWeight.bold,
-          fontSize: 9.5,
-        ),
-        cellStyle: const pw.TextStyle(fontSize: 9),
-        cellAlignment: pw.Alignment.centerLeft,
-        cellHeight: 24,
-        columnWidths: {
-          0: const pw.FlexColumnWidth(2.3),
-          1: const pw.FlexColumnWidth(1),
-          2: const pw.FlexColumnWidth(1),
-          3: const pw.FlexColumnWidth(1),
-        },
-        data: [
-          ['Prueba', 'Resultado', 'Nivel', 'Tiempo'],
-          ...pruebas.map(
-            (prueba) => [
-              prueba.nombrePrueba,
-              '${prueba.porcentajeObtenido.toStringAsFixed(1)}%',
-              _nivelResultado(prueba.porcentajeObtenido),
-              '${prueba.tiempoSegundos}s',
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  pw.Widget _pdfBarsChart(List<PruebaCognitivaModel> pruebas) {
-    if (pruebas.isEmpty) {
-      return _pdfParagraph('No hay resultados suficientes para graficar.');
-    }
-
-    return pw.Padding(
-      padding: const pw.EdgeInsets.only(top: 8),
-      child: pw.Column(
-        children: pruebas.map((prueba) {
-          final value = prueba.porcentajeObtenido.clamp(0, 100).toDouble();
-          return pw.Padding(
-            padding: const pw.EdgeInsets.only(bottom: 7),
-            child: pw.Row(
-              children: [
-                pw.SizedBox(
-                  width: 120,
-                  child: pw.Text(prueba.nombrePrueba, style: const pw.TextStyle(fontSize: 8.5)),
-                ),
-                pw.Expanded(
-                  child: pw.LayoutBuilder(
-                    builder: (context, constraints) {
-                      final barWidth = constraints!.maxWidth * value / 100;
-                      return pw.Container(
-                        height: 9,
-                        decoration: pw.BoxDecoration(
-                          color: PdfColors.grey200,
-                          border: pw.Border.all(
-                            color: PdfColors.grey400,
-                            width: 0.3,
-                          ),
-                        ),
-                        child: pw.Align(
-                          alignment: pw.Alignment.centerLeft,
-                          child: pw.Container(
-                            width: barWidth,
-                            color: _pdfLevelColor(value),
-                          ),
-                        ),
-                      );
-                    },
+      padding: const pw.EdgeInsets.only(bottom: 4),
+      child: match == null
+          ? pw.Text(texto, style: estilo, textAlign: pw.TextAlign.justify)
+          : pw.RichText(
+              textAlign: pw.TextAlign.justify,
+              text: pw.TextSpan(
+                style: estilo,
+                children: [
+                  pw.TextSpan(
+                    text: '${match.group(1)}: ',
+                    style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
                   ),
-                ),
-                pw.SizedBox(width: 8),
-                pw.SizedBox(
-                  width: 42,
-                  child: pw.Text(
-                    '${value.toStringAsFixed(1)}%',
-                    textAlign: pw.TextAlign.right,
-                    style: const pw.TextStyle(fontSize: 8.5),
-                  ),
-                ),
-              ],
+                  pw.TextSpan(text: match.group(2)),
+                ],
+              ),
             ),
-          );
-        }).toList(),
-      ),
     );
   }
 
   pw.Widget _pdfSummary(List<PruebaCognitivaModel> pruebas) {
-    if (pruebas.isEmpty) {
-      return _pdfParagraph('No hay resultados cuantitativos para resumir.');
-    }
-
     final promedio = _promedioResultados(pruebas);
+    final nivel = _nivelResultado(promedio);
 
-    return pw.Padding(
-      padding: const pw.EdgeInsets.only(top: 8),
-      child: pw.Row(
-        children: [
-          _pdfSummaryBox('Pruebas', '${pruebas.length}'),
-          pw.SizedBox(width: 8),
-          _pdfSummaryBox('Promedio', '${promedio.toStringAsFixed(1)}%'),
-          pw.SizedBox(width: 8),
-          _pdfSummaryBox('Alto', '${_contarNivel(pruebas, 'ALTO')}'),
-          pw.SizedBox(width: 8),
-          _pdfSummaryBox('Medio', '${_contarNivel(pruebas, 'MEDIO')}'),
-          pw.SizedBox(width: 8),
-          _pdfSummaryBox('Bajo', '${_contarNivel(pruebas, 'BAJO')}'),
-        ],
-      ),
+    return pw.Row(
+      children: [
+        _pdfSummaryBox('Promedio global', '${promedio.toStringAsFixed(1)}%'),
+        pw.SizedBox(width: 8),
+        _pdfSummaryBox('Nivel global', nivel, color: _pdfColorNivel(nivel)),
+        pw.SizedBox(width: 8),
+        _pdfSummaryBox('Pruebas aplicadas', '${pruebas.length}'),
+      ],
     );
   }
 
-  pw.Widget _pdfSummaryBox(String label, String value) {
+  pw.Widget _pdfSummaryBox(
+    String label,
+    String value, {
+    PdfColor color = PdfColors.black,
+  }) {
     return pw.Expanded(
       child: pw.Container(
-        padding: const pw.EdgeInsets.symmetric(vertical: 8, horizontal: 6),
+        padding: const pw.EdgeInsets.symmetric(vertical: 8, horizontal: 10),
         decoration: pw.BoxDecoration(
-          border: pw.Border.all(color: PdfColors.grey500, width: 0.6),
-          color: PdfColors.grey100,
+          border: pw.Border.all(color: PdfColors.grey300, width: 0.8),
+          borderRadius: const pw.BorderRadius.all(pw.Radius.circular(6)),
         ),
         child: pw.Column(
+          crossAxisAlignment: pw.CrossAxisAlignment.start,
           children: [
-            pw.Text(
-              label,
-              style: const pw.TextStyle(
-                fontSize: 8.5,
-                color: PdfColors.grey700,
-              ),
-            ),
-            pw.SizedBox(height: 3),
+            pw.Text(label, style: const pw.TextStyle(fontSize: 8, color: PdfColors.grey700)),
+            pw.SizedBox(height: 2),
             pw.Text(
               value,
-              style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold),
+              style: pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold, color: color),
             ),
           ],
         ),
@@ -671,563 +420,546 @@ class _ReporteCognitivoScreenState extends State<ReporteCognitivoScreen> {
     );
   }
 
-  List<pw.Widget> _pdfStructuredReport(String text) {
-    final sections = _splitReportSections(text);
-    if (sections.isEmpty) {
-      return [_pdfParagraph(text)];
-    }
+  pw.Widget _pdfResultsTable(List<PruebaCognitivaModel> pruebas) {
+    const encabezado = pw.TextStyle(fontSize: 8, color: PdfColors.grey700);
 
-    final widgets = <pw.Widget>[];
-    for (final section in sections) {
-      widgets
-        ..add(_pdfSubsection(section.title))
-        ..add(_pdfParagraph(section.body));
-    }
-    return widgets;
-  }
-
-  pw.Widget _pdfSubsection(String title) {
     return pw.Padding(
-      padding: const pw.EdgeInsets.only(top: 8),
-      child: pw.Text(
-        title,
-        style: pw.TextStyle(
-          fontSize: 10,
-          fontWeight: pw.FontWeight.bold,
-          color: PdfColors.blue900,
-        ),
-      ),
-    );
-  }
-}
-
-class _ResumenResultadosCard extends StatelessWidget {
-  const _ResumenResultadosCard({required this.pruebas});
-
-  final List<PruebaCognitivaModel> pruebas;
-
-  @override
-  Widget build(BuildContext context) {
-    if (pruebas.isEmpty) {
-      return const SizedBox.shrink();
-    }
-
-    final promedio = _promedioResultados(pruebas);
-
-    return Wrap(
-      spacing: 10,
-      runSpacing: 10,
-      children: [
-        _MetricChip(label: 'Pruebas', value: '${pruebas.length}'),
-        _MetricChip(
-          label: 'Promedio',
-          value: '${promedio.toStringAsFixed(1)}%',
-        ),
-        _MetricChip(label: 'Alto', value: '${_contarNivel(pruebas, 'ALTO')}'),
-        _MetricChip(label: 'Medio', value: '${_contarNivel(pruebas, 'MEDIO')}'),
-        _MetricChip(label: 'Bajo', value: '${_contarNivel(pruebas, 'BAJO')}'),
-      ],
-    );
-  }
-}
-
-class _MetricChip extends StatelessWidget {
-  const _MetricChip({required this.label, required this.value});
-
-  final String label;
-  final String value;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
-    return Container(
-      width: 112,
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-      decoration: BoxDecoration(
-        color: theme.colorScheme.surfaceContainerHighest,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: theme.colorScheme.outlineVariant),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      padding: const pw.EdgeInsets.only(top: 10),
+      child: pw.Column(
         children: [
-          Text(
-            label,
-            style: theme.textTheme.labelMedium?.copyWith(
-              color: theme.colorScheme.onSurfaceVariant,
+          pw.Row(
+            children: [
+              pw.SizedBox(width: 138, child: pw.Text('Prueba', style: encabezado)),
+              pw.Expanded(child: pw.SizedBox()),
+              pw.SizedBox(
+                width: 44,
+                child: pw.Text('Puntaje', style: encabezado, textAlign: pw.TextAlign.right),
+              ),
+              pw.SizedBox(
+                width: 50,
+                child: pw.Text('Nivel', style: encabezado, textAlign: pw.TextAlign.center),
+              ),
+              pw.SizedBox(
+                width: 40,
+                child: pw.Text('Tiempo', style: encabezado, textAlign: pw.TextAlign.right),
+              ),
+            ],
+          ),
+          pw.SizedBox(height: 4),
+          pw.Container(height: 0.5, color: PdfColors.grey400),
+          for (final prueba in pruebas) _pdfFilaPrueba(prueba),
+        ],
+      ),
+    );
+  }
+
+  pw.Widget _pdfFilaPrueba(PruebaCognitivaModel prueba) {
+    final valor = prueba.porcentajeObtenido.clamp(0, 100).toDouble();
+    final nivel = _nivelResultado(valor);
+    final color = _pdfColorNivel(nivel);
+
+    return pw.Container(
+      padding: const pw.EdgeInsets.symmetric(vertical: 6),
+      decoration: pw.BoxDecoration(
+        border: pw.Border(bottom: pw.BorderSide(color: PdfColors.grey200, width: 0.5)),
+      ),
+      child: pw.Row(
+        children: [
+          pw.SizedBox(
+            width: 130,
+            child: pw.Text(prueba.nombrePrueba, style: const pw.TextStyle(fontSize: 9.5)),
+          ),
+          pw.SizedBox(width: 8),
+          pw.Expanded(
+            child: pw.LayoutBuilder(
+              builder: (context, constraints) {
+                return pw.Container(
+                  height: 7,
+                  decoration: const pw.BoxDecoration(
+                    color: PdfColors.grey200,
+                    borderRadius: pw.BorderRadius.all(pw.Radius.circular(3.5)),
+                  ),
+                  child: pw.Align(
+                    alignment: pw.Alignment.centerLeft,
+                    child: pw.Container(
+                      width: constraints!.maxWidth * valor / 100,
+                      height: 7,
+                      decoration: pw.BoxDecoration(
+                        color: color,
+                        borderRadius: const pw.BorderRadius.all(pw.Radius.circular(3.5)),
+                      ),
+                    ),
+                  ),
+                );
+              },
             ),
           ),
-          const SizedBox(height: 3),
-          Text(
-            value,
-            style: theme.textTheme.titleMedium?.copyWith(
-              fontWeight: FontWeight.w900,
+          pw.SizedBox(
+            width: 44,
+            child: pw.Text(
+              '${valor.toStringAsFixed(1)}%',
+              textAlign: pw.TextAlign.right,
+              style: pw.TextStyle(fontSize: 9.5, fontWeight: pw.FontWeight.bold),
+            ),
+          ),
+          pw.SizedBox(
+            width: 50,
+            child: pw.Text(
+              nivel,
+              textAlign: pw.TextAlign.center,
+              style: pw.TextStyle(fontSize: 8.5, fontWeight: pw.FontWeight.bold, color: color),
+            ),
+          ),
+          pw.SizedBox(
+            width: 40,
+            child: pw.Text(
+              _formatearTiempo(prueba.tiempoSegundos),
+              textAlign: pw.TextAlign.right,
+              style: const pw.TextStyle(fontSize: 9),
             ),
           ),
         ],
       ),
     );
   }
-}
 
-class _ResultsBarsCard extends StatelessWidget {
-  const _ResultsBarsCard({required this.pruebas});
+  pw.Widget _pdfAviso() {
+    return pw.Container(
+      padding: const pw.EdgeInsets.all(8),
+      decoration: pw.BoxDecoration(
+        border: pw.Border.all(color: PdfColors.grey400, width: 0.6),
+        borderRadius: const pw.BorderRadius.all(pw.Radius.circular(4)),
+      ),
+      child: pw.Text(
+        _kAviso,
+        style: const pw.TextStyle(fontSize: 8.5, color: PdfColors.grey700),
+      ),
+    );
+  }
 
-  final List<PruebaCognitivaModel> pruebas;
-
-  @override
-  Widget build(BuildContext context) {
-    if (pruebas.isEmpty) {
-      return const SizedBox.shrink();
-    }
-
-    final theme = Theme.of(context);
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+  pw.Widget _pdfFirma(String profesional, String fecha) {
+    return pw.Row(
+      mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+      crossAxisAlignment: pw.CrossAxisAlignment.end,
       children: [
-        const _SectionTitle('GRÁFICO DE DESEMPEÑO:'),
-        const SizedBox(height: 10),
-        ...pruebas.map((prueba) {
-          final value = prueba.porcentajeObtenido.clamp(0, 100).toDouble();
-          return Padding(
-            padding: const EdgeInsets.only(bottom: 10),
-            child: Row(
-              children: [
-                SizedBox(
-                  width: 118,
-                  child: Text(
-                    prueba.nombrePrueba,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: theme.textTheme.bodySmall,
-                  ),
-                ),
-                Expanded(
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(4),
-                    child: LinearProgressIndicator(
-                      value: value / 100,
-                      minHeight: 10,
-                      backgroundColor: theme.colorScheme.surfaceContainerHighest,
-                      color: _levelColor(context, value),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                SizedBox(
-                  width: 48,
-                  child: Text(
-                    '${value.toStringAsFixed(1)}%',
-                    textAlign: TextAlign.right,
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ),
-              ],
+        pw.Text('Fecha de expedición: $fecha', style: const pw.TextStyle(fontSize: 9.5)),
+        pw.Column(
+          children: [
+            pw.Container(width: 180, height: 0.8, color: PdfColors.black),
+            pw.SizedBox(height: 4),
+            pw.Text(
+              profesional,
+              style: pw.TextStyle(fontSize: 10.5, fontWeight: pw.FontWeight.bold),
             ),
-          );
-        }),
+            pw.Text(
+              'Profesional evaluador',
+              style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey700),
+            ),
+          ],
+        ),
       ],
     );
   }
-}
 
-class _StructuredReportView extends StatelessWidget {
-  const _StructuredReportView({required this.text});
-
-  final String text;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final sections = _splitReportSections(text);
-
-    if (sections.isEmpty) {
-      return SelectableText(
-        text,
-        style: theme.textTheme.bodyLarge?.copyWith(height: 1.45),
-      );
-    }
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: sections.map((section) {
-        return Padding(
-          padding: const EdgeInsets.only(top: 12),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                section.title,
-                style: theme.textTheme.titleSmall?.copyWith(
-                  fontWeight: FontWeight.w900,
-                  color: theme.colorScheme.primary,
-                ),
-              ),
-              const SizedBox(height: 6),
-              SelectableText(
-                section.body,
-                style: theme.textTheme.bodyLarge?.copyWith(height: 1.45),
-              ),
-            ],
-          ),
-        );
-      }).toList(),
+  pw.Widget _pdfPie(pw.Context context) {
+    const estilo = pw.TextStyle(fontSize: 8, color: PdfColors.grey600);
+    return pw.Container(
+      margin: const pw.EdgeInsets.only(top: 12),
+      child: pw.Row(
+        mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+        children: [
+          pw.Text('NeuroApp360', style: estilo),
+          pw.Text('Página ${context.pageNumber} de ${context.pagesCount}', style: estilo),
+        ],
+      ),
     );
   }
 }
 
-class _DatosPacienteCard extends StatelessWidget {
-  const _DatosPacienteCard({
-    required this.reporte,
-    required this.solicitud,
-  });
+// ── Widgets de pantalla ─────────────────────────────────────────────────────────
+
+class _Tarjeta extends StatelessWidget {
+  const _Tarjeta({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: scheme.surfaceContainerLowest,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: scheme.outlineVariant.withValues(alpha: 0.6)),
+      ),
+      child: child,
+    );
+  }
+}
+
+class _EncabezadoPaciente extends StatelessWidget {
+  const _EncabezadoPaciente({required this.reporte, required this.solicitud});
 
   final ReporteCognitivoModel reporte;
   final SolicitudReporteCognitivoModel solicitud;
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+    final documento = solicitud.documentoPaciente.blankFallback(reporte.pacienteId);
+    final institucion = solicitud.institucion.blankFallback('');
+    final antecedente = solicitud.diagnosticoPaciente.blankFallback('');
+    final detalles = <(IconData, String)>[
+      (Icons.event_outlined, reporte.fechaEvaluacion),
+      (Icons.person_outline_rounded, solicitud.profesional),
+      if (institucion.isNotEmpty) (Icons.local_hospital_outlined, institucion),
+      if (antecedente.isNotEmpty) (Icons.medical_information_outlined, antecedente),
+    ];
 
-    return DecoratedBox(
+    return Container(
+      padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        border: Border.all(color: theme.colorScheme.outlineVariant),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(14),
-        child: Column(
-          children: [
-            _InfoLine(label: 'Profesional', value: solicitud.profesional),
-            _InfoLine(label: 'Paciente', value: reporte.nombrePaciente),
-            _InfoLine(
-              label: 'Documento / ID',
-              value: solicitud.documentoPaciente.blankFallback(
-                reporte.pacienteId,
-              ),
-            ),
-            _InfoLine(label: 'Edad', value: '${solicitud.edadPaciente} años'),
-            _InfoLine(
-              label: 'Teléfono',
-              value: solicitud.telefonoPaciente.blankFallback('No registrado'),
-            ),
-            _InfoLine(
-              label: 'Institución',
-              value: solicitud.institucion.blankFallback('NeuroApp360'),
-            ),
-            _InfoLine(
-              label: 'Antecedente',
-              value: solicitud.diagnosticoPaciente.blankFallback(
-                'No registrado',
-              ),
-            ),
-            _InfoLine(
-              label: 'Fecha evaluación',
-              value: reporte.fechaEvaluacion,
-            ),
-          ],
+        borderRadius: BorderRadius.circular(16),
+        gradient: const LinearGradient(
+          colors: [_kAzul, Color(0xFF2B5C9E)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
         ),
       ),
-    );
-  }
-}
-
-// ────────────────────────────────────────────────────────────────────────────────────
-
-/// Muestra el texto del informe generado, dividido en secciones con títulos.
-class _ReporteContenidoCard extends StatelessWidget {
-  const _ReporteContenidoCard({required this.reporte});
-
-  final ReporteCognitivoModel reporte;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 0),
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          border: Border.all(color: theme.colorScheme.outlineVariant),
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
             children: [
-              _SectionTitle('INFORME NEUROPSICOLÓGICO:'),
-              const SizedBox(height: 12),
-              _StructuredReportView(text: reporte.reporte),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-/// Tabla de pruebas aplicadas con puntajes y niveles.
-class _PruebasAplicadasCard extends StatelessWidget {
-  const _PruebasAplicadasCard({required this.pruebas});
-
-  final List<PruebaCognitivaModel> pruebas;
-
-  @override
-  Widget build(BuildContext context) {
-    if (pruebas.isEmpty) return const SizedBox.shrink();
-
-    final theme = Theme.of(context);
-
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        border: Border.all(color: theme.colorScheme.outlineVariant),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(14),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const _SectionTitle('PRUEBAS APLICADAS:'),
-            const SizedBox(height: 10),
-            // Encabezado de tabla
-            Row(
-              children: [
-                const Expanded(
-                  flex: 4,
-                  child: Text('Prueba', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 12)),
+              CircleAvatar(
+                radius: 26,
+                backgroundColor: Colors.white.withValues(alpha: 0.18),
+                child: Text(
+                  _iniciales(reporte.nombrePaciente),
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w800,
+                    fontSize: 18,
+                  ),
                 ),
-                const SizedBox(
-                  width: 60,
-                  child: Text('Result.', textAlign: TextAlign.center, style: TextStyle(fontWeight: FontWeight.w800, fontSize: 12)),
-                ),
-                const SizedBox(
-                  width: 60,
-                  child: Text('Nivel', textAlign: TextAlign.center, style: TextStyle(fontWeight: FontWeight.w800, fontSize: 12)),
-                ),
-                const SizedBox(
-                  width: 52,
-                  child: Text('Tiempo', textAlign: TextAlign.center, style: TextStyle(fontWeight: FontWeight.w800, fontSize: 12)),
-                ),
-              ],
-            ),
-            const Divider(height: 8),
-            ...pruebas.map((prueba) {
-              final nivel = _nivelResultado(prueba.porcentajeObtenido);
-              final color = _levelColor(context, prueba.porcentajeObtenido);
-              return Padding(
-                padding: const EdgeInsets.symmetric(vertical: 5),
-                child: Row(
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Expanded(
-                      flex: 4,
-                      child: Text(
-                        prueba.nombrePrueba,
-                        style: theme.textTheme.bodySmall,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
+                    Text(
+                      reporte.nombrePaciente,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 19,
+                        fontWeight: FontWeight.w800,
                       ),
                     ),
-                    SizedBox(
-                      width: 60,
-                      child: Text(
-                        '${prueba.porcentajeObtenido.toStringAsFixed(1)}%',
-                        textAlign: TextAlign.center,
-                        style: theme.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w700),
-                      ),
-                    ),
-                    SizedBox(
-                      width: 60,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: color.withValues(alpha: 0.12),
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                        child: Text(
-                          nivel,
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            fontSize: 10,
-                            fontWeight: FontWeight.w800,
-                            color: color,
-                          ),
-                        ),
-                      ),
-                    ),
-                    SizedBox(
-                      width: 52,
-                      child: Text(
-                        '${prueba.tiempoSegundos}s',
-                        textAlign: TextAlign.center,
-                        style: theme.textTheme.bodySmall,
+                    const SizedBox(height: 2),
+                    Text(
+                      '${solicitud.edadPaciente} años  ·  ID $documento',
+                      style: TextStyle(
+                        color: Colors.white.withValues(alpha: 0.8),
+                        fontSize: 13,
                       ),
                     ),
                   ],
                 ),
-              );
-            }),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _InfoLine extends StatelessWidget {
-  const _InfoLine({required this.label, required this.value});
-
-  final String label;
-  final String value;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SizedBox(
-            width: 130,
-            child: Text(
-              label.toUpperCase(),
-              style: const TextStyle(fontWeight: FontWeight.w800),
-            ),
+              ),
+            ],
           ),
-          const Text(':  '),
-          Expanded(child: Text(value.isBlank ? 'No registrado' : value)),
+          const SizedBox(height: 14),
+          Wrap(
+            spacing: 16,
+            runSpacing: 8,
+            children: [
+              for (final (icono, texto) in detalles)
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(icono, size: 16, color: Colors.white70),
+                    const SizedBox(width: 6),
+                    Flexible(
+                      child: Text(
+                        texto,
+                        style: const TextStyle(color: Colors.white, fontSize: 13),
+                      ),
+                    ),
+                  ],
+                ),
+            ],
+          ),
         ],
       ),
     );
   }
 }
 
-class _SectionTitle extends StatelessWidget {
-  const _SectionTitle(this.text);
+class _ResultadosCard extends StatelessWidget {
+  const _ResultadosCard({required this.pruebas});
 
-  final String text;
+  final List<PruebaCognitivaModel> pruebas;
 
   @override
   Widget build(BuildContext context) {
-    const color = Color(0xFF1A3A6B);
-    return Container(
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
-        border: const Border(
-          left: BorderSide(
-            color: color,
-            width: 4,
+    final theme = Theme.of(context);
+    final promedio = _promedioResultados(pruebas);
+    final nivel = _nivelResultado(promedio);
+    final color = _colorNivel(nivel);
+    final secundario = theme.colorScheme.onSurfaceVariant;
+
+    return _Tarjeta(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              SizedBox(
+                width: 78,
+                height: 78,
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    CircularProgressIndicator(
+                      value: promedio.clamp(0, 100) / 100,
+                      strokeWidth: 8,
+                      strokeCap: StrokeCap.round,
+                      backgroundColor: color.withValues(alpha: 0.15),
+                      color: color,
+                    ),
+                    Center(
+                      child: Text(
+                        '${promedio.round()}%',
+                        style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Rendimiento global',
+                      style: theme.textTheme.labelLarge?.copyWith(color: secundario),
+                    ),
+                    const SizedBox(height: 6),
+                    _NivelBadge(nivel: nivel),
+                    const SizedBox(height: 8),
+                    Text(
+                      '${pruebas.length} ${pruebas.length == 1 ? 'prueba' : 'pruebas'}  ·  '
+                      '${_contarNivel(pruebas, 'ALTO')} alto  ·  '
+                      '${_contarNivel(pruebas, 'MEDIO')} medio  ·  '
+                      '${_contarNivel(pruebas, 'BAJO')} bajo',
+                      style: theme.textTheme.bodySmall?.copyWith(color: secundario),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
-        ),
+          const SizedBox(height: 16),
+          Divider(height: 1, color: theme.colorScheme.outlineVariant),
+          const SizedBox(height: 4),
+          for (final prueba in pruebas) _FilaPrueba(prueba: prueba),
+        ],
       ),
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+    );
+  }
+}
+
+class _FilaPrueba extends StatelessWidget {
+  const _FilaPrueba({required this.prueba});
+
+  final PruebaCognitivaModel prueba;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final valor = prueba.porcentajeObtenido.clamp(0, 100).toDouble();
+    final nivel = _nivelResultado(valor);
+    final color = _colorNivel(nivel);
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      prueba.nombrePrueba,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w700),
+                    ),
+                    Text(
+                      _formatearTiempo(prueba.tiempoSegundos),
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Text(
+                '${valor.toStringAsFixed(1)}%',
+                style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w800),
+              ),
+              const SizedBox(width: 10),
+              _NivelBadge(nivel: nivel),
+            ],
+          ),
+          const SizedBox(height: 8),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(99),
+            child: LinearProgressIndicator(
+              value: valor / 100,
+              minHeight: 8,
+              backgroundColor: color.withValues(alpha: 0.15),
+              color: color,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _NivelBadge extends StatelessWidget {
+  const _NivelBadge({required this.nivel});
+
+  final String nivel;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = _colorNivel(nivel);
+    return Container(
+      width: 64,
+      padding: const EdgeInsets.symmetric(vertical: 3),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(99),
+      ),
       child: Text(
-        text,
-        style: const TextStyle(
-          fontWeight: FontWeight.w900,
-          letterSpacing: 0.2,
+        nivel,
+        textAlign: TextAlign.center,
+        style: TextStyle(
           color: color,
+          fontSize: 11,
+          fontWeight: FontWeight.w800,
+          letterSpacing: 0.4,
         ),
       ),
     );
   }
 }
 
-extension on String {
-  bool get isBlank => trim().isEmpty;
-}
+/// Texto del informe dividido en secciones con icono y título.
+class _InformeCard extends StatelessWidget {
+  const _InformeCard({required this.texto});
 
-extension on String? {
-  String blankFallback(String fallback) {
-    final value = this?.trim();
-    return value == null || value.isEmpty ? fallback : value;
+  final String texto;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final secciones = _seccionesInforme(texto);
+
+    return _Tarjeta(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Informe clínico',
+            style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
+          ),
+          if (secciones.isEmpty) ...[
+            const SizedBox(height: 12),
+            SelectableText(texto, style: theme.textTheme.bodyMedium?.copyWith(height: 1.5)),
+          ] else
+            for (final seccion in secciones) _SeccionInforme(seccion: seccion),
+        ],
+      ),
+    );
   }
 }
 
-class _ReportSection {
-  const _ReportSection({required this.title, required this.body});
+class _SeccionInforme extends StatelessWidget {
+  const _SeccionInforme({required this.seccion});
 
-  final String title;
-  final String body;
-}
+  final _ReportSection seccion;
 
-List<_ReportSection> _splitReportSections(String text) {
-  final lines = text
-      .split(RegExp(r'\r?\n'))
-      .map((line) => line.trim())
-      .where((line) => line.isNotEmpty)
-      .toList();
-  final sections = <_ReportSection>[];
-  String? currentTitle;
-  final buffer = <String>[];
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final acento = theme.colorScheme.primary;
+    final estilo = theme.textTheme.bodyMedium?.copyWith(height: 1.5);
 
-  for (final line in lines) {
-    final isHeading =
-        line.endsWith(':') &&
-        line.length <= 80 &&
-        line.toUpperCase() == line;
-    if (isHeading) {
-      if (currentTitle != null && buffer.isNotEmpty) {
-        sections.add(
-          _ReportSection(title: currentTitle, body: buffer.join('\n')),
-        );
-      }
-      currentTitle = line;
-      buffer.clear();
-    } else {
-      buffer.add(line);
-    }
+    return Padding(
+      padding: const EdgeInsets.only(top: 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(
+                  color: acento.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(_iconoSeccion(seccion.title), size: 18, color: acento),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  _tituloLegible(seccion.title),
+                  style: theme.textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.w800,
+                    color: acento,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          for (final linea in seccion.lines)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 6),
+              child: SelectableText.rich(_lineaConEtiqueta(linea, estilo)),
+            ),
+        ],
+      ),
+    );
   }
+}
 
-  if (currentTitle != null && buffer.isNotEmpty) {
-    sections.add(_ReportSection(title: currentTitle, body: buffer.join('\n')));
+class _AvisoLegal extends StatelessWidget {
+  const _AvisoLegal();
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final color = theme.colorScheme.onSurfaceVariant;
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(Icons.info_outline_rounded, size: 16, color: color),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Text(_kAviso, style: theme.textTheme.bodySmall?.copyWith(color: color)),
+        ),
+      ],
+    );
   }
-
-  return sections;
-}
-
-bool _requierePortada(
-  ReporteCognitivoModel reporte,
-  SolicitudReporteCognitivoModel solicitud,
-) {
-  return reporte.reporte.length > 1800 || solicitud.pruebas.length > 6;
-}
-
-PdfColor _pdfLevelColor(double value) {
-  if (value <= 40) return PdfColors.red600;
-  if (value <= 69) return PdfColors.amber700;
-  return PdfColors.green700;
-}
-
-Color _levelColor(BuildContext context, double value) {
-  if (value <= 40) return Colors.red.shade700;
-  if (value <= 69) return Colors.amber.shade800;
-  return Colors.green.shade700;
-}
-
-String _nivelResultado(double porcentaje) {
-  if (porcentaje <= 40) return 'BAJO';
-  if (porcentaje <= 69) return 'MEDIO';
-  return 'ALTO';
-}
-
-double _promedioResultados(List<PruebaCognitivaModel> pruebas) {
-  if (pruebas.isEmpty) return 0;
-  final total = pruebas.fold<double>(
-    0,
-    (sum, prueba) => sum + prueba.porcentajeObtenido,
-  );
-  return total / pruebas.length;
-}
-
-int _contarNivel(List<PruebaCognitivaModel> pruebas, String nivel) {
-  return pruebas
-      .where((prueba) => _nivelResultado(prueba.porcentajeObtenido) == nivel)
-      .length;
 }
 
 class _ReporteLoading extends StatelessWidget {
@@ -1244,7 +976,7 @@ class _ReporteLoading extends StatelessWidget {
             CircularProgressIndicator(),
             SizedBox(height: 20),
             Text(
-              'Ollama está generando el reporte neuropsicológico...',
+              'Generando el reporte neuropsicológico...',
               textAlign: TextAlign.center,
             ),
           ],
@@ -1283,4 +1015,151 @@ class _ReporteError extends StatelessWidget {
       ),
     );
   }
+}
+
+// ── Utilidades ─────────────────────────────────────────────────────────────────
+
+extension on String {
+  bool get isBlank => trim().isEmpty;
+}
+
+extension on String? {
+  String blankFallback(String fallback) {
+    final value = this?.trim();
+    return value == null || value.isEmpty ? fallback : value;
+  }
+}
+
+class _ReportSection {
+  const _ReportSection({required this.title, required this.lines});
+
+  /// Título en MAYÚSCULAS, sin los dos puntos finales.
+  final String title;
+  final List<String> lines;
+}
+
+List<_ReportSection> _splitReportSections(String text) {
+  final lines = text
+      .split(RegExp(r'\r?\n'))
+      // Limpia marcas de formato que a veces devuelve el modelo (**, ##, viñetas).
+      .map(
+        (line) => line
+            .replaceAll('**', '')
+            .replaceFirst(RegExp(r'^\s*#+\s*'), '')
+            .replaceFirst(RegExp(r'^\s*[-*•]\s+'), '')
+            .trim(),
+      )
+      .where((line) => line.isNotEmpty)
+      .toList();
+  final sections = <_ReportSection>[];
+  String? currentTitle;
+  var buffer = <String>[];
+
+  for (final line in lines) {
+    final isHeading =
+        line.endsWith(':') &&
+        line.length <= 80 &&
+        line.toUpperCase() == line;
+    if (isHeading) {
+      if (currentTitle != null && buffer.isNotEmpty) {
+        sections.add(_ReportSection(title: currentTitle, lines: buffer));
+      }
+      currentTitle = line.substring(0, line.length - 1).trim();
+      buffer = <String>[];
+    } else {
+      buffer.add(line);
+    }
+  }
+
+  if (currentTitle != null && buffer.isNotEmpty) {
+    sections.add(_ReportSection(title: currentTitle, lines: buffer));
+  }
+
+  return sections;
+}
+
+/// Secciones a mostrar, omitiendo las que duplican información ya visible.
+List<_ReportSection> _seccionesInforme(String texto) {
+  return _splitReportSections(texto)
+      .where((s) => !_seccionesRedundantes.contains(s.title))
+      .toList();
+}
+
+/// "RESULTADOS POR DOMINIO" -> "Resultados por dominio".
+String _tituloLegible(String titulo) {
+  final t = titulo.toLowerCase();
+  return t.isEmpty ? t : t[0].toUpperCase() + t.substring(1);
+}
+
+IconData _iconoSeccion(String titulo) {
+  if (titulo.contains('RESUMEN')) return Icons.summarize_outlined;
+  if (titulo.contains('RESULTADO')) return Icons.insights_rounded;
+  if (titulo.contains('INTERPRETACI')) return Icons.psychology_outlined;
+  if (titulo.contains('RECOMENDACI')) return Icons.checklist_rounded;
+  if (titulo.contains('CONCLUSI')) return Icons.flag_outlined;
+  if (titulo.contains('ANTECEDENTE')) return Icons.history_edu_outlined;
+  return Icons.article_outlined;
+}
+
+TextSpan _lineaConEtiqueta(String linea, TextStyle? estilo) {
+  final match = _etiquetaLinea.firstMatch(linea);
+  if (match == null) return TextSpan(text: linea, style: estilo);
+  return TextSpan(
+    style: estilo,
+    children: [
+      TextSpan(
+        text: '${match.group(1)}: ',
+        style: const TextStyle(fontWeight: FontWeight.w700),
+      ),
+      TextSpan(text: match.group(2)),
+    ],
+  );
+}
+
+String _iniciales(String nombre) {
+  final partes = nombre.trim().split(RegExp(r'\s+')).where((p) => p.isNotEmpty);
+  return partes.take(2).map((p) => p[0].toUpperCase()).join();
+}
+
+String _formatearTiempo(int segundos) {
+  if (segundos < 60) return '${segundos}s';
+  final resto = (segundos % 60).toString().padLeft(2, '0');
+  return '${segundos ~/ 60}m ${resto}s';
+}
+
+String _nivelResultado(double porcentaje) {
+  if (porcentaje <= 40) return 'BAJO';
+  if (porcentaje <= 69) return 'MEDIO';
+  return 'ALTO';
+}
+
+Color _colorNivel(String nivel) {
+  return switch (nivel) {
+    'BAJO' => Colors.red.shade700,
+    'MEDIO' => Colors.amber.shade800,
+    _ => Colors.green.shade700,
+  };
+}
+
+PdfColor _pdfColorNivel(String nivel) {
+  return switch (nivel) {
+    'BAJO' => PdfColors.red700,
+    'MEDIO' => PdfColors.amber800,
+    _ => PdfColors.green700,
+  };
+}
+
+double _promedioResultados(List<PruebaCognitivaModel> pruebas) {
+  if (pruebas.isEmpty) return 0;
+  final total = pruebas.fold<double>(
+    0,
+    (sum, prueba) => sum + prueba.porcentajeObtenido,
+  );
+  return total / pruebas.length;
+}
+
+int _contarNivel(List<PruebaCognitivaModel> pruebas, String nivel) {
+  return pruebas
+      .where((prueba) => _nivelResultado(prueba.porcentajeObtenido) == nivel)
+      .length;
 }

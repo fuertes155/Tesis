@@ -2,7 +2,13 @@ import asyncio
 
 import httpx
 
-from app.ollama_service import MAX_TOKENS_REPORTE, TIMEOUT_SEGUNDOS, construir_prompt, generar_reporte_cognitivo
+from app.ollama_service import (
+    MAX_TOKENS_REPORTE,
+    TIMEOUT_SEGUNDOS,
+    construir_prompt,
+    generar_reporte_cognitivo,
+    generar_reporte_local,
+)
 
 
 def test_construir_prompt_es_razonablemente_corto():
@@ -33,7 +39,7 @@ def test_construir_prompt_es_razonablemente_corto():
 
 
 def test_max_tokens_reporte_usa_presupuesto_reducido():
-    assert MAX_TOKENS_REPORTE == 1800
+    assert MAX_TOKENS_REPORTE == 700
 
 
 def test_timeout_reporte_es_corto_para_activar_respaldo():
@@ -92,9 +98,9 @@ def test_generar_reporte_cognitivo_usa_respaldo_local_si_ollama_falla(monkeypatc
 
     reporte = asyncio.run(generar_reporte_cognitivo(datos))
 
-    assert reporte is not None and "DATOS DE LA EVALUACIÓN" in reporte
+    assert reporte is not None and "RESUMEN:" in reporte
     assert "Ana" in reporte
-    assert "Memoria Visual" in reporte
+    assert "Memoria: 35.0% (BAJO)" in reporte
 
 
 def test_generar_reporte_cognitivo_usa_respaldo_local_al_exceder_wait_for(monkeypatch):
@@ -120,5 +126,38 @@ def test_generar_reporte_cognitivo_usa_respaldo_local_al_exceder_wait_for(monkey
 
     reporte = asyncio.run(generar_reporte_cognitivo(datos))
 
-    assert reporte is not None and "DATOS DE LA EVALUACIÓN" in reporte
+    assert reporte is not None and "RESUMEN:" in reporte
     assert "Ana" in reporte
+
+
+def test_reporte_local_es_breve_y_usa_metricas_de_los_juegos():
+    datos = {
+        "paciente_id": "P001",
+        "nombre_paciente": "Ana",
+        "edad_paciente": 45,
+        "fecha_evaluacion": "2026-05-28",
+        "profesional": "Dr. Test",
+        "diagnostico_paciente": "Ansiedad",
+        "pruebas": [
+            {"nombre_prueba": "Memoria Visual", "porcentaje_obtenido": 80, "tiempo_segundos": 120,
+             "metricas": {"level": 5, "avg_selection_ms": 740.4}},
+            {"nombre_prueba": "Atención Sostenida", "porcentaje_obtenido": 55, "tiempo_segundos": 90,
+             "metricas": {"avg_ms": 512.3, "too_early": 1}},
+            {"nombre_prueba": "Fluidez Verbal", "porcentaje_obtenido": 30, "tiempo_segundos": 60,
+             "metricas": {"count": 8, "prompt": "animales"}},
+            {"nombre_prueba": "Funciones Ejecutivas (Stroop)", "porcentaje_obtenido": 75, "tiempo_segundos": 70,
+             "metricas": {"correct": 15, "wrong": 5, "avg_ms": None}},
+        ],
+    }
+
+    reporte = generar_reporte_local(datos)
+
+    titulos = [linea for linea in reporte.splitlines() if linea.isupper() and linea.endswith(":")]
+    assert titulos == ["RESUMEN:", "RESULTADOS POR DOMINIO:", "RECOMENDACIONES:", "CONCLUSIÓN:"]
+    assert len(reporte.split()) < 220
+    assert "Antecedente reportado: Ansiedad." in reporte
+    assert "Atención: 55.0% (MEDIO)" in reporte
+    assert "Tiempo medio 512 ms, anticipaciones 1" in reporte
+    assert "Aciertos 15, errores 5" in reporte
+    assert "Palabras 8" in reporte
+    assert "Control sugerido en 3 meses." in reporte
