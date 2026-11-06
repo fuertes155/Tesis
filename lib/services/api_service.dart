@@ -489,11 +489,11 @@ class ApiService {
     }
   }
 
-  Future<List<dynamic>> getLatestResultsForPatient(int patientId) async {
+  Future<List<dynamic>> getLatestResultsForPatient(int patientId, {int limit = 10}) async {
     try {
       final response = await _dio.get(
         '/sessions/results/latest',
-        queryParameters: {'patient_id': patientId.toString()},
+        queryParameters: {'patient_id': patientId.toString(), 'limit': limit},
       );
       return response.data as List<dynamic>;
     } on dio.DioException catch (e) {
@@ -661,6 +661,17 @@ class ApiService {
   Future<List<ReporteCognitivoModel>> getReportesByPatient(String patientId) async {
     try {
       final response = await _dio.get('/evaluacion/reportes/$patientId');
+      final data = response.data as List;
+      return data.map((e) => ReporteCognitivoModel.fromJson(e as Map<String, dynamic>)).toList();
+    } on dio.DioException catch (e) {
+      throw Exception('Error al cargar historial de reportes: ${e.message}');
+    }
+  }
+
+  /// Reportes de todos los pacientes, del más reciente al más antiguo.
+  Future<List<ReporteCognitivoModel>> getAllReportes() async {
+    try {
+      final response = await _dio.get('/evaluacion/reportes');
       final data = response.data as List;
       return data.map((e) => ReporteCognitivoModel.fromJson(e as Map<String, dynamic>)).toList();
     } on dio.DioException catch (e) {

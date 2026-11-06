@@ -5,7 +5,7 @@ class _PatientDetailState extends ConsumerState<PatientDetailScreen> {
   String _currentPatientName = '';
   Map<String, dynamic>? _patientData;
   List<Map<String, dynamic>> _recentSessions = [];
-  List<dynamic> _allPatients = [];
+  List<Patient> _allPatients = [];
   List<dynamic> _patientResults = [];
   bool _loading = true;
 
@@ -42,7 +42,8 @@ class _PatientDetailState extends ConsumerState<PatientDetailScreen> {
         
       List<dynamic> results = [];
       try {
-        results = await api.getLatestResultsForPatient(_currentPatientId!);
+        // Suficientes resultados para graficar varias evaluaciones (4 pruebas c/u).
+        results = await api.getLatestResultsForPatient(_currentPatientId!, limit: 60);
       } catch (_) {}
 
       if (!mounted) return;
@@ -700,12 +701,15 @@ class _ActionsGrid extends StatelessWidget {
         onTap: () => context.push('/history'),
       ),
       _ActionItem(
-        icon: Icons.analytics_outlined,
-        label: 'Resultados',
-        subtitle: 'Última evaluación',
+        icon: Icons.description_outlined,
+        label: 'Reportes',
+        subtitle: 'Informes neuropsicológicos',
         color: sem.info,
         isPrimary: false,
-        onTap: () => context.push('/history'),
+        onTap: () => context.push('/report_preview', extra: {
+          'patientId': patientId,
+          'patientName': patientData?['name'],
+        }),
       ),
       _ActionItem(
         icon: Icons.picture_as_pdf_rounded,
@@ -984,99 +988,147 @@ class _SessionMiniCard extends StatelessWidget {
   }
 }
 
+/// Evolución por dominio: una línea por prueba y un punto por evaluación (día).
 class _EvolutionChart extends StatelessWidget {
   final List<dynamic> results;
-  
+
   const _EvolutionChart({required this.results});
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
-    
-    // Sort oldest to newest for the graph
-    final sorted = List<dynamic>.from(results)
-      ..sort((a, b) => (a['id'] as int).compareTo(b['id'] as int));
+    final sem = context.sem;
+    final colores = <String, Color>{
+      'visual_memory': sem.info,
+      'reaction': sem.success,
+      'stroop': sem.warning,
+      'fluency': cs.tertiary,
+    };
 
-    List<FlSpot> spots = [];
-    for (int i = 0; i < sorted.length; i++) {
-      final r = sorted[i];
-      final num rawScore = r['score'] ?? 0;
-      final double score = rawScore.toDouble();
-      spots.add(FlSpot(i.toDouble(), score));
-    }
+    final evolucion = agruparEvolucion(results);
+    if (evolucion.vacia) return const SizedBox();
+    final fechas = evolucion.fechas;
+    final juegos = evolucion.juegos;
+    final series = [
+      for (final juego in juegos)
+        LineChartBarData(
+          spots: [
+            for (var i = 0; i < fechas.length; i++)
+              if (evolucion.puntajes[juego]![i] != null)
+                FlSpot(i.toDouble(), evolucion.puntajes[juego]![i]!),
+          ],
+          color: colores[juego],
+          barWidth: 3,
+          isStrokeCapRound: true,
+          dotData: const FlDotData(show: true),
+        ),
+    ];
 
-    if (spots.isEmpty) return const SizedBox();
+    final etiqueta = TextStyle(color: cs.onSurfaceVariant, fontSize: 10);
 
     return Container(
-      height: 220,
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.fromLTRB(12, 20, 20, 16),
       decoration: BoxDecoration(
         color: cs.surfaceContainerLowest,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: cs.outlineVariant),
       ),
-      child: LineChart(
-        LineChartData(
-          gridData: FlGridData(
-            show: true,
-            drawVerticalLine: false,
-            horizontalInterval: 20,
-            getDrawingHorizontalLine: (value) => FlLine(
-              color: cs.outlineVariant.withValues(alpha: 0.5),
-              strokeWidth: 1,
-            ),
-          ),
-          titlesData: FlTitlesData(
-            show: true,
-            rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-            topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-            bottomTitles: AxisTitles(
-              sideTitles: SideTitles(
-                showTitles: true,
-                getTitlesWidget: (value, meta) {
-                  final idx = value.toInt();
-                  if (idx >= 0 && idx < sorted.length) {
-                    return Padding(
-                      padding: const EdgeInsets.only(top: 8.0),
-                      child: Text(
-                        '#${sorted[idx]['id']}',
-                        style: TextStyle(color: cs.onSurfaceVariant, fontSize: 10),
-                      ),
-                    );
-                  }
-                  return const SizedBox();
-                },
-              ),
-            ),
-          ),
-          borderData: FlBorderData(show: false),
-          minX: 0,
-          maxX: (spots.length - 1).toDouble(),
-          minY: 0,
-          maxY: 100,
-          lineBarsData: [
-            LineChartBarData(
-              spots: spots,
-              isCurved: true,
-              color: cs.primary,
-              barWidth: 3,
-              isStrokeCapRound: true,
-              dotData: const FlDotData(show: true),
-              belowBarData: BarAreaData(
-                show: true,
-                gradient: LinearGradient(
-                  colors: [
-                    cs.primary.withValues(alpha: 0.3),
-                    cs.primary.withValues(alpha: 0.0),
-                  ],
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            height: 220,
+            child: LineChart(
+              LineChartData(
+                gridData: FlGridData(
+                  show: true,
+                  drawVerticalLine: false,
+                  horizontalInterval: 20,
+                  getDrawingHorizontalLine: (value) => FlLine(
+                    color: cs.outlineVariant.withValues(alpha: 0.5),
+                    strokeWidth: 1,
+                  ),
                 ),
+                titlesData: FlTitlesData(
+                  show: true,
+                  rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                  topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                  leftTitles: AxisTitles(
+                    sideTitles: SideTitles(
+                      showTitles: true,
+                      interval: 20,
+                      reservedSize: 32,
+                      getTitlesWidget: (value, meta) => Text('${value.toInt()}', style: etiqueta),
+                    ),
+                  ),
+                  bottomTitles: AxisTitles(
+                    sideTitles: SideTitles(
+                      showTitles: true,
+                      interval: 1,
+                      reservedSize: 28,
+                      getTitlesWidget: (value, meta) {
+                        final idx = value.toInt();
+                        if (value != idx.toDouble() || idx < 0 || idx >= fechas.length) {
+                          return const SizedBox();
+                        }
+                        return Padding(
+                          padding: const EdgeInsets.only(top: 8),
+                          child: Text(DateFormat('dd/MM/yy').format(fechas[idx]), style: etiqueta),
+                        );
+                      },
+                    ),
+                  ),
+                ),
+                lineTouchData: LineTouchData(
+                  touchTooltipData: LineTouchTooltipData(
+                    getTooltipItems: (puntos) => [
+                      for (final p in puntos)
+                        LineTooltipItem(
+                          '${dominiosEvolucion[juegos[p.barIndex]]}: ${p.y.toInt()}%',
+                          TextStyle(color: p.bar.color, fontWeight: FontWeight.w600, fontSize: 12),
+                        ),
+                    ],
+                  ),
+                ),
+                borderData: FlBorderData(show: false),
+                // Margen lateral para que una sola evaluación no quede pegada al borde.
+                minX: -0.3,
+                maxX: fechas.length - 1 + 0.3,
+                minY: 0,
+                maxY: 100,
+                lineBarsData: series,
               ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 16,
+            runSpacing: 8,
+            children: [
+              for (final juego in juegos)
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 10,
+                      height: 10,
+                      decoration: BoxDecoration(color: colores[juego], shape: BoxShape.circle),
+                    ),
+                    const SizedBox(width: 6),
+                    Text(dominiosEvolucion[juego]!, style: theme.textTheme.bodySmall),
+                  ],
+                ),
+            ],
+          ),
+          if (fechas.length == 1) ...[
+            const SizedBox(height: 8),
+            Text(
+              'Una sola evaluación registrada: la tendencia se verá a partir de la segunda.',
+              style: theme.textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant),
             ),
           ],
-        ),
+        ],
       ),
     );
   }

@@ -371,19 +371,30 @@ def delete_user(
         models.Administrator.user_id == user_id
     ).delete(synchronize_session=False)
 
-    # Remove sessions tied to patients owned by this user, then the patients
-    owned_patients = (
-        db.query(models.Patient)
-        .filter(models.Patient.user_id == user_id)
-        .all()
+    # Pacientes cuyo perfil es esta cuenta (rol "user"): se borran con sus sesiones y
+    # resultados; sus informes se conservan desvinculados (igual que al borrar un paciente).
+    owned_ids = [
+        pid for (pid,) in db.query(models.Patient.id).filter(models.Patient.user_id == user_id)
+    ]
+    if owned_ids:
+        db.query(models.Result).filter(models.Result.patient_id.in_(owned_ids)).delete(
+            synchronize_session=False
+        )
+        db.query(models.Session).filter(models.Session.patient_id.in_(owned_ids)).delete(
+            synchronize_session=False
+        )
+        db.query(models.CognitiveReport).filter(
+            models.CognitiveReport.patient_db_id.in_(owned_ids)
+        ).update({models.CognitiveReport.patient_db_id: None}, synchronize_session=False)
+        db.query(models.Patient).filter(models.Patient.id.in_(owned_ids)).delete(
+            synchronize_session=False
+        )
+
+    # Los pacientes que atendía (si era doctor) quedan sin asignar en vez de apuntar
+    # a un usuario inexistente.
+    db.query(models.Patient).filter(models.Patient.doctor_id == user_id).update(
+        {models.Patient.doctor_id: None}, synchronize_session=False
     )
-    for p in owned_patients:
-        db.query(models.Session).filter(
-            models.Session.patient_id == p.id
-        ).delete(synchronize_session=False)
-    db.query(models.Patient).filter(
-        models.Patient.user_id == user_id
-    ).delete(synchronize_session=False)
 
     db.delete(db_user)
     db.commit()

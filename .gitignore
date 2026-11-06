@@ -66,3 +66,7 @@ pyrightconfig.json
 
 # Scratch / temporary files
 scratch/
+
+# Datos de cobertura de pytest-cov
+backend/.coverage
+backend/htmlcov/

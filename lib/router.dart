@@ -289,11 +289,25 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: '/report_preview',
-        pageBuilder: (context, state) => _deferredPage(
-          state,
-          report_preview_screen.loadLibrary,
-          () => report_preview_screen.ReportPreviewScreen(),
-        ),
+        pageBuilder: (context, state) {
+          final extra = state.extra;
+          int? patientId;
+          String? patientName;
+          if (extra is Map) {
+            final v = extra['patientId'];
+            if (v is int) patientId = v;
+            if (v is String) patientId = int.tryParse(v);
+            patientName = extra['patientName']?.toString();
+          }
+          return _deferredPage(
+            state,
+            report_preview_screen.loadLibrary,
+            () => report_preview_screen.ReportPreviewScreen(
+              patientId: patientId,
+              patientName: patientName,
+            ),
+          );
+        },
       ),
       GoRoute(
         path: '/reporte_cognitivo',

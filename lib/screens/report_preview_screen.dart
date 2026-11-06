@@ -5,8 +5,13 @@ import '../providers/api_providers.dart';
 import '../models/reporte_cognitivo_model.dart';
 import 'package:intl/intl.dart';
 
+/// Lista de informes neuropsicológicos.
+/// Con [patientId] muestra solo los de ese paciente; sin él, los de todos.
 class ReportPreviewScreen extends ConsumerWidget {
-  const ReportPreviewScreen({super.key});
+  const ReportPreviewScreen({super.key, this.patientId, this.patientName});
+
+  final int? patientId;
+  final String? patientName;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -19,16 +24,30 @@ class ReportPreviewScreen extends ConsumerWidget {
       );
     }
 
-    final patientId = api.currentPatientId.toString();
+    final delPaciente = patientId != null;
 
     return Scaffold(
       backgroundColor: theme.colorScheme.surfaceContainerHighest,
       appBar: AppBar(
-        title: const Text('Historial de Reportes'),
+        title: Text(delPaciente ? 'Reportes del paciente' : 'Historial de Reportes'),
         centerTitle: true,
+        bottom: delPaciente && (patientName ?? '').trim().isNotEmpty
+            ? PreferredSize(
+                preferredSize: const Size.fromHeight(28),
+                child: Padding(
+                  padding: const EdgeInsets.only(bottom: 10),
+                  child: Text(
+                    patientName!.trim(),
+                    style: theme.textTheme.titleSmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                  ),
+                ),
+              )
+            : null,
       ),
       body: FutureBuilder<List<ReporteCognitivoModel>>(
-        future: api.getReportesByPatient(patientId),
+        future: delPaciente
+            ? api.getReportesByPatient(patientId.toString())
+            : api.getAllReportes(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
@@ -57,7 +76,9 @@ class ReportPreviewScreen extends ConsumerWidget {
                   Icon(Icons.folder_open_outlined, size: 64, color: theme.colorScheme.outline),
                   const SizedBox(height: 16),
                   Text(
-                    'No hay reportes generados aún',
+                    delPaciente
+                        ? 'Este paciente aún no tiene reportes generados'
+                        : 'No hay reportes generados aún',
                     style: theme.textTheme.titleMedium?.copyWith(color: theme.colorScheme.onSurfaceVariant),
                   ),
                 ],

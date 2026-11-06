@@ -135,10 +135,46 @@ class LoginScreenState extends ConsumerState<LoginScreen> {
     final cs = theme.colorScheme;
     final s = context.spacing;
 
-    return Column(
+    return Container(
+      padding: EdgeInsets.all(s.x2l),
+      decoration: BoxDecoration(
+        color: cs.surfaceContainerLowest,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: cs.outlineVariant.withValues(alpha: 0.75)),
+        boxShadow: [
+          BoxShadow(
+            color: cs.shadow.withValues(alpha: 0.08),
+            blurRadius: 32,
+            offset: const Offset(0, 16),
+          ),
+        ],
+      ),
+      child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: [
+        Row(
+          children: [
+            Container(
+              width: 38,
+              height: 38,
+              decoration: BoxDecoration(
+                color: cs.primaryContainer,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(Icons.health_and_safety_outlined, color: cs.primary, size: 21),
+            ),
+            SizedBox(width: s.sm),
+            Text(
+              'ACCESO SEGURO',
+              style: theme.textTheme.labelMedium?.copyWith(
+                color: cs.primary,
+                letterSpacing: 1.1,
+              ),
+            ),
+          ],
+        ),
+        SizedBox(height: s.xl),
         // Título
         Text(
           'Bienvenido de nuevo',
@@ -253,6 +289,7 @@ class LoginScreenState extends ConsumerState<LoginScreen> {
           ),
         ).animate().fadeIn(delay: 600.ms),
       ],
+      ),
     );
   }
 }

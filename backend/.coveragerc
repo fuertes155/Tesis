@@ -1,0 +1,11 @@
+[run]
+# Código de la aplicación que se mide (no las pruebas ni el entorno virtual).
+source =
+    app
+    main
+
+[report]
+show_missing = True
+# Solo se excluye el arranque manual con `python main.py`, que no se ejecuta en pruebas.
+exclude_also =
+    if __name__ == .__main__.:

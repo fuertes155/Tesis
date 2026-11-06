@@ -8,6 +8,7 @@ from pydantic import BaseModel, Field, field_validator
 from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
+from app.api.deps import require_roles
 from app.core.audit import log_action
 from app.infrastructure import models
 from app.infrastructure.database import get_db
@@ -134,6 +135,25 @@ async def generar_reporte(
 
 
 @router.get(
+    "/evaluacion/reportes",
+    response_model=list[ReporteCognitivoRespuestaSchema],
+)
+def listar_reportes(
+    limite: int = 200,
+    db: Session = Depends(get_db),
+    _user=Depends(require_roles("doctor", "gestor")),
+):
+    """Reportes de todos los pacientes, del más reciente al más antiguo."""
+    reportes = (
+        db.query(models.CognitiveReport)
+        .order_by(models.CognitiveReport.created_at.desc())
+        .limit(max(1, min(limite, 500)))
+        .all()
+    )
+    return [_a_respuesta(reporte) for reporte in reportes]
+
+
+@router.get(
     "/evaluacion/reportes/{paciente_id}",
     response_model=list[ReporteCognitivoRespuestaSchema],
 )
@@ -151,20 +171,21 @@ def listar_reportes_paciente(paciente_id: str, db: Session = Depends(get_db)):
         .all()
     )
 
-    return [
-        ReporteCognitivoRespuestaSchema(
-            id=reporte.id,
-            paciente_id=reporte.paciente_id,
-            nombre_paciente=reporte.nombre_paciente,
-            edad_paciente=reporte.edad_paciente,
-            profesional=reporte.profesional,
-            pruebas=reporte.pruebas if isinstance(reporte.pruebas, list) else [],
-            fecha_evaluacion=date.fromisoformat(reporte.fecha_evaluacion),
-            reporte=reporte.reporte,
-            created_at=reporte.created_at.isoformat(),
-        )
-        for reporte in reportes
-    ]
+    return [_a_respuesta(reporte) for reporte in reportes]
+
+
+def _a_respuesta(reporte: models.CognitiveReport) -> ReporteCognitivoRespuestaSchema:
+    return ReporteCognitivoRespuestaSchema(
+        id=reporte.id,
+        paciente_id=reporte.paciente_id,
+        nombre_paciente=reporte.nombre_paciente,
+        edad_paciente=reporte.edad_paciente,
+        profesional=reporte.profesional,
+        pruebas=reporte.pruebas if isinstance(reporte.pruebas, list) else [],
+        fecha_evaluacion=date.fromisoformat(reporte.fecha_evaluacion),
+        reporte=reporte.reporte,
+        created_at=reporte.created_at.isoformat(),
+    )
 
 
 def _buscar_paciente(

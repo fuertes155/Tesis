@@ -3,7 +3,9 @@ import 'package:go_router/go_router.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../core/theme/app_theme.dart';
+import '../models/patient.dart';
 import '../providers/api_providers.dart';
+import '../providers/data_providers.dart';
 import '../widgets/session_stepper.dart';
 
 /// Pruebas disponibles. Los nombres coinciden con los del selector de pruebas.
@@ -35,13 +37,27 @@ class NewSessionScreen extends ConsumerWidget {
     if (patientId != null && api != null) {
       api.setCurrentPatientId(patientId!);
     }
-    final paciente = api?.currentPatientName;
+    final pacientesAsync = ref.watch(patientsProvider);
+    final pacientes = pacientesAsync.value ?? const <Patient>[];
 
-    void abrirSelector(List<_Prueba> pruebas) {
-      context.push('/test_selector', extra: {
-        'initialSelection': [for (final p in pruebas) p.id],
-      });
+    // Las pruebas se guardan sobre el "paciente actual"; si no es uno existente
+    // (p. ej. se entró desde Inicio), los resultados quedarían sin paciente.
+    void exigirPaciente(VoidCallback accion) {
+      final valido = api != null && pacientes.any((p) => p.id == api.currentPatientId);
+      if (valido) {
+        accion();
+        return;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Primero selecciona el paciente que vas a evaluar.')),
+      );
     }
+
+    void abrirSelector(List<_Prueba> pruebas) => exigirPaciente(() {
+          context.push('/test_selector', extra: {
+            'initialSelection': [for (final p in pruebas) p.id],
+          });
+        });
 
     final baterias = [
       _Bateria(
@@ -115,13 +131,20 @@ class NewSessionScreen extends ConsumerWidget {
                 'Elige un protocolo. En el siguiente paso podrás agregar o quitar pruebas.',
                 style: theme.textTheme.bodyLarge?.copyWith(color: cs.onSurfaceVariant),
               ),
-              if (paciente != null && paciente.trim().isNotEmpty) ...[
-                const SizedBox(height: 16),
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: _ChipPaciente(nombre: paciente.trim()),
+              const SizedBox(height: 16),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: _SelectorPaciente(
+                  pacientes: pacientes,
+                  cargando: pacientesAsync.isLoading,
+                  seleccionadoId: api?.currentPatientId,
+                  fijo: patientId != null,
+                  onSeleccionar: (p) {
+                    api?.setCurrentPatientId(p.id);
+                    api?.setCurrentPatientName(p.name);
+                  },
                 ),
-              ],
+              ),
               const SizedBox(height: 28),
               if (enColumnas)
                 IntrinsicHeight(
@@ -151,7 +174,7 @@ class NewSessionScreen extends ConsumerWidget {
                       style: theme.textTheme.bodyMedium?.copyWith(color: cs.onSurfaceVariant),
                     ),
                     TextButton.icon(
-                      onPressed: () => context.push('/test_selector'),
+                      onPressed: () => exigirPaciente(() => context.push('/test_selector')),
                       icon: const Icon(Icons.tune_rounded, size: 18),
                       label: const Text('Personalizar'),
                     ),
@@ -407,6 +430,75 @@ class _Dato extends StatelessWidget {
         const SizedBox(width: 5),
         Text(texto, style: theme.textTheme.labelLarge?.copyWith(color: cs.onSurface)),
       ],
+    );
+  }
+}
+
+/// Paciente a evaluar: chip fijo si se llegó desde su ficha; si no, un buscador.
+class _SelectorPaciente extends StatefulWidget {
+  const _SelectorPaciente({
+    required this.pacientes,
+    required this.cargando,
+    required this.seleccionadoId,
+    required this.fijo,
+    required this.onSeleccionar,
+  });
+
+  final List<Patient> pacientes;
+  final bool cargando;
+  final int? seleccionadoId;
+  final bool fijo;
+  final ValueChanged<Patient> onSeleccionar;
+
+  @override
+  State<_SelectorPaciente> createState() => _SelectorPacienteState();
+}
+
+class _SelectorPacienteState extends State<_SelectorPaciente> {
+  int? _elegido;
+
+  @override
+  Widget build(BuildContext context) {
+    final idActual = _elegido ?? widget.seleccionadoId;
+    Patient? actual;
+    for (final p in widget.pacientes) {
+      if (p.id == idActual) actual = p;
+    }
+
+    if (widget.fijo && actual != null) {
+      return _ChipPaciente(nombre: actual.name);
+    }
+    if (widget.cargando && widget.pacientes.isEmpty) {
+      return const SizedBox(
+        width: 22,
+        height: 22,
+        child: CircularProgressIndicator(strokeWidth: 2),
+      );
+    }
+
+    final ordenados = [...widget.pacientes]..sort((a, b) => a.name.compareTo(b.name));
+    final anchoPantalla = MediaQuery.sizeOf(context).width;
+    return DropdownMenu<int>(
+      // Se recrea al llegar la lista para que tome la selección inicial.
+      key: ValueKey('pacientes_${widget.pacientes.length}'),
+      width: anchoPantalla < 452 ? anchoPantalla - 32 : 420,
+      menuHeight: 320,
+      initialSelection: actual?.id,
+      enableFilter: true,
+      requestFocusOnTap: true,
+      leadingIcon: const Icon(Icons.person_search_rounded),
+      label: const Text('Paciente a evaluar'),
+      hintText: 'Busca y selecciona un paciente',
+      dropdownMenuEntries: [
+        for (final p in ordenados)
+          DropdownMenuEntry(value: p.id, label: p.name),
+      ],
+      onSelected: (id) {
+        if (id == null) return;
+        final p = widget.pacientes.firstWhere((x) => x.id == id);
+        setState(() => _elegido = id);
+        widget.onSeleccionar(p);
+      },
     );
   }
 }

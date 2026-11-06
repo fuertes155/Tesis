@@ -46,7 +46,14 @@ class PatientService:
     def delete_patient(db: Session, patient_id: int):
         db_patient = db.query(models.Patient).filter(models.Patient.id == patient_id).first()
         if db_patient:
+            # SQLite no aplica los ON DELETE de las claves foráneas, así que se replican aquí:
+            # resultados y sesiones se borran (CASCADE) y los informes se conservan
+            # desvinculados (SET NULL), como declaran los modelos.
+            db.query(models.Result).filter(models.Result.patient_id == patient_id).delete(synchronize_session=False)
             db.query(models.Session).filter(models.Session.patient_id == patient_id).delete(synchronize_session=False)
+            db.query(models.CognitiveReport).filter(models.CognitiveReport.patient_db_id == patient_id).update(
+                {models.CognitiveReport.patient_db_id: None}, synchronize_session=False
+            )
             db.delete(db_patient)
             db.commit()
             return True
