@@ -70,3 +70,12 @@ scratch/
 # Datos de cobertura de pytest-cov
 backend/.coverage
 backend/htmlcov/
+
+# Evidencia reproducible de QA (los informes finales se resumen en docs/pruebas)
+.qa-venv/
+backend/venv/
+artifacts/
+backend/mutants/
+backend/.mutmut-cache
+backend/coverage.xml
+backend/.pytest_cache/

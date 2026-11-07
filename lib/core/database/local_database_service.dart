@@ -17,7 +17,13 @@ Future<LocalDatabaseService> localDatabase(Ref ref) async {
 }
 
 class LocalDatabaseService {
+  LocalDatabaseService({Database? database}) {
+    if (database != null) _db = database;
+  }
+
   late Database _db;
+
+  Future<void> close() => _db.close();
 
   // Stores
   final _patientsStore = intMapStoreFactory.store('patients');
@@ -106,7 +112,11 @@ class LocalDatabaseService {
   }
 
   // --- Pending Actions ---
-  Future<void> addPendingAction(String action, String entity, Map<String, dynamic> data) async {
+  Future<void> addPendingAction(
+    String action,
+    String entity,
+    Map<String, dynamic> data,
+  ) async {
     await _pendingStore.add(_db, {
       'action': action, // CREATE, UPDATE, DELETE
       'entity': entity, // patients, sessions
@@ -115,8 +125,12 @@ class LocalDatabaseService {
     });
   }
 
-  Future<List<RecordSnapshot<int, Map<String, dynamic>>>> getPendingActions() async {
-    return await _pendingStore.find(_db, finder: Finder(sortOrders: [SortOrder('timestamp')]));
+  Future<List<RecordSnapshot<int, Map<String, dynamic>>>>
+  getPendingActions() async {
+    return await _pendingStore.find(
+      _db,
+      finder: Finder(sortOrders: [SortOrder('timestamp')]),
+    );
   }
 
   Future<void> deletePendingAction(int key) async {

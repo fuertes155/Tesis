@@ -1,0 +1,60 @@
+name: Carga, ZAP y mutación
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  load:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install -r backend/requirements-qa.txt
+      - run: python scripts/qa/run_load.py --seconds 120
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: carga-10-50-100
+          path: artifacts/load/
+  zap:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install -r backend/requirements.txt
+      - run: python scripts/qa/run_zap.py
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: zap-api
+          path: artifacts/security/zap/
+  mutation:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install -r backend/requirements.txt mutmut==3.3.1
+      - name: Mutar seguridad (alcance inicial explícito)
+        working-directory: backend
+        run: mutmut run
+      - name: Exportar resultados y parche de mutantes
+        if: always()
+        working-directory: backend
+        run: |
+          mkdir -p ../artifacts/mutation
+          mutmut results > ../artifacts/mutation/results.txt
+          python ../scripts/qa/export_mutation.py ../artifacts/mutation
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mutacion-seguridad
+          path: artifacts/mutation/

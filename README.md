@@ -1,4 +1,10 @@
-# flutter_application_1
+# NeuroApp360
+
+Aplicación Flutter y API Python para evaluación cognitiva.
+
+La guía de ejecución de pruebas, carga, seguridad, accesibilidad, compatibilidad,
+mutación y protocolos de estudios está en [docs/pruebas](docs/pruebas/README.md).
+Consultar también el [backend](backend/README.md).
 
 A new Flutter project.
 

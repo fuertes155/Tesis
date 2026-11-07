@@ -2,7 +2,7 @@
 from datetime import timedelta
 
 import pytest
-from jose import JWTError
+from jwt import InvalidTokenError as JWTError
 
 from app.api.v1.users import _is_strong_password
 from app.core.security import (

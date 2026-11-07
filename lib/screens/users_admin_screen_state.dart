@@ -968,11 +968,17 @@ class UsersAdminScreenState extends ConsumerState<UsersAdminScreen> {
                   color: cs.onSurfaceVariant,
                 ),
                 const SizedBox(width: 12),
-                Text(
-                  dateStr,
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    fontWeight: FontWeight.w600,
-                    color: cs.onSurface,
+                // Flexible + elipsis: no desborda la columna con fechas largas
+                // o con el texto agrandado por accesibilidad.
+                Flexible(
+                  child: Text(
+                    dateStr,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      fontWeight: FontWeight.w600,
+                      color: cs.onSurface,
+                    ),
                   ),
                 ),
               ],
@@ -981,12 +987,16 @@ class UsersAdminScreenState extends ConsumerState<UsersAdminScreen> {
           // ESTADO
           SizedBox(
             width: 140,
-            child: UnconstrainedBox(
+            child: Align(
               alignment: Alignment.centerLeft,
-              child: StatusBadge(
-                label: statusText,
-                color: statusColor,
-                small: true,
+              // Se reduce si no cabe, en vez de salirse de la columna.
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: StatusBadge(
+                  label: statusText,
+                  color: statusColor,
+                  small: true,
+                ),
               ),
             ),
           ),

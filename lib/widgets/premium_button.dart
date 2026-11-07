@@ -115,7 +115,8 @@ class _PremiumButtonState extends State<PremiumButton>
               Transform.scale(scale: _scale.value, child: child),
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 150),
-            height: widget.height,
+            constraints: BoxConstraints(minHeight: widget.height),
+            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
             decoration: BoxDecoration(
               gradient: gradient,
               borderRadius: BorderRadius.circular(widget.radius),
@@ -153,13 +154,16 @@ class _PremiumButtonState extends State<PremiumButton>
                             ),
                             const SizedBox(width: 10),
                           ],
-                          Text(
-                            widget.label,
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: widget.fontSize,
-                              fontWeight: FontWeight.w600,
-                              letterSpacing: 0.1,
+                          Flexible(
+                            child: Text(
+                              widget.label,
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: widget.fontSize,
+                                fontWeight: FontWeight.w600,
+                                letterSpacing: 0.1,
+                              ),
                             ),
                           ),
                         ],

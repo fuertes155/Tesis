@@ -79,7 +79,8 @@ class LoginScreenState extends ConsumerState<LoginScreen> {
       body: AppDecorations.meshBackground(
         child: LayoutBuilder(
           builder: (context, constraints) {
-            final isWide = constraints.maxWidth >= 1000;
+            final isWide = constraints.maxWidth >= 1000 &&
+                MediaQuery.textScalerOf(context).scale(16) <= 24;
 
             if (isWide) {
               return Row(
@@ -165,13 +166,13 @@ class LoginScreenState extends ConsumerState<LoginScreen> {
               child: Icon(Icons.health_and_safety_outlined, color: cs.primary, size: 21),
             ),
             SizedBox(width: s.sm),
-            Text(
+            Flexible(child: Text(
               'ACCESO SEGURO',
               style: theme.textTheme.labelMedium?.copyWith(
                 color: cs.primary,
                 letterSpacing: 1.1,
               ),
-            ),
+            )),
           ],
         ),
         SizedBox(height: s.xl),
@@ -195,7 +196,6 @@ class LoginScreenState extends ConsumerState<LoginScreen> {
         Semantics(
           label: 'Usuario',
           hint: 'Ingresa tu correo o nombre de usuario',
-          textField: true,
           child: TextField(
             controller: _usernameController,
             keyboardType: TextInputType.emailAddress,
@@ -215,7 +215,6 @@ class LoginScreenState extends ConsumerState<LoginScreen> {
         Semantics(
           label: 'Contraseña',
           hint: 'Ingresa tu contraseña',
-          textField: true,
           child: TextField(
             controller: _passwordController,
             obscureText: !_showPassword,
@@ -248,6 +247,7 @@ class LoginScreenState extends ConsumerState<LoginScreen> {
           child: TextButton(
             onPressed: () => context.push('/reset_password'),
             style: TextButton.styleFrom(
+              minimumSize: const Size(48, 48),
               foregroundColor: cs.primary,
               textStyle: theme.textTheme.labelLarge?.copyWith(fontSize: 13),
               padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
@@ -284,7 +284,7 @@ class LoginScreenState extends ConsumerState<LoginScreen> {
           child: Text(
             '© 2026 NeuroApp Systems • Hospital Central',
             style: theme.textTheme.bodySmall?.copyWith(
-              color: cs.onSurfaceVariant.withValues(alpha: 0.5),
+              color: cs.onSurfaceVariant,
             ),
           ),
         ).animate().fadeIn(delay: 600.ms),
@@ -326,10 +326,12 @@ class _BrandingPanelState extends State<_BrandingPanel>
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
     final s = context.spacing;
-    final glass = context.glass;
 
     return Container(
-      decoration: BoxDecoration(gradient: glass.headerGradient),
+      decoration: const BoxDecoration(gradient: LinearGradient(
+        begin: Alignment.topLeft, end: Alignment.bottomRight,
+        colors: [Color(0xFF1E3A8A), Color(0xFF1D4ED8), Color(0xFF1E40AF)],
+      )),
       child: Stack(
         children: [
           // ── Orbes de fondo animados ────────────────────────────────
@@ -513,7 +515,7 @@ class _BrandingPanelState extends State<_BrandingPanel>
                 Text(
                   '© 2026 NeuroApp Systems  •  v2.5.0',
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: Colors.white.withValues(alpha: 0.4),
+                    color: Colors.white,
                     letterSpacing: 0.5,
                   ),
                 ),
@@ -532,12 +534,14 @@ class _MobileHero extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final s = context.spacing;
-    final glass = context.glass;
 
     return Container(
       width: double.infinity,
       padding: EdgeInsets.fromLTRB(s.xl, s.x2l + 16, s.xl, s.x2l),
-      decoration: BoxDecoration(gradient: glass.headerGradient),
+      decoration: const BoxDecoration(gradient: LinearGradient(
+        begin: Alignment.topLeft, end: Alignment.bottomRight,
+        colors: [Color(0xFF1E3A8A), Color(0xFF1D4ED8), Color(0xFF1E40AF)],
+      )),
       child: SafeArea(
         bottom: false,
         child: Column(

@@ -1,0 +1,36 @@
+name: Seguridad estática y dependencias
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 12 * * 1'
+permissions:
+  contents: read
+jobs:
+  security:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install -r backend/requirements.txt bandit==1.9.4 pip-audit==2.10.1
+      - run: mkdir -p artifacts/security
+      - name: Bandit (todos los hallazgos)
+        id: bandit
+        continue-on-error: true
+        run: bandit -r backend/app backend/main.py -f json -o artifacts/security/bandit.json
+      - name: Auditar versiones realmente instaladas
+        id: audit
+        continue-on-error: true
+        run: pip-audit --format json --output artifacts/security/pip-audit.json
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: seguridad
+          path: artifacts/security/
+      - name: Fallar si hay hallazgos o el análisis no terminó
+        if: steps.bandit.outcome != 'success' || steps.audit.outcome != 'success'
+        run: exit 1

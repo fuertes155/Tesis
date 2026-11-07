@@ -12,9 +12,18 @@ import tempfile
 import uuid
 from pathlib import Path
 
-_DIR_TEMPORAL = Path(tempfile.mkdtemp(prefix="neuroapp_pruebas_"))
+_mutation_dir = os.environ.get("NEUROAPP_MUTATION_TEST_DIR") if "MUTANT_UNDER_TEST" in os.environ else None
+if _mutation_dir:
+    _DIR_TEMPORAL = Path(_mutation_dir).resolve()
+    if _DIR_TEMPORAL.parent != Path(tempfile.gettempdir()).resolve() or not _DIR_TEMPORAL.name.startswith("neuroapp_pruebas_"):
+        raise RuntimeError("Directorio temporal de mutación inválido")
+else:
+    _DIR_TEMPORAL = Path(tempfile.mkdtemp(prefix="neuroapp_pruebas_"))
+    if "MUTANT_UNDER_TEST" in os.environ:
+        os.environ["NEUROAPP_MUTATION_TEST_DIR"] = str(_DIR_TEMPORAL)
 os.environ["DATABASE_URL"] = f"sqlite:///{(_DIR_TEMPORAL / 'pruebas.db').as_posix()}"
 os.environ["DEFAULT_ADMIN_PASSWORD"] = "Password123!"  # clave de los usuarios semilla
+os.environ["SECRET_KEY"] = "neuroapp-test-only-secret-at-least-32-characters"
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
@@ -40,6 +49,10 @@ def pytest_configure(config):
 
 
 def pytest_sessionfinish(session, exitstatus):
+    # mutmut ejecuta varias sesiones en el mismo intérprete y procesos fork.
+    # La BD temporal debe sobrevivir a la recolección; el contenedor se desecha.
+    if "MUTANT_UNDER_TEST" in os.environ:
+        return
     engine.dispose()
     shutil.rmtree(_DIR_TEMPORAL, ignore_errors=True)
 

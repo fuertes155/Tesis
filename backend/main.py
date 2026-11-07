@@ -226,7 +226,7 @@ def health_check():
         db.execute(text("SELECT 1"))
         db_ok = True
     except Exception:
-        pass
+        _logger.warning("Database health check failed", exc_info=True)
     finally:
         db.close()
     return {
@@ -255,4 +255,4 @@ def readiness_check():
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
+    uvicorn.run("main:app", host="127.0.0.1", port=8000, reload=True)

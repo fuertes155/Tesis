@@ -274,7 +274,8 @@ def reset_password(
         entity_type="User",
         entity_id=db_user.id,
         old_value={"username": normalized},
-        new_value={"password_reset": True},
+        # Indicador booleano de auditoría; no contiene una contraseña.
+        new_value={"password_reset": True},  # nosec B105
     )
 
     return db_user

@@ -371,15 +371,13 @@ class _PatientDetailState extends ConsumerState<PatientDetailScreen> {
                         ] else ...[
                           _SectionLabel(label: 'SESIONES RECIENTES', icon: Icons.history_rounded),
                           SizedBox(height: spacing.lg),
-                          SizedBox(
-                            height: 200,
-                            child: EmptyStateView(
-                              title: 'Sin Evaluaciones',
-                              description: 'Este paciente aún no registra actividad cognitiva.',
-                              iconData: Icons.history_toggle_off_rounded,
-                              buttonLabel: 'Iniciar Evaluación',
-                              onButtonPressed: () => context.push('/new_session', extra: {'patientId': _currentPatientId}),
-                            ),
+                          // Sin alto fijo: el estado vacío mide ~340 px y se desbordaba en 200.
+                          EmptyStateView(
+                            title: 'Sin Evaluaciones',
+                            description: 'Este paciente aún no registra actividad cognitiva.',
+                            iconData: Icons.history_toggle_off_rounded,
+                            buttonLabel: 'Iniciar Evaluación',
+                            onButtonPressed: () => context.push('/new_session', extra: {'patientId': _currentPatientId}),
                           ),
                         ],
                         SizedBox(height: spacing.xl),

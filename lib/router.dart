@@ -32,6 +32,37 @@ import 'games/common/game_flow.dart' deferred as game_flow;
 
 typedef DeferredWidgetBuilder = Widget Function();
 
+/// Carga de una vez todas las pantallas diferidas.
+///
+/// Las pruebas la llaman antes de montar la app (ver test/flutter_test_config.dart):
+/// `loadLibrary()` se resuelve en el ciclo de eventos real, que el reloj simulado
+/// de las pruebas de widgets no avanza.
+Future<void> precargarPantallas() => Future.wait([
+      reset_password_screen.loadLibrary(),
+      mfa_screen.loadLibrary(),
+      home_screen.loadLibrary(),
+      users_admin_screen.loadLibrary(),
+      doctor_panel_screen.loadLibrary(),
+      patient_welcome_screen.loadLibrary(),
+      patients_screen.loadLibrary(),
+      create_patient_screen.loadLibrary(),
+      patient_detail_screen.loadLibrary(),
+      consent_screen.loadLibrary(),
+      new_session_screen.loadLibrary(),
+      test_selector_screen.loadLibrary(),
+      profile_screen.loadLibrary(),
+      test_placeholder_screen.loadLibrary(),
+      results_screen.loadLibrary(),
+      history_screen.loadLibrary(),
+      report_preview_screen.loadLibrary(),
+      reporte_cognitivo_screen.loadLibrary(),
+      visual_memory_game.loadLibrary(),
+      reaction_game.loadLibrary(),
+      fluency_game.loadLibrary(),
+      stroop_game.loadLibrary(),
+      game_flow.loadLibrary(),
+    ]);
+
 class DeferredRouteView extends StatefulWidget {
   const DeferredRouteView({
     super.key,

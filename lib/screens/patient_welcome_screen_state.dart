@@ -392,50 +392,55 @@ class _WelcomeHeroState extends State<_WelcomeHero>
       decoration: BoxDecoration(gradient: glass.headerGradient),
       child: Stack(
         children: [
-          // Orbes animados
-          AnimatedBuilder(
-            animation: _ctrl,
-            builder: (_, __) {
-              final t = _ctrl.value;
-              return Stack(
-                children: [
-                  Positioned(
-                    right: -40 + 30 * math.sin(t * 2 * math.pi),
-                    top: 20 + 20 * math.cos(t * 2 * math.pi),
-                    child: Container(
-                      width: 200,
-                      height: 200,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        gradient: RadialGradient(
-                          colors: [
-                            cs.tertiary.withValues(alpha: 0.15),
-                            Colors.transparent,
-                          ],
+          // Orbes animados. Positioned.fill: la capa decorativa toma el tamaño del
+          // contenido; un Stack solo con hijos Positioned no puede medirse dentro
+          // de una lista (alto infinito) y lanzaba 'size.isFinite'.
+          Positioned.fill(
+            child: AnimatedBuilder(
+              animation: _ctrl,
+              builder: (_, __) {
+                final t = _ctrl.value;
+                return Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    Positioned(
+                      right: -40 + 30 * math.sin(t * 2 * math.pi),
+                      top: 20 + 20 * math.cos(t * 2 * math.pi),
+                      child: Container(
+                        width: 200,
+                        height: 200,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          gradient: RadialGradient(
+                            colors: [
+                              cs.tertiary.withValues(alpha: 0.15),
+                              Colors.transparent,
+                            ],
+                          ),
                         ),
                       ),
                     ),
-                  ),
-                  Positioned(
-                    left: -30 + 20 * math.sin(t * 2 * math.pi + 1),
-                    bottom: 0,
-                    child: Container(
-                      width: 160,
-                      height: 160,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        gradient: RadialGradient(
-                          colors: [
-                            Colors.white.withValues(alpha: 0.06),
-                            Colors.transparent,
-                          ],
+                    Positioned(
+                      left: -30 + 20 * math.sin(t * 2 * math.pi + 1),
+                      bottom: 0,
+                      child: Container(
+                        width: 160,
+                        height: 160,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          gradient: RadialGradient(
+                            colors: [
+                              Colors.white.withValues(alpha: 0.06),
+                              Colors.transparent,
+                            ],
+                          ),
                         ),
                       ),
                     ),
-                  ),
-                ],
-              );
-            },
+                  ],
+                );
+              },
+            ),
           ),
 
           // Contenido

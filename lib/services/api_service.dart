@@ -38,6 +38,28 @@ class ApiService {
   String? _homeSortMode;
   String? _notice;
   bool _initialized = false;
+  Future<void>? _pendingFlush;
+  Future<void> _pendingQueueOperation = Future<void>.value();
+
+  Future<void> _withPendingQueue(Future<void> Function() action) {
+    final operation = _pendingQueueOperation.then((_) => action());
+    _pendingQueueOperation = operation.catchError((Object _) {});
+    return operation;
+  }
+
+  // Un rechazo de permisos o validación requiere intervención, no un reintento.
+  bool _isRetryable(dio.DioException error) =>
+      error.type != dio.DioExceptionType.cancel &&
+      ((error.response == null &&
+              const {
+                dio.DioExceptionType.connectionError,
+                dio.DioExceptionType.connectionTimeout,
+                dio.DioExceptionType.receiveTimeout,
+                dio.DioExceptionType.sendTimeout,
+              }.contains(error.type)) ||
+          error.response?.statusCode == 408 ||
+          error.response?.statusCode == 429 ||
+          (error.response?.statusCode ?? 0) >= 500);
 
   Future<void> init() async {
     if (_initialized) return;
@@ -74,7 +96,17 @@ class ApiService {
     _currentUsername = null;
     _currentRole = null;
     _currentUserId = null;
-    await _persist();
+    _currentPatientName = null;
+    final prefs = await SharedPreferences.getInstance();
+    for (final key in [
+      _prefsTokenKey,
+      _prefsUsernameKey,
+      _prefsRoleKey,
+      _prefsUserIdKey,
+      _prefsPatientIdKey,
+    ]) {
+      await prefs.remove(key);
+    }
   }
 
   void setToken(String token) {
@@ -186,7 +218,7 @@ class ApiService {
     } on dio.DioException catch (e) {
       final detail = e.response?.data?['detail'];
       if (detail != null) throw Exception(detail);
-      
+
       if (e.response?.statusCode == 401) {
         throw Exception('Credenciales inválidas');
       }
@@ -220,13 +252,13 @@ class ApiService {
           .toList();
 
       if (_localDb != null) {
-        unawaited(_localDb.savePatients(list.cast<Map<String, dynamic>>()));
-        unawaited(_localDb.setLastSync('patients', DateTime.now()));
+        await _localDb.savePatients(list.cast<Map<String, dynamic>>());
+        await _localDb.setLastSync('patients', DateTime.now());
       }
 
       return patients;
     } on dio.DioException catch (e) {
-      if (_localDb != null) {
+      if (_isRetryable(e) && _localDb != null) {
         final cached = await _localDb.getPatients();
         if (cached.isNotEmpty) {
           return cached.map((e) => Patient.fromJson(e)).toList();
@@ -236,7 +268,10 @@ class ApiService {
     }
   }
 
-  Future<Patient> createPatient(Map<String, dynamic> patientData, {bool skipOffline = false}) async {
+  Future<Patient> createPatient(
+    Map<String, dynamic> patientData, {
+    bool skipOffline = false,
+  }) async {
     if (patientData['name'] == null || patientData['name'].toString().isEmpty) {
       throw Exception('El nombre del paciente es requerido');
     }
@@ -250,12 +285,17 @@ class ApiService {
     } on dio.DioException catch (e) {
       final detail = e.response?.data?['detail'];
       if (detail != null) throw Exception(detail);
-      if (!skipOffline && _localDb != null) {
-        final extId = 'p-${DateTime.now().microsecondsSinceEpoch}-${Random().nextInt(10000)}';
+      if (!skipOffline && _isRetryable(e) && _localDb != null) {
+        final extId =
+            'p-${DateTime.now().microsecondsSinceEpoch}-${Random().nextInt(10000)}';
         patientData['external_id'] = extId;
         await _localDb.addPendingAction('CREATE', 'patients', patientData);
         // Return a mock patient or throw a specific 'queued' exception
-        return Patient.fromJson({...patientData, 'id': -1, 'external_id': extId}); 
+        return Patient.fromJson({
+          ...patientData,
+          'id': -1,
+          'external_id': extId,
+        });
       }
       throw Exception('Error al crear paciente: ${e.message}');
     }
@@ -265,21 +305,33 @@ class ApiService {
     try {
       await _dio.delete('/patients/$patientId');
     } on dio.DioException catch (e) {
-      if (!skipOffline && _localDb != null) {
-        await _localDb.addPendingAction('DELETE', 'patients', {'id': patientId});
+      if (!skipOffline && _isRetryable(e) && _localDb != null) {
+        await _localDb.addPendingAction('DELETE', 'patients', {
+          'id': patientId,
+        });
         return;
       }
       throw Exception('Error al eliminar paciente: ${e.message}');
     }
   }
 
-  Future<Patient> updatePatient(int patientId, Map<String, dynamic> patientData, {bool skipOffline = false}) async {
+  Future<Patient> updatePatient(
+    int patientId,
+    Map<String, dynamic> patientData, {
+    bool skipOffline = false,
+  }) async {
     try {
-      final response = await _dio.put('/patients/$patientId', data: patientData);
+      final response = await _dio.put(
+        '/patients/$patientId',
+        data: patientData,
+      );
       return Patient.fromJson(response.data);
     } on dio.DioException catch (e) {
-      if (!skipOffline && _localDb != null) {
-        await _localDb.addPendingAction('UPDATE', 'patients', {...patientData, 'id': patientId});
+      if (!skipOffline && _isRetryable(e) && _localDb != null) {
+        await _localDb.addPendingAction('UPDATE', 'patients', {
+          ...patientData,
+          'id': patientId,
+        });
         return Patient.fromJson({...patientData, 'id': patientId});
       }
       throw Exception('Error al editar paciente: ${e.message}');
@@ -333,7 +385,7 @@ class ApiService {
       final response = await _dio.get('/patients/$patientId');
       return Patient.fromJson(response.data);
     } on dio.DioException catch (e) {
-      if (_localDb != null) {
+      if (_isRetryable(e) && _localDb != null) {
         final cached = await _localDb.getPatients();
         final match = cached.firstWhere(
           (p) => p['id'] == patientId,
@@ -356,7 +408,8 @@ class ApiService {
     int durationMs = 0,
     bool skipOffline = false,
   }) async {
-    if (patientId <= 0 && !skipOffline) throw Exception('ID de paciente inválido');
+    if (patientId <= 0 && !skipOffline)
+      throw Exception('ID de paciente inválido');
     if (status.trim().isEmpty) throw Exception('El estado es requerido');
 
     final d = date ?? DateTime.now();
@@ -376,7 +429,7 @@ class ApiService {
       final response = await _dio.post('/sessions/', data: data);
       return Session.fromJson(response.data);
     } on dio.DioException catch (e) {
-      if (!skipOffline && _localDb != null) {
+      if (!skipOffline && _isRetryable(e) && _localDb != null) {
         await _localDb.addPendingAction('CREATE', 'sessions', data);
         return Session.fromJson({...data, 'id': -1});
       }
@@ -391,7 +444,7 @@ class ApiService {
     required String date,
     required String externalId,
     int durationMs = 0,
-  }) async {
+  }) => _withPendingQueue(() async {
     final prefs = await SharedPreferences.getInstance();
     final raw = prefs.getString(_prefsPendingSessionsKey);
     final List<dynamic> list = raw == null ? [] : (jsonDecode(raw) as List);
@@ -405,9 +458,21 @@ class ApiService {
       'ts': DateTime.now().toIso8601String(),
     });
     await prefs.setString(_prefsPendingSessionsKey, jsonEncode(list));
-  }
+  });
 
   Future<void> flushPendingSessions() async {
+    // Dos disparadores de sincronización comparten el mismo envío.
+    if (_pendingFlush != null) return _pendingFlush;
+    final operation = _withPendingQueue(_flushPendingSessions);
+    _pendingFlush = operation;
+    try {
+      await operation;
+    } finally {
+      _pendingFlush = null;
+    }
+  }
+
+  Future<void> _flushPendingSessions() async {
     final prefs = await SharedPreferences.getInstance();
     final raw = prefs.getString(_prefsPendingSessionsKey);
     if (raw == null) return;
@@ -418,7 +483,7 @@ class ApiService {
     final List<dynamic> failed = [];
     for (final s in list) {
       try {
-        await _dio.post('/sessions/results', data: s);
+        await _dio.post('/sessions/', data: s);
       } catch (e) {
         failed.add(s);
       }
@@ -448,13 +513,13 @@ class ApiService {
           .toList();
 
       if (_localDb != null) {
-        unawaited(_localDb.saveSessions(list.cast<Map<String, dynamic>>()));
-        unawaited(_localDb.setLastSync('sessions', DateTime.now()));
+        await _localDb.saveSessions(list.cast<Map<String, dynamic>>());
+        await _localDb.setLastSync('sessions', DateTime.now());
       }
 
       return sessions;
     } on dio.DioException catch (e) {
-      if (_localDb != null) {
+      if (_isRetryable(e) && _localDb != null) {
         final cached = await _localDb.getSessions();
         if (cached.isNotEmpty) {
           return cached.map((e) => Session.fromJson(e)).toList();
@@ -473,13 +538,13 @@ class ApiService {
           .toList();
 
       if (_localDb != null) {
-        unawaited(_localDb.saveUsers(list.cast<Map<String, dynamic>>()));
-        unawaited(_localDb.setLastSync('users', DateTime.now()));
+        await _localDb.saveUsers(list.cast<Map<String, dynamic>>());
+        await _localDb.setLastSync('users', DateTime.now());
       }
 
       return users;
     } on dio.DioException catch (e) {
-      if (_localDb != null) {
+      if (_isRetryable(e) && _localDb != null) {
         final cached = await _localDb.getUsers();
         if (cached.isNotEmpty) {
           return cached.map((e) => User.fromJson(e)).toList();
@@ -489,7 +554,10 @@ class ApiService {
     }
   }
 
-  Future<List<dynamic>> getLatestResultsForPatient(int patientId, {int limit = 10}) async {
+  Future<List<dynamic>> getLatestResultsForPatient(
+    int patientId, {
+    int limit = 10,
+  }) async {
     try {
       final response = await _dio.get(
         '/sessions/results/latest',
@@ -508,7 +576,8 @@ class ApiService {
     int? sessionId,
     bool skipOffline = false,
   }) async {
-    if (patientId <= 0 && !skipOffline) throw Exception('ID de paciente inválido');
+    if (patientId <= 0 && !skipOffline)
+      throw Exception('ID de paciente inválido');
     if (gameName.trim().isEmpty) {
       throw Exception('El nombre del juego es requerido');
     }
@@ -533,14 +602,13 @@ class ApiService {
     try {
       await _dio.post('/sessions/results', data: data);
     } on dio.DioException catch (e) {
-      if (!skipOffline && _localDb != null) {
+      if (!skipOffline && _isRetryable(e) && _localDb != null) {
         await _localDb.addPendingAction('CREATE', 'results', data);
         return;
       }
       throw Exception('Error al enviar resultados: ${e.message}');
     }
   }
-
 
   Future<Map<String, dynamic>> updateUserAvailability(
     int userId,
@@ -658,11 +726,15 @@ class ApiService {
     }
   }
 
-  Future<List<ReporteCognitivoModel>> getReportesByPatient(String patientId) async {
+  Future<List<ReporteCognitivoModel>> getReportesByPatient(
+    String patientId,
+  ) async {
     try {
       final response = await _dio.get('/evaluacion/reportes/$patientId');
       final data = response.data as List;
-      return data.map((e) => ReporteCognitivoModel.fromJson(e as Map<String, dynamic>)).toList();
+      return data
+          .map((e) => ReporteCognitivoModel.fromJson(e as Map<String, dynamic>))
+          .toList();
     } on dio.DioException catch (e) {
       throw Exception('Error al cargar historial de reportes: ${e.message}');
     }
@@ -673,7 +745,9 @@ class ApiService {
     try {
       final response = await _dio.get('/evaluacion/reportes');
       final data = response.data as List;
-      return data.map((e) => ReporteCognitivoModel.fromJson(e as Map<String, dynamic>)).toList();
+      return data
+          .map((e) => ReporteCognitivoModel.fromJson(e as Map<String, dynamic>))
+          .toList();
     } on dio.DioException catch (e) {
       throw Exception('Error al cargar historial de reportes: ${e.message}');
     }

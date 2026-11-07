@@ -34,6 +34,9 @@ class EmptyStateView extends StatelessWidget {
       child: Padding(
         padding: EdgeInsets.all(spacing.lg),
         child: Column(
+          // Ocupa solo lo que necesita: así funciona tanto a pantalla completa
+          // (lo centra el Center) como dentro de listas con alto libre.
+          mainAxisSize: MainAxisSize.min,
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             // Illustration container premium
