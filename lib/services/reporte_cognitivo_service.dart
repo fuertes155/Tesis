@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../models/reporte_cognitivo_model.dart';
 
@@ -13,6 +14,11 @@ String _defaultBaseUrl() {
   // En desktop nativo (Windows / Linux / macOS) también usamos localhost
   return 'http://localhost:8000';
 }
+
+/// Servicio que genera el informe con IA; las pruebas lo reemplazan por uno simulado.
+final reporteCognitivoServiceProvider = Provider<ReporteCognitivoService>(
+  (ref) => ReporteCognitivoService(),
+);
 
 class ReporteCognitivoService {
   ReporteCognitivoService({Dio? dio})

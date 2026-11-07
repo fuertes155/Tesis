@@ -391,13 +391,15 @@ class _TestCard extends StatelessWidget {
                       ),
                     ),
                     SizedBox(height: spacing.xs),
-                    Row(
+                    // Wrap: en teléfonos las etiquetas pasan a otra línea.
+                    Wrap(
+                      spacing: 6,
+                      runSpacing: 6,
                       children: [
                         _DomainPill(
                           text: info.domain,
                           color: info.domainColor,
                         ),
-                        const SizedBox(width: 6),
                         _DomainPill(
                           text: '~${info.duration} min',
                           color: cs.onSurfaceVariant,

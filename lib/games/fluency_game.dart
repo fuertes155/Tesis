@@ -9,6 +9,7 @@ import 'common/game_scoring.dart';
 import '../widgets/animated_dialog.dart';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:speech_to_text/speech_recognition_result.dart';
 import 'package:speech_to_text/speech_to_text.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import '../providers/api_providers.dart';
@@ -95,7 +96,7 @@ class _FluencyGameState extends ConsumerState<FluencyGame> {
 
   final Set<String> _countedWords = {};
 
-  void _onSpeechResult(result) {
+  void _onSpeechResult(SpeechRecognitionResult result) {
     if (result.finalResult || result.recognizedWords.isNotEmpty) {
       final text = result.recognizedWords.toLowerCase();
       final words = text.split(RegExp(r'\s+')).where((w) => w.length > 1).toList();

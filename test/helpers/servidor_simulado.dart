@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
 
@@ -14,13 +15,14 @@ class ServidorSimulado implements HttpClientAdapter {
     List<Map<String, dynamic>>? sesiones,
     List<Map<String, dynamic>>? resultados,
     List<Map<String, dynamic>>? reportes,
-  })  : usuarios = usuarios ?? [doctor, gestor],
+  })  : usuarios = usuarios ?? [Map.of(doctor), Map.of(gestor)],
         pacientes = pacientes ?? [],
         sesiones = sesiones ?? [],
         resultados = resultados ?? [],
         reportes = reportes ?? [];
 
   static const clave = 'Password123!';
+  static const codigo2fa = '123456';
 
   static final doctor = <String, dynamic>{
     'id': 36, 'username': 'samuel@gmail.com', 'role': 'doctor', 'full_name': 'Samuel Vanegas',
@@ -32,6 +34,12 @@ class ServidorSimulado implements HttpClientAdapter {
     'document_id': null, 'is_active': true, 'is_available': true, 'registration_date': '2026-03-21T20:14:31',
   };
 
+  /// Usuario con rol paciente (`user`).
+  static final paciente = <String, dynamic>{
+    'id': 50, 'username': 'paciente@gmail.com', 'role': 'user', 'full_name': 'Paciente de Prueba',
+    'document_id': null, 'is_active': true, 'is_available': true, 'registration_date': '2026-05-02T09:00:00',
+  };
+
   final List<Map<String, dynamic>> usuarios;
   final List<Map<String, dynamic>> pacientes;
   final List<Map<String, dynamic>> sesiones;
@@ -41,12 +49,42 @@ class ServidorSimulado implements HttpClientAdapter {
   /// Peticiones recibidas, en orden: "GET /patients/".
   final List<String> peticiones = [];
 
+  /// Último cuerpo enviado a cada petición ("POST /patients/" → JSON).
+  final Map<String, Object?> cuerpos = {};
+
+  /// Último query enviado a cada petición.
+  final Map<String, Map<String, String>> consultas = {};
+
+  /// Encabezados de la última petición a cada ruta (p. ej. Authorization).
+  final Map<String, Map<String, dynamic>> encabezados = {};
+
   /// Si se asigna, el login responde que se requiere 2FA.
   bool exigir2fa = false;
 
-  Map<String, dynamic>? _usuarioActual;
+  /// Respuesta de `GET /users/me` (por defecto, el usuario que inició sesión o el doctor).
+  Map<String, dynamic>? usuarioActual;
+
+  /// Si se asigna, cada petición espera a que se complete (para ver estados de carga).
+  Completer<void>? pausa;
+
+  /// Respuesta del generador de informes (`POST /evaluacion/generar-reporte`).
+  Map<String, dynamic>? reporteGenerado;
+
+  final Map<String, (int, Object?)> _fallos = {};
+
+  /// Hace que `'METODO /ruta'` responda con un error HTTP.
+  void fallar(String peticion, {int estado = 500, Object? cuerpo = const {'detail': 'Error simulado'}}) =>
+      _fallos[peticion] = (estado, cuerpo);
+
+  /// Hace que `'METODO /ruta'` falle como si no hubiera conexión.
+  void sinConexion(String peticion) => _fallos[peticion] = (0, null);
+
+  /// Quita los fallos configurados.
+  void restablecer() => _fallos.clear();
 
   bool recibio(String metodo, String ruta) => peticiones.contains('$metodo $ruta');
+
+  int veces(String metodo, String ruta) => peticiones.where((p) => p == '$metodo $ruta').length;
 
   @override
   Future<ResponseBody> fetch(
@@ -56,8 +94,18 @@ class ServidorSimulado implements HttpClientAdapter {
   ) async {
     final ruta = options.uri.path.replaceFirst(RegExp(r'^/api/v1'), '');
     final metodo = options.method.toUpperCase();
-    peticiones.add('$metodo $ruta');
-    final (estado, cuerpo) = _responder(metodo, ruta, options.uri.queryParameters, options.data);
+    final clave = '$metodo $ruta';
+    peticiones.add(clave);
+    cuerpos[clave] = options.data;
+    consultas[clave] = options.uri.queryParameters;
+    encabezados[clave] = Map.of(options.headers);
+    if (pausa != null) await pausa!.future;
+
+    final fallo = _fallos[clave];
+    if (fallo != null && fallo.$1 == 0) {
+      throw DioException(requestOptions: options, type: DioExceptionType.connectionError, message: 'Sin conexión');
+    }
+    final (estado, cuerpo) = fallo ?? _responder(metodo, ruta, options.uri.queryParameters, options.data);
     return ResponseBody.fromString(
       jsonEncode(cuerpo),
       estado,
@@ -70,12 +118,13 @@ class ServidorSimulado implements HttpClientAdapter {
   (int, Object?) _responder(String metodo, String ruta, Map<String, String> query, Object? datos) {
     final cuerpo = datos is Map ? Map<String, dynamic>.from(datos) : <String, dynamic>{};
 
+    // ── Usuarios ──────────────────────────────────────────────────────────
     if (metodo == 'POST' && ruta == '/users/auth/login') {
       final usuario = usuarios.where((u) => u['username'] == cuerpo['username']).firstOrNull;
       if (usuario == null || cuerpo['password'] != clave) {
         return (401, {'detail': 'Usuario o contraseña incorrectos'});
       }
-      _usuarioActual = usuario;
+      usuarioActual = usuario;
       return (200, {
         'access_token': 'token-${usuario['id']}',
         'token_type': 'bearer',
@@ -83,17 +132,101 @@ class ServidorSimulado implements HttpClientAdapter {
         if (exigir2fa) 'mfa_required': true,
       });
     }
-    if (metodo == 'GET' && ruta == '/users/me') return (200, _usuarioActual ?? doctor);
+    if (metodo == 'POST' && ruta == '/users/verify-2fa') {
+      return cuerpo['code'] == codigo2fa
+          ? (200, {'status': 'success'})
+          : (400, {'detail': 'Código de verificación incorrecto'});
+    }
+    if (metodo == 'GET' && ruta == '/users/me') return (200, usuarioActual ?? doctor);
     if (metodo == 'GET' && ruta == '/users/') return (200, usuarios);
-
-    if (metodo == 'GET' && ruta == '/patients/') return (200, pacientes);
-    final paciente = RegExp(r'^/patients/(\d+)$').firstMatch(ruta);
-    if (metodo == 'GET' && paciente != null) {
-      final p = pacientes.where((x) => x['id'] == int.parse(paciente.group(1)!)).firstOrNull;
-      return p == null ? (404, {'detail': 'Patient not found'}) : (200, p);
+    if (metodo == 'POST' && (ruta == '/users/register' || ruta == '/users/auth/register')) {
+      if (usuarios.any((u) => u['username'] == cuerpo['username'])) {
+        return (400, {'detail': 'El usuario ya existe'});
+      }
+      final nuevo = {
+        'id': 100 + usuarios.length,
+        'username': cuerpo['username'],
+        'role': cuerpo['role'] ?? 'doctor',
+        'full_name': cuerpo['full_name'],
+        'document_id': cuerpo['document_id'],
+        'is_active': true,
+        'is_available': true,
+        'registration_date': '2026-11-06T10:00:00',
+      };
+      usuarios.add(nuevo);
+      return (200, {'access_token': 'token-${nuevo['id']}', 'user': nuevo, ...nuevo});
+    }
+    if (metodo == 'POST' && ruta == '/users/reset') {
+      final usuario = usuarios.where((u) => u['username'] == cuerpo['username']).firstOrNull;
+      return usuario == null
+          ? (404, {'detail': 'Usuario no encontrado'})
+          : (200, {'status': 'success', 'username': cuerpo['username']});
+    }
+    final disponibilidad = RegExp(r'^/users/(\d+)/availability$').firstMatch(ruta);
+    if (metodo == 'PUT' && disponibilidad != null) {
+      final u = _buscar(usuarios, disponibilidad.group(1)!);
+      if (u == null) return (404, {'detail': 'User not found'});
+      u['is_available'] = query['is_available'] == 'true';
+      return (200, u);
+    }
+    final usuario = RegExp(r'^/users/(\d+)$').firstMatch(ruta);
+    if (usuario != null) {
+      final u = _buscar(usuarios, usuario.group(1)!);
+      if (u == null) return (404, {'detail': 'User not found'});
+      if (metodo == 'PUT') {
+        u.addAll(cuerpo..remove('password'));
+        return (200, u);
+      }
+      if (metodo == 'DELETE') {
+        usuarios.remove(u);
+        return (200, {'ok': true});
+      }
     }
 
-    if (metodo == 'GET' && ruta == '/sessions/') return (200, sesiones);
+    // ── Pacientes ─────────────────────────────────────────────────────────
+    if (metodo == 'GET' && ruta == '/patients/') return (200, pacientes);
+    if (metodo == 'POST' && ruta == '/patients/') {
+      final p = {
+        'id': 500 + pacientes.length,
+        'birth_date': null, 'document_id': null, 'phone': null, 'diagnosis': null, 'institution': null,
+        'medical_history': null, 'email': null, 'doctor_id': null, 'has_consent': false, 'external_id': null,
+        'created_at': '2026-11-06T10:00:00', 'registration_date': null,
+        ...cuerpo,
+      };
+      pacientes.add(p);
+      return (200, p);
+    }
+    final asignar = RegExp(r'^/patients/(\d+)/assign-doctor$').firstMatch(ruta);
+    if (metodo == 'PUT' && asignar != null) {
+      final p = _buscar(pacientes, asignar.group(1)!);
+      if (p == null) return (404, {'detail': 'Patient not found'});
+      p['doctor_id'] = int.tryParse(query['doctor_id'] ?? '');
+      return (200, p);
+    }
+    final paciente = RegExp(r'^/patients/(\d+)$').firstMatch(ruta);
+    if (paciente != null) {
+      final p = _buscar(pacientes, paciente.group(1)!);
+      if (p == null) return (404, {'detail': 'Patient not found'});
+      if (metodo == 'GET') return (200, p);
+      if (metodo == 'PUT') {
+        p.addAll(cuerpo);
+        return (200, p);
+      }
+      if (metodo == 'DELETE') {
+        pacientes.remove(p);
+        return (200, {'ok': true});
+      }
+    }
+
+    // ── Sesiones y resultados ─────────────────────────────────────────────
+    if (metodo == 'GET' && ruta == '/sessions/') {
+      final pid = int.tryParse(query['patient_id'] ?? '');
+      return (200, pid == null ? sesiones : sesiones.where((s) => s['patient_id'] == pid).toList());
+    }
+    if (metodo == 'GET' && ruta == '/sessions/count') {
+      final pid = int.tryParse(query['patient_id'] ?? '');
+      return (200, {'count': sesiones.where((s) => s['patient_id'] == pid).length});
+    }
     if (metodo == 'POST' && ruta == '/sessions/') {
       final s = {'id': sesiones.length + 1, 'external_id': null, 'created_at': null, ...cuerpo};
       sesiones.add(s);
@@ -112,6 +245,10 @@ class ServidorSimulado implements HttpClientAdapter {
       return (201, r);
     }
 
+    // ── Informes ──────────────────────────────────────────────────────────
+    if (metodo == 'POST' && ruta == '/evaluacion/generar-reporte') {
+      return reporteGenerado == null ? (503, {'detail': 'Ollama no disponible'}) : (200, reporteGenerado);
+    }
     if (metodo == 'GET' && ruta == '/evaluacion/reportes') return (200, reportes);
     final delPaciente = RegExp(r'^/evaluacion/reportes/(.+)$').firstMatch(ruta);
     if (metodo == 'GET' && delPaciente != null) {
@@ -121,6 +258,9 @@ class ServidorSimulado implements HttpClientAdapter {
 
     return (404, {'detail': 'Not Found'});
   }
+
+  static Map<String, dynamic>? _buscar(List<Map<String, dynamic>> lista, String id) =>
+      lista.where((x) => x['id'] == int.parse(id)).firstOrNull;
 
   @override
   void close({bool force = false}) {}
@@ -160,6 +300,20 @@ List<Map<String, dynamic>> bateriaEjemplo(int pacienteId, String fecha, List<int
       },
   ];
 }
+
+/// Sesión registrada (como la devuelve `GET /sessions/`).
+Map<String, dynamic> sesionEjemplo({
+  int id = 1,
+  int pacienteId = 21,
+  String fecha = '2026-09-16T15:00:00',
+  String estado = 'completed',
+  String notas = 'Batería de pruebas finalizada.',
+  int duracionMs = 300000,
+}) =>
+    {
+      'id': id, 'patient_id': pacienteId, 'date': fecha, 'status': estado, 'notes': notas,
+      'duration_ms': duracionMs, 'external_id': 's-$id', 'created_at': fecha,
+    };
 
 Map<String, dynamic> reporteEjemplo({
   int id = 7,

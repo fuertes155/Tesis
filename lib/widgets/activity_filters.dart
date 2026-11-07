@@ -139,7 +139,9 @@ class _MenuPill<T> extends StatelessWidget {
                       ? Icon(Icons.check_rounded, size: 18, color: cs.primary)
                       : null,
                 ),
-                Text(entry.value),
+                // El menú mide como máximo 280 px: con texto ampliado, la opción
+                // pasa a otra línea en vez de desbordarse.
+                Flexible(child: Text(entry.value)),
               ],
             ),
           ),

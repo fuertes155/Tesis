@@ -42,6 +42,9 @@ class CreatePatientScreenState extends ConsumerState<CreatePatientScreen> {
     try {
       final api = await ref.read(apiServiceProvider.future);
       int age = 0;
+      // La API guarda la fecha como texto y la app la lee con DateTime.parse:
+      // se envía en ISO (aaaa-mm-dd), no como se muestra (dd/mm/aaaa).
+      String? birthDateIso;
       final text = _birthDateController.text.trim();
       if (text.isNotEmpty) {
         DateTime? date;
@@ -62,13 +65,15 @@ class CreatePatientScreenState extends ConsumerState<CreatePatientScreen> {
               (now.month == date.month && now.day >= date.day);
           if (!hasHadBirthday) years -= 1;
           age = years.clamp(0, 120);
+          birthDateIso =
+              '${date.year.toString().padLeft(4, '0')}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
         }
       }
 
       await api.createPatient({
         'name': _nameController.text,
         'age': age,
-        'birth_date': _birthDateController.text,
+        'birth_date': birthDateIso,
         'document_id': _docIdController.text,
         'phone': _phoneController.text,
         'email': _emailController.text,

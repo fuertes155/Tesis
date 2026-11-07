@@ -738,13 +738,17 @@ class _ActionsGrid extends StatelessWidget {
       ),
     ];
 
-    return GridView.count(
+    // Alto fijo (no proporción ancho/alto): en teléfonos la tarjeta quedaba
+    // más baja que su contenido y se recortaba.
+    return GridView(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
-      crossAxisCount: 2,
-      mainAxisSpacing: spacing.md,
-      crossAxisSpacing: spacing.md,
-      childAspectRatio: 2.0,
+      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        mainAxisSpacing: spacing.md,
+        crossAxisSpacing: spacing.md,
+        mainAxisExtent: 120,
+      ),
       children: actions.map((a) => _ActionCard(item: a)).toList(),
     );
   }
@@ -845,6 +849,8 @@ class _ActionCard extends StatelessWidget {
               children: [
                 Text(
                   item.label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: theme.textTheme.labelLarge?.copyWith(
                     color: item.isPrimary ? Colors.white : cs.onSurface,
                     fontWeight: FontWeight.w800,
@@ -852,6 +858,8 @@ class _ActionCard extends StatelessWidget {
                 ),
                 Text(
                   item.subtitle,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: theme.textTheme.labelSmall?.copyWith(
                     color: item.isPrimary
                         ? Colors.white.withValues(alpha: 0.75)

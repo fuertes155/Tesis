@@ -39,15 +39,21 @@ class StatusBadge extends StatelessWidget {
         children: [
           _PulseDot(color: color, pulse: pulse, size: small ? 6 : 8),
           SizedBox(width: small ? 5 : 6),
-          Text(
-            label,
-            style: (small
-                    ? theme.textTheme.labelSmall
-                    : theme.textTheme.labelMedium)
-                ?.copyWith(
-              color: color,
-              fontWeight: FontWeight.w700,
-              letterSpacing: 0.2,
+          // Flexible (holgado): textos largos, como un diagnóstico, se cortan
+          // con "…" en vez de desbordar la tarjeta en pantallas angostas.
+          Flexible(
+            child: Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: (small
+                      ? theme.textTheme.labelSmall
+                      : theme.textTheme.labelMedium)
+                  ?.copyWith(
+                color: color,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 0.2,
+              ),
             ),
           ),
         ],

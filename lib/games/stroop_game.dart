@@ -369,11 +369,13 @@ class _StroopGameState extends ConsumerState<StroopGame> {
                         ),
                       ),
                     ] else ...[
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
+                      // Wrap: en teléfonos angostos los chips pasan a otra línea.
+                      Wrap(
+                        alignment: WrapAlignment.center,
+                        spacing: 8,
+                        runSpacing: 8,
                         children: [
                           Chip(label: Text('Ronda: $_currentRound/$totalRounds')),
-                          const SizedBox(width: 8),
                           Chip(label: Text('Puntos: $_score')),
                         ],
                       ),

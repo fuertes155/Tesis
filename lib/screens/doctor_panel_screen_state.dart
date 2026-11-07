@@ -602,22 +602,12 @@ class _PatientRowCard extends StatelessWidget {
       decoration: AppDecorations.premiumCard(context, radius: 16),
       child: ClipRRect(
         borderRadius: r.radiusLg,
-        child: IntrinsicHeight(
-          child: Row(
+        // Stack en vez de IntrinsicHeight: un LayoutBuilder no admite medidas
+        // intrínsecas (en debug falla y en release la tarjeta queda en 0 px).
+        child: Stack(
             children: [
-              // Accent bar premium con gradiente
-              Container(
-                width: 4,
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [cs.primary, cs.tertiary],
-                  ),
-                ),
-              ),
-
-              Expanded(
+              Padding(
+                padding: const EdgeInsets.only(left: 4),
                 child: Padding(
                   padding: EdgeInsets.all(spacing.lg),
                   child: LayoutBuilder(
@@ -749,9 +739,24 @@ class _PatientRowCard extends StatelessWidget {
                   ),
                 ),
               ),
+              // Accent bar premium con gradiente, a toda la altura de la tarjeta.
+              Positioned(
+                left: 0,
+                top: 0,
+                bottom: 0,
+                width: 4,
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [cs.primary, cs.tertiary],
+                    ),
+                  ),
+                ),
+              ),
             ],
           ),
-        ),
       ),
     );
   }

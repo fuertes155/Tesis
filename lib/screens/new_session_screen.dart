@@ -529,7 +529,15 @@ class _ChipPaciente extends StatelessWidget {
           ),
           const SizedBox(width: 8),
           Text('Paciente: ', style: theme.textTheme.bodyMedium?.copyWith(color: cs.onSurfaceVariant)),
-          Text(nombre, style: theme.textTheme.labelLarge?.copyWith(color: cs.onSurface)),
+          // Flexible: los nombres largos se cortan con "…" en teléfonos.
+          Flexible(
+            child: Text(
+              nombre,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: theme.textTheme.labelLarge?.copyWith(color: cs.onSurface),
+            ),
+          ),
         ],
       ),
     );

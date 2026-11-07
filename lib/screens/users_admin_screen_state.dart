@@ -655,11 +655,14 @@ class UsersAdminScreenState extends ConsumerState<UsersAdminScreen> {
         children: [
           Icon(icon, size: 26, color: cs.primary),
           SizedBox(width: s.sm),
-          Text(
-            title,
-            style: theme.textTheme.titleLarge?.copyWith(
-              fontWeight: FontWeight.w900,
-              letterSpacing: -0.2,
+          // Flexible: en teléfonos el título largo pasa a otra línea.
+          Flexible(
+            child: Text(
+              title,
+              style: theme.textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.w900,
+                letterSpacing: -0.2,
+              ),
             ),
           ),
         ],

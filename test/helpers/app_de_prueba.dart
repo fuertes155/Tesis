@@ -1,16 +1,21 @@
 import 'package:dio/dio.dart';
-import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_application_1/core/database/local_database_service.dart';
 import 'package:flutter_application_1/main.dart';
 import 'package:flutter_application_1/providers/api_providers.dart';
 import 'package:flutter_application_1/router.dart';
 import 'package:flutter_application_1/services/api_service.dart';
+import 'package:flutter_application_1/services/reporte_cognitivo_service.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/date_symbol_data_local.dart';
+import 'package:sembast/sembast_memory.dart' show databaseFactoryMemory;
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'servidor_simulado.dart';
+
+var _bases = 0;
 
 /// Monta la app completa (router, tema y proveedores reales) contra un
 /// [ServidorSimulado] en lugar del backend. Devuelve el contenedor de Riverpod
@@ -23,17 +28,28 @@ Future<ProviderContainer> montarApp(
   Size pantalla = const Size(1440, 1000),
 }) async {
   GoogleFonts.config.allowRuntimeFetching = false;
+  // rootBundle guarda en caché el Future de cada recurso, ligado a la zona de la
+  // prueba que lo pidió primero; en la siguiente prueba ese Future no avanzaría.
+  rootBundle.clear();
   await initializeDateFormatting('es');
   tester.view.physicalSize = pantalla;
   tester.view.devicePixelRatio = 1.0;
   addTearDown(tester.view.reset);
 
+  // El perfil (GET /users/me) corresponde al usuario de la sesión.
+  final usuario = switch (rolConSesion) {
+    'gestor' => ServidorSimulado.gestor,
+    'user' => ServidorSimulado.paciente,
+    _ => ServidorSimulado.doctor,
+  };
+  if (rolConSesion != null) servidor.usuarioActual ??= usuario;
+
   SharedPreferences.setMockInitialValues({
     if (rolConSesion != null) ...{
       'api_token': 'token-de-prueba',
       'api_role': rolConSesion,
-      'api_user_id': rolConSesion == 'gestor' ? 23 : 36,
-      'api_username': rolConSesion == 'gestor' ? 'samuel1@gmail.com' : 'samuel@gmail.com',
+      'api_user_id': usuario['id'] as int,
+      'api_username': usuario['username'] as String,
     },
     if (pacienteActual != null) 'api_patient_id': pacienteActual,
   });
@@ -46,6 +62,14 @@ Future<ProviderContainer> montarApp(
       await api.init();
       return api;
     }),
+    // Base local (caché y cola offline) en memoria en vez de un archivo en disco.
+    localDatabaseProvider.overrideWith(
+      (ref) async => LocalDatabaseService(database: await databaseFactoryMemory.openDatabase('app-${_bases++}.db')),
+    ),
+    // El generador de informes usa otra URL base (sin /api/v1), pero el mismo servidor simulado.
+    reporteCognitivoServiceProvider.overrideWithValue(
+      ReporteCognitivoService(dio: Dio(BaseOptions(baseUrl: 'http://servidor-simulado'))..httpClientAdapter = servidor),
+    ),
   ]);
   addTearDown(container.dispose);
 
@@ -79,6 +103,7 @@ Future<void> esperar(WidgetTester tester, {int pasos = 25}) async {
 /// Si el toque no cae sobre el elemento, la prueba falla (no solo avisa).
 Future<void> tocar(WidgetTester tester, Finder elemento, {int pasos = 25}) async {
   WidgetController.hitTestWarningShouldBeFatal = true;
+  await tester.pump(); // aplica desplazamientos pendientes (p. ej. del foco de un campo)
   await tester.ensureVisible(elemento);
   await tester.pump(const Duration(milliseconds: 100));
   await tester.tap(elemento);

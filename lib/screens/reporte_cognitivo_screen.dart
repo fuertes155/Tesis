@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
@@ -29,7 +30,7 @@ const _seccionesRedundantes = {
 /// Detecta líneas del tipo "Memoria: 80.0% (ALTO), ..." para separar la etiqueta.
 final _etiquetaLinea = RegExp(r'^([^:]{2,40}):\s+(.+)$');
 
-class ReporteCognitivoScreen extends StatefulWidget {
+class ReporteCognitivoScreen extends ConsumerStatefulWidget {
   const ReporteCognitivoScreen({
     super.key,
     required this.solicitud,
@@ -40,12 +41,12 @@ class ReporteCognitivoScreen extends StatefulWidget {
   final ReporteCognitivoModel? preGeneratedReport;
 
   @override
-  State<ReporteCognitivoScreen> createState() => _ReporteCognitivoScreenState();
+  ConsumerState<ReporteCognitivoScreen> createState() => _ReporteCognitivoScreenState();
 }
 
-class _ReporteCognitivoScreenState extends State<ReporteCognitivoScreen> {
+class _ReporteCognitivoScreenState extends ConsumerState<ReporteCognitivoScreen> {
   late final Future<ReporteCognitivoModel> _reporteFuture;
-  final _servicio = ReporteCognitivoService();
+  late final _servicio = ref.read(reporteCognitivoServiceProvider);
 
   @override
   void initState() {
@@ -1354,9 +1355,14 @@ class _Clasificacion extends StatelessWidget {
       children: [
         Container(width: 8, height: 8, decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
         const SizedBox(width: 8),
-        Text(
-          _nivelLegible(nivel),
-          style: Theme.of(context).textTheme.labelLarge?.copyWith(color: color),
+        // Flexible: en celdas angostas (teléfono, texto ampliado) no se desborda.
+        Flexible(
+          child: Text(
+            _nivelLegible(nivel),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: Theme.of(context).textTheme.labelLarge?.copyWith(color: color),
+          ),
         ),
       ],
     );
